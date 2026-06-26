@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "ReadFlow",
+    "slug": "readflow",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "scheme": "readflow",
+    "primaryColor": "#E5533A",
+    "backgroundColor": "#F4ECD6",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F4ECD6"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.urmiaworks.readflow",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.urmiaworks.readflow",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E5533A"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-document-picker",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 220,
+          "backgroundColor": "#F4ECD6",
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-audio"
+    ],
+    "extra": {
+      "apiUrl": "",
+      "appKey": "",
+      "supportEmail": "support@urmiaworks.com",
+      "website": "https://urmiaworks.com",
+      "privacyPolicy": "https://urmiaworks.com/readflow/privacy"
+    }
+  }
+}

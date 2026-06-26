@@ -1,0 +1,44 @@
+# Render Blueprint for the ReadFlow repo root.
+# If your connected Git repo root is ReadFlow/, use this file directly.
+services:
+  - type: web
+    name: readflow-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: APP_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: openai
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+      - key: TTS_PROVIDER
+        value: cloud
+      - key: TTS_MODEL
+        value: tts-1-hd
+      - key: TTS_VOICE
+        value: nova
+      - key: OCR_ENABLED
+        value: "true"
+      - key: OCR_LANG
+        value: eng
+      - key: OCR_EAGER_PAGES
+        value: "4"
+      - key: ENTITLEMENTS_DEV_OVERRIDE
+        value: "true"
+      - key: DEV_DEFAULT_TIER
+        value: ai_pro
+      - key: RATE_EXTRACT_PER_MIN
+        value: "12"
+      - key: RATE_AI_PER_MIN
+        value: "20"
+      - key: RATE_TTS_PER_MIN
+        value: "180"

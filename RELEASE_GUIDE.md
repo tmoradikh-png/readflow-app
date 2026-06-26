@@ -1,0 +1,166 @@
+# ReadFlow — Android v1 Release Guide (Free app, Internal Testing)
+
+App: **ReadFlow** · Package: **com.urmiaworks.readflow** · Version **1.0.0** (code **1**)
+Org: Urmia Works · Free app (in‑app purchases added later)
+
+---
+
+## 0) CRITICAL — Deploy the backend first (the app cannot work without it)
+
+PDF text extraction, OCR, AI, and the natural voice **all run on your backend**. A released
+`.aab` has no Expo dev server, so it will try `localhost` and do nothing.
+
+**You must:**
+1. Deploy `ReadFlow/backend` to a public **HTTPS** URL.
+   - Render-ready files are included now: `backend/Dockerfile`, `backend/.dockerignore`,
+     and root-level `render.yaml` (for Blueprint deploys from the ReadFlow repo root).
+   - In Render, create from Blueprint (or manual Docker service) and set secret env vars:
+     `OPENAI_API_KEY` and `APP_KEY`.
+   - Non-secret env is already documented in `render.yaml` (`AI_PROVIDER`, `OPENAI_MODEL`,
+     `TTS_PROVIDER`, `TTS_MODEL`, `TTS_VOICE`, `OCR_ENABLED`, `RATE_*`, etc.).
+2. Put the deployed backend URL and app key in `mobile/app.json`:
+   - `expo.extra.apiUrl` = `https://<your-render-host>.onrender.com`
+   - `expo.extra.appKey` = same value as backend `APP_KEY`
+   - Both can also be supplied via `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_APP_KEY`.
+3. Rebuild the `.aab` (below).
+
+> For internal testing only, you *can* run the backend on your PC and use a tunnel
+> (e.g. `cloudflared tunnel --url http://localhost:4000`) and paste that HTTPS URL into
+> `extra.apiUrl` (and set `extra.appKey` if APP_KEY is enabled). Fine for testing,
+> not for production.
+
+### Render quick setup
+1. Push this repo to GitHub (if not already).
+2. Render dashboard → **New +** → **Blueprint** → connect repo.
+3. Confirm service uses `backend/render.yaml` values and builds Docker image.
+4. Add secret env vars in Render service settings:
+  - `OPENAI_API_KEY`: your OpenAI key
+  - `APP_KEY`: random long secret string (same one you put in mobile `extra.appKey`)
+5. Wait for deploy success, then verify:
+  - `GET https://<service>.onrender.com/api/health` returns `{ ok: true, ... }`
+
+---
+
+## 1) Build the Android App Bundle (.aab)
+
+Already configured in `mobile/eas.json` (profile `internal` → `app-bundle`, release build).
+
+```powershell
+cd ReadFlow/mobile
+npm install -g eas-cli      # if not installed
+eas login                   # your Expo account
+eas build:configure         # first time only, links the project
+eas build -p android --profile internal
+```
+
+- EAS creates and stores a **release keystore** for you (recommended). Say **yes** to let EAS
+  manage signing. Back it up later via `eas credentials`.
+- The result is a downloadable **.aab** (release, signed). No debug build is produced.
+
+Confirmations (all already set in `app.json`):
+- ✅ applicationId / package: `com.urmiaworks.readflow` (permanent once uploaded)
+- ✅ versionCode: `1` · versionName: `1.0.0`
+- ✅ Release signing: EAS‑managed keystore (or Play App Signing)
+- ✅ Target SDK: Expo SDK 54 → targetSdk 35 (Play‑accepted)
+- ✅ Permissions: `INTERNET` only (no location / contacts / SMS)
+- ✅ No debug build (internal profile is a release app‑bundle)
+
+---
+
+## 2) Upload to Internal Testing
+
+Play Console → your app → **Testing → Internal testing → Create new release**.
+- Upload the `.aab`.
+- Add testers (an email list or a Google Group). Save → Review → **Roll out**.
+- Share the opt‑in link with your testers; they install via Play.
+
+(Optional CLI submit: `eas submit -p android --profile internal` after configuring a Google
+service‑account key in Play Console → Setup → API access.)
+
+---
+
+## 3) Fill out the required Play Console sections
+
+### Store listing  (Main store listing)
+- **App name:** ReadFlow
+- **Short description (≤80 chars):** "Turn any PDF into a natural‑voice audiobook. Read along, hands‑free."
+- **Full description:** Describe: import PDFs, read‑aloud with natural or device voice,
+  OCR for scanned PDFs, follows along and remembers your place, adjustable font/spacing/speed.
+  Do **not** promise "free AI forever" or unlimited anything (avoid misleading claims).
+- **App icon:** 512×512 PNG (export from `assets/icon.png`).
+- **Feature graphic:** 1024×500 PNG.
+- **Phone screenshots:** 2–8, 16:9 or 9:16 (use the app on your S10).
+- **Category:** Books & Reference. **Tags:** reading, audiobook, accessibility.
+- **Contact email:** support@urmiaworks.com.
+
+### App content (Policy → App content) — complete every item:
+
+**Privacy policy**
+- Provide a public URL: `https://urmiaworks.com/readflow/privacy` (must be live before review).
+- It must state what you collect (PDF text is sent to your server for processing & to OpenAI
+  for AI/voice), that you don't sell data, and how to contact you.
+
+**Data safety** (Play form)
+- Data collected/shared: declare **Files/Docs** — the PDF content is sent to your server and to
+  OpenAI to generate text/audio. Mark it as **processed**, not sold.
+- If you log nothing personal and store no accounts, say so. Be honest and minimal.
+- Security: data encrypted in transit (HTTPS) ✓. Provide a way to request deletion (email).
+
+**Content rating** (questionnaire)
+- Category: Reference/Books. Answer "No" to violence/sexual/gambling/etc. → likely **Everyone**.
+
+**Target audience and content**
+- Target age: **18+** (or 13+) to avoid the stricter Families policy for v1. Do **not** target
+  children. Confirm the app isn't designed for kids.
+
+**Ads**
+- Declare **No, my app does not contain ads** (you're not shipping ads in v1).
+
+**App access**
+- If all features are usable without login (they are), choose **"All functionality is available
+  without special access"**. If anything were gated, you'd provide test credentials here.
+
+**Government apps / Financial / Health:** No to all (no medical/health claims).
+
+**News app:** No.
+
+### Production countries / availability
+- For internal testing, pick the countries where testers live. For later production, select
+  the countries you want to distribute in.
+
+---
+
+## 4) Policy‑safe checklist for v1 (intentionally minimal)
+
+- ✅ No subscriptions / no in‑app purchases yet.
+- ✅ No AI paid limits / paywall (paywall code is inert; `ENFORCE_FREE_LIMIT=false`).
+- ✅ Permissions: INTERNET only. No background location, contacts, SMS, call log.
+- ✅ No medical/health claims. No misleading "free AI" wording in the listing.
+- ✅ Core features shipped: PDF import · read‑aloud (device + natural voice) · OCR fallback ·
+  remembers reading position · font/spacing/speed settings · privacy policy · support contact.
+
+Add payments + AI usage limits **after** this first stable release and after the backend
+billing/rate‑limiting is proven in production.
+
+---
+
+## 5) Quick command reference
+
+```powershell
+# regenerate the rF icon if colors change
+cd ReadFlow/mobile; python scripts/make_icon.py
+
+# build the release .aab for internal testing
+eas build -p android --profile internal
+
+# (optional) submit straight to the Play internal track
+eas submit -p android --profile internal
+```
+
+```powershell
+# backend local smoke test (with app key enforcement enabled)
+cd ReadFlow/backend
+$env:APP_KEY = "your-secret"
+npm run dev
+# then call /api/health and verify protected routes need x-app-key
+```

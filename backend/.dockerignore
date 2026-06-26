@@ -1,0 +1,9 @@
+# .dockerignore — keep the build context small & secrets out of the image
+node_modules
+dist
+.env
+.env.*
+*.log
+npm-debug.log*
+.DS_Store
+_diag_openai.js
