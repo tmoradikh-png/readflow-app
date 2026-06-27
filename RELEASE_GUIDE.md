@@ -13,11 +13,20 @@ PDF text extraction, OCR, AI, and the natural voice **all run on your backend**.
 **You must:**
 1. Deploy `ReadFlow/backend` to a public **HTTPS** URL.
    - Render-ready files are included now: `backend/Dockerfile`, `backend/.dockerignore`,
-     and root-level `render.yaml` (for Blueprint deploys from the ReadFlow repo root).
+  and split Blueprint files:
+  - `render.internal.yaml` for internal testing on Render Free (dev override on)
+  - `render.yaml` for public release (dev override off, production-safe default)
+  - fallback equivalents for parent-repo roots: `backend/render.internal.yaml`, `backend/render.yaml`
    - In Render, create from Blueprint (or manual Docker service) and set secret env vars:
      `OPENAI_API_KEY` and `APP_KEY`.
    - Non-secret env is already documented in `render.yaml` (`AI_PROVIDER`, `OPENAI_MODEL`,
      `TTS_PROVIDER`, `TTS_MODEL`, `TTS_VOICE`, `OCR_ENABLED`, `RATE_*`, etc.).
+   - **IMPORTANT: AI feature enforcement.** See `BACKEND_FEATURE_ENFORCEMENT.md` for complete details.
+     - For internal testing: Use `ENTITLEMENTS_DEV_OVERRIDE=true, DEV_DEFAULT_TIER=ai_pro`
+       (all testers get paid features, no RevenueCat needed).
+     - For public v1: Set `ENTITLEMENTS_DEV_OVERRIDE=false` and `RC_SECRET_KEY` to your RevenueCat 
+       production secret (free users cannot access AI/OCR/TTS).
+
 2. Put the deployed backend URL and app key in `mobile/app.json`:
    - `expo.extra.apiUrl` = `https://<your-render-host>.onrender.com`
    - `expo.extra.appKey` = same value as backend `APP_KEY`
@@ -29,15 +38,28 @@ PDF text extraction, OCR, AI, and the natural voice **all run on your backend**.
 > `extra.apiUrl` (and set `extra.appKey` if APP_KEY is enabled). Fine for testing,
 > not for production.
 
-### Render quick setup
+### Render quick setup (Internal Testing on Free tier)
 1. Push this repo to GitHub (if not already).
 2. Render dashboard → **New +** → **Blueprint** → connect repo.
-3. Confirm service uses `backend/render.yaml` values and builds Docker image.
-4. Add secret env vars in Render service settings:
-  - `OPENAI_API_KEY`: your OpenAI key
-  - `APP_KEY`: random long secret string (same one you put in mobile `extra.appKey`)
-5. Wait for deploy success, then verify:
-  - `GET https://<service>.onrender.com/api/health` returns `{ ok: true, ... }`
+3. Choose `render.internal.yaml` (or `backend/render.internal.yaml` if repo root is parent workspace).
+4. Confirm service builds Docker image and uses Free plan.
+5. Add secret env vars in Render service settings:
+   - `OPENAI_API_KEY`: your OpenAI key
+   - `APP_KEY`: random long secret string (same one you put in mobile `extra.appKey`)
+   - **Do NOT set `RC_SECRET_KEY` yet** (internal testing uses dev override)
+6. Wait for deploy success, then verify:
+   - `GET https://<service>.onrender.com/api/health` returns `{ ok: true, ... }`
+7. Test the enforcement:
+   - Free user (no auth) accessing AI should get 402: `curl -X POST https://<service>.onrender.com/api/ai -H "Content-Type: application/json" -d '{"task":"summary","text":"test","language":"en"}'`
+   - See `BACKEND_FEATURE_ENFORCEMENT.md` for full testing suite.
+
+### Render upgrade for public v1 (Starter/Standard tier)
+Before public release, upgrade the Render plan and disable dev override:
+1. Deploy with `render.yaml` (or `backend/render.yaml` if repo root is parent workspace).
+2. Confirm `ENTITLEMENTS_DEV_OVERRIDE=false`.
+3. Set `RC_SECRET_KEY` to your RevenueCat production secret.
+4. Use Starter or Standard plan for production reliability.
+5. Re-deploy. Now only users with active RevenueCat subscriptions can access AI/OCR/TTS.
 
 ---
 
@@ -149,6 +171,9 @@ billing/rate‑limiting is proven in production.
 ```powershell
 # regenerate the rF icon if colors change
 cd ReadFlow/mobile; python scripts/make_icon.py
+
+# validate public release config before building
+npm run check:release
 
 # build the release .aab for internal testing
 eas build -p android --profile internal

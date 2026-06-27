@@ -12,11 +12,13 @@ import Constants from "expo-constants";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { PDFParser, ParsedPdf } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
+import { EntitlementSnapshot } from "../services/Entitlements";
 import { theme } from "../theme";
 
 interface Props {
   /** Open a freshly parsed document in the reader. */
   onOpen: (doc: ParsedPdf, item: LibraryItem) => void;
+  entitlement: EntitlementSnapshot;
 }
 
 /** Deterministic cover variant from the document id. */
@@ -26,7 +28,7 @@ function coverVariant(id: string): 0 | 1 | 2 | 3 {
   return (h % 4) as 0 | 1 | 2 | 3;
 }
 
-export function LibraryScreen({ onOpen }: Props) {
+export function LibraryScreen({ onOpen, entitlement }: Props) {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -122,7 +124,7 @@ export function LibraryScreen({ onOpen }: Props) {
       {error && <Text style={styles.error}>{error}</Text>}
 
       {items.length === 0 ? (
-        <Empty onAdd={importNew} loading={loading} />
+        <Empty onAdd={importNew} loading={loading} isPaid={Boolean(entitlement.features.ai)} />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -163,7 +165,15 @@ export function LibraryScreen({ onOpen }: Props) {
 
 /* ---------- pieces ---------- */
 
-function Empty({ onAdd, loading }: { onAdd: () => void; loading: boolean }) {
+function Empty({
+  onAdd,
+  loading,
+  isPaid,
+}: {
+  onAdd: () => void;
+  loading: boolean;
+  isPaid: boolean;
+}) {
   return (
     <View style={styles.empty}>
       <View style={styles.emptyCover}>
@@ -174,8 +184,9 @@ function Empty({ onAdd, loading }: { onAdd: () => void; loading: boolean }) {
       </View>
       <Text style={styles.emptyTitle}>Your shelf is empty</Text>
       <Text style={styles.emptyBody}>
-        Add a PDF or Word file. It reflows to fit your screen, reads aloud in a natural voice, and
-        explains anything with AI.
+        {isPaid
+          ? "Add a PDF or Word file. It reflows to fit your screen, reads aloud with natural cloud voice, and explains anything with AI."
+          : "Add a PDF or Word file. Free mode supports local reading, normal PDF text extraction, and device voice. AI, cloud voice, and scanned-PDF OCR are locked for paid plans."}
       </Text>
       <Pressable style={styles.cta} onPress={onAdd} disabled={loading}>
         {loading ? (

@@ -20,6 +20,11 @@ import { LibraryScreen } from "./src/screens/LibraryScreen";
 import { Reader } from "./src/components/Reader";
 import { ParsedPdf } from "./src/services/PDFParser";
 import { Library, LibraryItem } from "./src/services/Library";
+import {
+  EntitlementSnapshot,
+  FREE_ENTITLEMENT,
+  fetchEntitlement,
+} from "./src/services/Entitlements";
 import { theme } from "./src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -27,6 +32,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 export default function App() {
   const [doc, setDoc] = useState<ParsedPdf | null>(null);
   const [item, setItem] = useState<LibraryItem | null>(null);
+  const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(FREE_ENTITLEMENT);
 
   const [fontsLoaded] = useFonts({
     Spectral_400Regular,
@@ -42,6 +48,10 @@ export default function App() {
   useEffect(() => {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    fetchEntitlement().then(setEntitlement).catch(() => {});
+  }, []);
 
   const openDoc = useCallback((d: ParsedPdf, it: LibraryItem) => {
     setItem(it);
@@ -69,6 +79,7 @@ export default function App() {
         {doc ? (
           <Reader
             doc={doc}
+            entitlement={entitlement}
             language="en-US"
             freePageLimit={10}
             startSentenceId={item?.lastSentenceId ?? 0}
@@ -79,7 +90,7 @@ export default function App() {
             }}
           />
         ) : (
-          <LibraryScreen onOpen={openDoc} />
+          <LibraryScreen onOpen={openDoc} entitlement={entitlement} />
         )}
       </View>
     </SafeAreaProvider>

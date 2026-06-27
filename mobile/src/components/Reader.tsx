@@ -19,10 +19,12 @@ import { createTTSProvider } from "../services/tts";
 import { Controls, ReadingSettings } from "./Controls";
 import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
+import { EntitlementSnapshot } from "../services/Entitlements";
 import { theme } from "../theme";
 
 interface Props {
   doc: ParsedPdf;
+  entitlement: EntitlementSnapshot;
   language?: string; // BCP-47, e.g. "en-US"
   /** Pages readable for free before the subscribe gate. */
   freePageLimit?: number;
@@ -37,6 +39,7 @@ const ENFORCE_FREE_LIMIT = false;
 
 export function Reader({
   doc,
+  entitlement,
   language = "en-US",
   freePageLimit = 10,
   startSentenceId = 0,
@@ -64,10 +67,18 @@ export function Reader({
   const [immersive, setImmersive] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [voiceMode, setVoiceMode] = useState<"natural" | "device">("natural");
+  const [voiceMode, setVoiceMode] = useState<"natural" | "device">("device");
+  const [paywallTitle, setPaywallTitle] = useState("Paid feature");
+  const [paywallBody, setPaywallBody] = useState(
+    "This feature is available on paid plans. Free users can continue with local reading and device voice."
+  );
   const [controlsOpen, setControlsOpen] = useState(false);
+
+  const canUseAI = Boolean(entitlement.features.ai);
+  const canUseOcr = Boolean(entitlement.features.ocr);
+  // TTS route is currently gated by the backend AI feature.
+  const canUseCloudVoice = canUseAI;
 
   const insets = useSafeAreaInsets();
   const ttsRef = useRef(createTTSProvider(voiceMode === "natural" ? "cloud" : "device"));
@@ -78,7 +89,6 @@ export function Reader({
   const currentIdRef = useRef<number | null>(null);
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
-  const subscribedRef = useRef(false);
   const settingsRef = useRef(settings);
   // Stable tap handler so memoized rows never re-render on scroll/highlight.
   const onTapWordRef = useRef<(id: number, offset: number) => void>(() => {});
@@ -96,11 +106,22 @@ export function Reader({
   const langCode = language.split("-")[0];
 
   useEffect(() => {
-    subscribedRef.current = subscribed;
-  }, [subscribed]);
-  useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+    useEffect(() => {
+      if (canUseCloudVoice || voiceMode !== "natural") return;
+      epochRef.current++;
+      ttsRef.current.stop();
+      ttsRef.current = createTTSProvider("device");
+      setVoiceMode("device");
+    }, [canUseCloudVoice, voiceMode]);
+
+    function openFeatureLock(title: string, body: string) {
+      setPaywallTitle(title);
+      setPaywallBody(body);
+      setShowPaywall(true);
+    }
+
   useEffect(() => {
     return () => {
       ttsRef.current.stop();
@@ -156,13 +177,14 @@ export function Reader({
   }
   function freeCap(): number {
     if (!ENFORCE_FREE_LIMIT) return totalPages;
-    return subscribedRef.current ? totalPages : Math.min(totalPages, freePageLimit);
+    return Math.min(totalPages, freePageLimit);
   }
 
   // Fetch OCR for pages near `page` that still need it, then merge the text in.
   // While playing we only OCR pages AHEAD of the current one so sentence indices
   // for already-read content stay stable (keeps the highlight in sync).
   async function ensureOcrAround(page: number) {
+    if (!canUseOcr) return;
     const token = doc.docToken;
     if (!token || ocrBusyRef.current || pendingOcrRef.current.size === 0) return;
 
@@ -259,7 +281,10 @@ export function Reader({
       saveLastRead();
       playingRef.current = false;
       setIsPlaying(false);
-      if (!subscribedRef.current) setShowPaywall(true);
+      openFeatureLock(
+        "Page limit reached",
+        `You've reached the free reading limit (${freePageLimit} pages). Upgrade to continue reading this document.`
+      );
       return;
     }
 
@@ -323,6 +348,13 @@ export function Reader({
   }
 
   function toggleVoice() {
+    if (voiceMode === "device" && !canUseCloudVoice) {
+      openFeatureLock(
+        "Cloud voice is paid",
+        "Natural cloud voice requires a paid plan. Free users can continue with device voice."
+      );
+      return;
+    }
     const next = voiceMode === "natural" ? "device" : "natural";
     epochRef.current++;
     ttsRef.current.stop();
@@ -365,7 +397,10 @@ export function Reader({
     const s = flat[globalId];
     if (!s) return;
     if (s.page > freeCap()) {
-      setShowPaywall(true);
+      openFeatureLock(
+        "Page limit reached",
+        `You've reached the free reading limit (${freePageLimit} pages). Upgrade to continue reading this document.`
+      );
       return;
     }
     epochRef.current++;
@@ -414,9 +449,11 @@ export function Reader({
     return (
       <View style={styles.center}>
         <Text style={styles.dim}>No readable text found.</Text>
-        {doc.scanned && (
+        {doc.needsPaidOcr ? (
+          <Text style={styles.dim}>This document needs OCR, which is available on paid plans.</Text>
+        ) : doc.scanned ? (
           <Text style={styles.dim}>This looks like a scanned PDF. OCR is coming soon.</Text>
-        )}
+        ) : null}
         <Pressable style={styles.backBtn} onPress={handleBack}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
@@ -497,6 +534,13 @@ export function Reader({
               </Text>
             </Pressable>
           </View>
+          {doc.needsPaidOcr && !canUseOcr ? (
+            <View style={styles.lockBanner}>
+              <Text style={styles.lockBannerText}>
+                Scanned-PDF OCR is locked on Free. Upgrade to Reader Plus or AI Pro.
+              </Text>
+            </View>
+          ) : null}
         </>
       )}
 
@@ -529,9 +573,23 @@ export function Reader({
       />
 
       {/* AI launcher (compact) */}
-      <Pressable style={[styles.aiFab, { bottom: fabBottom }]} onPress={() => setShowAI(true)}>
-        <Text style={styles.aiFabText}>✨ AI</Text>
-      </Pressable>
+      {canUseAI ? (
+        <Pressable style={[styles.aiFab, { bottom: fabBottom }]} onPress={() => setShowAI(true)}>
+          <Text style={styles.aiFabText}>AI</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          style={[styles.aiFab, styles.aiFabLocked, { bottom: fabBottom }]}
+          onPress={() =>
+            openFeatureLock(
+              "AI is paid",
+              "Summaries, explanations, and Q&A are available on AI Pro and higher."
+            )
+          }
+        >
+          <Text style={[styles.aiFabText, styles.aiFabTextLocked]}>AI Pro</Text>
+        </Pressable>
+      )}
 
       {/* controls */}
       <Controls
@@ -542,6 +600,13 @@ export function Reader({
         onStop={stop}
         voiceMode={voiceMode}
         onToggleVoice={toggleVoice}
+        canUseCloudVoice={canUseCloudVoice}
+        onCloudVoiceLocked={() =>
+          openFeatureLock(
+            "Cloud voice is paid",
+            "Natural cloud voice requires a paid plan. Free users can continue with device voice."
+          )
+        }
         expanded={controlsOpen}
         onToggleExpand={() => setControlsOpen((v) => !v)}
         bottomInset={insets.bottom}
@@ -576,19 +641,13 @@ export function Reader({
       {showPaywall && (
         <View style={styles.paywall}>
           <View style={styles.paywallCard}>
-            <Text style={styles.paywallTitle}>Keep reading with ReadFlow Premium</Text>
-            <Text style={styles.paywallBody}>
-              You've reached the free limit ({freePageLimit} pages). Subscribe to read unlimited
-              pages with natural AI voice and AI explanations.
-            </Text>
+            <Text style={styles.paywallTitle}>{paywallTitle}</Text>
+            <Text style={styles.paywallBody}>{paywallBody}</Text>
             <Pressable
               style={styles.paywallBtn}
-              onPress={() => {
-                setSubscribed(true);
-                setShowPaywall(false);
-              }}
+              onPress={() => setShowPaywall(false)}
             >
-              <Text style={styles.paywallBtnText}>Unlock (test)</Text>
+              <Text style={styles.paywallBtnText}>OK</Text>
             </Pressable>
             <Pressable onPress={() => setShowPaywall(false)}>
               <Text style={styles.paywallDismiss}>Not now</Text>
@@ -679,6 +738,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
+  lockBanner: {
+    marginHorizontal: theme.spacing(3),
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius,
+    paddingHorizontal: theme.spacing(1.2),
+    paddingVertical: theme.spacing(0.9),
+  },
+  lockBannerText: {
+    color: theme.colors.textDim,
+    fontSize: 12,
+    fontFamily: theme.fonts.sans,
+  },
   pageNavBtn: { color: theme.colors.accent, fontSize: 14, fontFamily: theme.fonts.sansSemiBold },
   reader: { flex: 1 },
   readerContent: { padding: theme.spacing(3), paddingBottom: theme.spacing(14) },
@@ -715,6 +790,14 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   aiFabText: { color: theme.colors.onAccent, fontFamily: theme.fonts.sansSemiBold },
+  aiFabLocked: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  aiFabTextLocked: {
+    color: theme.colors.text,
+  },
   backBtn: {
     marginTop: 12,
     backgroundColor: theme.colors.surfaceAlt,

@@ -17,6 +17,8 @@ interface Props {
   onStop: () => void;
   voiceMode: "natural" | "device";
   onToggleVoice: () => void;
+  canUseCloudVoice: boolean;
+  onCloudVoiceLocked?: () => void;
   /** Whether the full settings (voice, font, spacing, speed) are shown. */
   expanded: boolean;
   onToggleExpand: () => void;
@@ -32,6 +34,8 @@ export function Controls({
   onStop,
   voiceMode,
   onToggleVoice,
+  canUseCloudVoice,
+  onCloudVoiceLocked,
   expanded,
   onToggleExpand,
   bottomInset = 0,
@@ -48,18 +52,42 @@ export function Controls({
         <>
           <View style={styles.row}>
             <Text style={styles.label}>Voice</Text>
-            <Pressable style={styles.segment} onPress={onToggleVoice}>
-              <View style={[styles.segOption, voiceMode === "natural" && styles.segOptionOn]}>
-                <Text style={[styles.segText, voiceMode === "natural" && styles.segTextOn]}>
-                  ✨ Natural
+            <View style={styles.segment}>
+              <Pressable
+                style={[
+                  styles.segOption,
+                  voiceMode === "natural" && styles.segOptionOn,
+                  !canUseCloudVoice && styles.segOptionLocked,
+                ]}
+                onPress={() => {
+                  if (canUseCloudVoice) {
+                    if (voiceMode !== "natural") onToggleVoice();
+                    return;
+                  }
+                  onCloudVoiceLocked?.();
+                }}
+              >
+                <Text
+                  style={[
+                    styles.segText,
+                    voiceMode === "natural" && styles.segTextOn,
+                    !canUseCloudVoice && styles.segTextLocked,
+                  ]}
+                >
+                  {canUseCloudVoice ? "Natural" : "Natural (Pro)"}
                 </Text>
-              </View>
-              <View style={[styles.segOption, voiceMode === "device" && styles.segOptionOn]}>
+              </Pressable>
+              <Pressable
+                style={[styles.segOption, voiceMode === "device" && styles.segOptionOn]}
+                onPress={() => {
+                  if (voiceMode !== "device") onToggleVoice();
+                }}
+              >
                 <Text style={[styles.segText, voiceMode === "device" && styles.segTextOn]}>
                   Device
                 </Text>
-              </View>
-            </Pressable>
+              </Pressable>
+            </View>
           </View>
 
           <View style={styles.row}>
@@ -176,6 +204,12 @@ const styles = StyleSheet.create({
   segOptionOn: { backgroundColor: theme.colors.accent },
   segText: { color: theme.colors.textDim, fontSize: 13, fontWeight: "600" },
   segTextOn: { color: theme.colors.onAccent },
+  segOptionLocked: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  segTextLocked: { color: theme.colors.textDim },
   stepper: {
     flexDirection: "row",
     alignItems: "center",

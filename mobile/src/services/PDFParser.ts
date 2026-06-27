@@ -28,6 +28,8 @@ export interface ParsedPdf {
   docToken?: string;
   /** Page numbers still needing OCR (fetched lazily as the reader views them). */
   pendingOcr?: number[];
+  /** True when the backend detected scanned content that requires paid OCR. */
+  needsPaidOcr?: boolean;
 }
 
 const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -97,6 +99,7 @@ export const PDFParser = {
       mimeType: args.mimeType,
       docToken: typeof data.docToken === "string" ? data.docToken : undefined,
       pendingOcr: Array.isArray(data.pendingOcr) ? data.pendingOcr : [],
+      needsPaidOcr: Boolean(data.needsPaidOcr),
     };
   },
 

@@ -8,15 +8,28 @@
 # In Render: New + -> Blueprint -> pick your repo. It reads this file, builds the
 # Docker image, and gives you an HTTPS URL like https://readflow-backend.onrender.com
 #
-# Set the secret env vars (OPENAI_API_KEY, APP_KEY) in the dashboard or when
-# prompted (they are marked `sync: false` so they are never stored in git).
+# FEATURE ENFORCEMENT:
+#   AI access is gated by subscription tier (free tier cannot access /api/ai or /api/tts).
+#
+# This default file is PUBLIC-RELEASE SAFE:
+#   - ENTITLEMENTS_DEV_OVERRIDE is disabled
+#   - plan is starter (upgrade to standard if needed)
+#
+# For internal testing on Render Free, use backend/render.internal.yaml instead.
+#
+# Set the secret env vars in the Render dashboard (they are marked `sync: false`
+# so they are never stored in git):
+#   - OPENAI_API_KEY: Your OpenAI API key
+#   - APP_KEY: Random secret the mobile app must send (x-app-key)
+#   - RC_SECRET_KEY: RevenueCat production secret (for public release)
+#
 services:
   - type: web
     name: readflow-backend
     runtime: docker
     rootDir: ReadFlow/backend
     dockerfilePath: ./Dockerfile
-    plan: starter # "free" also works but cold-starts after inactivity
+    plan: starter
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
@@ -25,7 +38,9 @@ services:
       # --- secrets: set these in the Render dashboard (sync:false = not in git) ---
       - key: OPENAI_API_KEY
         sync: false
-      - key: APP_KEY # shared key the mobile app must send (x-app-key). Generate a random string.
+      - key: APP_KEY
+        sync: false
+      - key: RC_SECRET_KEY
         sync: false
       # --- AI / voice config ---
       - key: AI_PROVIDER
@@ -45,11 +60,13 @@ services:
         value: eng
       - key: OCR_EAGER_PAGES
         value: "4"
-      # --- entitlements (free v1: everyone gets the standard features) ---
+      # --- entitlements (public-safe default) ---
       - key: ENTITLEMENTS_DEV_OVERRIDE
-        value: "true"
+        value: "false"
       - key: DEV_DEFAULT_TIER
-        value: ai_pro
+        value: free
+      - key: ENTITLEMENTS_CACHE_MS
+        value: "60000"
       # --- rate limits (protect the wallet) ---
       - key: RATE_EXTRACT_PER_MIN
         value: "12"

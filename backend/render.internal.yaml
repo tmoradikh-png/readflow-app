@@ -1,22 +1,19 @@
-# Render Blueprint for the ReadFlow repo root.
-# If your connected Git repo root is ReadFlow/, use this file directly.
+# Render Blueprint for INTERNAL TESTING only.
 #
-# FEATURE ENFORCEMENT: AI access is gated by tier (free tier cannot access /api/ai or /api/tts).
-# This is enforced on the backend via RevenueCat integration (production) or dev override (testing).
+# If your Render-connected repo root is the parent workspace, keep:
+#   rootDir: ReadFlow/backend
+# If your repo root is ReadFlow itself, use the top-level render.internal.yaml.
 #
-# This default file is PUBLIC-RELEASE SAFE:
-#   - ENTITLEMENTS_DEV_OVERRIDE is disabled
-#   - plan is starter (upgrade to standard if needed)
-#
-# For internal testing on Render Free, use render.internal.yaml instead.
+# WARNING: Do not use this for public release.
+# It enables ENTITLEMENTS_DEV_OVERRIDE=true, so everyone is treated as paid.
 
 services:
   - type: web
-    name: readflow-backend
+    name: readflow-backend-internal
     runtime: docker
-    rootDir: backend
+    rootDir: ReadFlow/backend
     dockerfilePath: ./Dockerfile
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
@@ -24,9 +21,9 @@ services:
         value: production
       - key: OPENAI_API_KEY
         sync: false
-      - key: RC_SECRET_KEY
-        sync: false
       - key: APP_KEY
+        sync: false
+      - key: RC_SECRET_KEY
         sync: false
       - key: AI_PROVIDER
         value: openai
@@ -45,9 +42,11 @@ services:
       - key: OCR_EAGER_PAGES
         value: "4"
       - key: ENTITLEMENTS_DEV_OVERRIDE
-        value: "false"
+        value: "true"
       - key: DEV_DEFAULT_TIER
-        value: free
+        value: ai_pro
+      - key: ENTITLEMENTS_CACHE_MS
+        value: "60000"
       - key: RATE_EXTRACT_PER_MIN
         value: "12"
       - key: RATE_AI_PER_MIN
