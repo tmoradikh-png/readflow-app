@@ -13,8 +13,8 @@ import {
 import Constants from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
-import { ParsedPdf, PdfPage, PDFParser } from "../services/PDFParser";
-import { DocCache } from "../services/DocCache";
+import { ParsedPdf, PdfPage } from "../services/PDFParser";
+import { OcrLoader, OcrProgress } from "../services/OcrLoader";
 import { Sentence, TextReflow } from "../services/TextReflow";
 import { Bookmark, Bookmarks } from "../services/Bookmarks";
 import { createTTSProvider } from "../services/tts";
@@ -97,22 +97,22 @@ export function Reader({
   const tapHandler = useRef((id: number, offset: number) => onTapWordRef.current(id, offset))
     .current;
 
-  // ----- background OCR (so big scanned docs open fast, then fill in fully) -----
-  const pendingOcrRef = useRef<Set<number>>(new Set(doc.pendingOcr ?? []));
+  // ----- background OCR (global engine: keeps loading across book/app switches) -----
   const currentPageRef = useRef(1); // page currently in view (drives OCR priority)
-  const prioritizePageRef = useRef<number | null>(null); // page to OCR next
   const pendingJumpRef = useRef<number | null>(null); // page to jump to once loaded
   const ocrOfflineRef = useRef(false); // background OCR paused because we're offline
   const anchorRef = useRef<{ page: number; within: number } | null>(null);
-  const [ocrNote, setOcrNote] = useState<string | null>(null);
+  // Always-current view of the sentence list so TTS callbacks never read stale data.
+  const flatRef = useRef<Sentence[]>([]);
+  const docRef = useRef(doc); // current doc for stable callbacks
+  docRef.current = doc;
+  const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [loadingPageMsg, setLoadingPageMsg] = useState<string | null>(null);
   useEffect(() => {
-    pendingOcrRef.current = new Set(doc.pendingOcr ?? []);
     ocrOfflineRef.current = false;
-    prioritizePageRef.current = null;
     pendingJumpRef.current = null;
     anchorRef.current = null;
-    setOcrNote(null);
+    setOcrProgress(null);
     setLoadingPageMsg(null);
   }, [doc]);
 
@@ -182,112 +182,82 @@ export function Reader({
   }, [doc]);
 
   // ----- helpers -----
+  // Keep a live, render-independent copy of the sentence list. TTS onDone/onError
+  // callbacks fire asynchronously and would otherwise close over a STALE `flat`
+  // (the OCR engine rebuilds it as pages fill in), which is what made the voice
+  // and the highlight drift a few lines apart. Reading from flatRef fixes that.
+  flatRef.current = flat;
+
   function setCurrent(id: number | null) {
     currentIdRef.current = id;
     setCurrentId(id);
-    if (id != null && flat[id]) {
-      const pg = flat[id].page;
+    const f = flatRef.current;
+    if (id != null && f[id]) {
+      const pg = f[id].page;
       setCurrentPage(pg);
       currentPageRef.current = pg;
       // Remember WHICH sentence (page + position within page) is active so the
       // highlight can re-anchor if OCR later inserts pages and shifts indices.
-      const within = flat.filter((s) => s.page === pg).findIndex((s) => s.id === id);
+      const within = f.filter((s) => s.page === pg).findIndex((s) => s.id === id);
       anchorRef.current = { page: pg, within: Math.max(0, within) };
     }
   }
   function currentSentence(): Sentence | undefined {
+    const f = flatRef.current;
     const id = currentIdRef.current ?? indexRef.current;
-    return flat[id];
+    return f[id];
+  }
+  // Resolve the index of the currently-anchored sentence in the LATEST flat list.
+  // Used to advance playback so an OCR-driven index shift can never skip/repeat.
+  function resolveAnchorIndex(): number {
+    const a = anchorRef.current;
+    const f = flatRef.current;
+    if (!a) return indexRef.current;
+    const onPage = f.filter((s) => s.page === a.page);
+    if (onPage.length === 0) return indexRef.current;
+    const target = onPage[Math.min(a.within, onPage.length - 1)];
+    return target ? target.id : indexRef.current;
   }
   function freeCap(): number {
     if (!ENFORCE_FREE_LIMIT) return totalPages;
     return Math.min(totalPages, freePageLimit);
   }
 
-  // Merge freshly OCR'd pages into the page list (kept sorted by page number).
-  function mergeOcrPages(improved: { page: number; text: string; confidence?: number }[]) {
-    setPages((prev) => {
-      const map = new Map(prev.map((p) => [p.page, p] as const));
-      for (const r of improved) {
-        const existing = map.get(r.page);
-        if (!existing || r.text.length > existing.text.length) {
-          map.set(r.page, { page: r.page, text: r.text, source: "ocr", confidence: r.confidence });
-        }
-      }
-      return Array.from(map.values()).sort((a, b) => a.page - b.page);
-    });
-  }
-
-  // Continuously OCR every pending scanned page in the background, prioritised by
-  // whatever page you're looking at / jumping to, so pages keep loading as you
-  // scroll and never stall. Pauses cleanly (with a note) if the network drops.
+  // Subscribe to the GLOBAL background OCR engine. Starting it here registers the
+  // job once; it then keeps loading even if we leave for another book or the
+  // Library, and resumes automatically when the app returns to the foreground.
   useEffect(() => {
-    if (!canUseOcr || !doc.docToken || pendingOcrRef.current.size === 0) return;
-    const token = doc.docToken;
-    let cancelled = false;
-
-    (async () => {
-      await new Promise((r) => setTimeout(r, 300)); // let the first paint settle
-      while (!cancelled && pendingOcrRef.current.size > 0) {
-        const focus = prioritizePageRef.current ?? currentPageRef.current ?? 1;
-        const want = [...pendingOcrRef.current]
-          .sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus) || a - b)
-          .slice(0, 4);
-
-        let results;
-        try {
-          results = await PDFParser.ocrPages(token, want);
-        } catch {
-          // Likely offline — pause the loop and tell the reader why.
-          ocrOfflineRef.current = true;
-          if (!cancelled)
-            setOcrNote("You're offline — scanned pages will finish loading when you reconnect.");
-          break;
-        }
-        if (cancelled) break;
-
-        for (const p of want) pendingOcrRef.current.delete(p);
-        const improved = (results || []).filter((r) => r.text && r.text.trim().length > 0);
-        if (improved.length > 0) mergeOcrPages(improved);
-        if (
-          prioritizePageRef.current != null &&
-          !pendingOcrRef.current.has(prioritizePageRef.current)
-        ) {
-          prioritizePageRef.current = null;
-        }
-        await new Promise((r) => setTimeout(r, 120)); // be gentle on the backend
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+    if (!canUseOcr || !doc.docToken || (doc.pendingOcr?.length ?? 0) === 0) return;
+    OcrLoader.start({
+      docId: doc.docId,
+      token: doc.docToken,
+      pages: doc.pages,
+      pending: doc.pendingOcr ?? [],
+    });
+    const unsub = OcrLoader.subscribe(doc.docId, (nextPages, progress) => {
+      setPages(nextPages);
+      setOcrProgress(progress);
+      ocrOfflineRef.current = progress.offline;
+    });
+    return unsub; // unsubscribe on unmount; the job keeps running in the background
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, canUseOcr]);
 
-  // Persist merged OCR text so the book becomes fully available offline.
-  useEffect(() => {
-    if (!doc.docToken) return; // cache-only docs are already saved
-    const t = setTimeout(() => {
-      DocCache.update(doc.docId, pages, [...pendingOcrRef.current]).catch(() => {});
-    }, 800);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pages]);
-
-  // Re-anchor the highlight after OCR inserts pages (so it stays on the same
-  // sentence even though array indices shifted). Never moves the cursor while the
-  // voice is actively reading.
+  // Re-anchor the highlight + reading index after OCR inserts pages so they stay
+  // glued to the SAME sentence even though array indices shifted. Runs during
+  // playback too (the spoken page is already OCR'd, so its sentences are stable).
   useEffect(() => {
     const a = anchorRef.current;
-    if (!a || playingRef.current) return;
+    if (!a) return;
     const onPage = flat.filter((s) => s.page === a.page);
     if (onPage.length === 0) return;
     const target = onPage[Math.min(a.within, onPage.length - 1)];
-    if (target && target.id !== currentIdRef.current) {
-      currentIdRef.current = target.id;
+    if (target) {
       indexRef.current = target.id;
-      setCurrentId(target.id);
+      if (target.id !== currentIdRef.current) {
+        currentIdRef.current = target.id;
+        setCurrentId(target.id);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flat]);
@@ -308,7 +278,7 @@ export function Reader({
 
   // ----- scrolling / follow (FlatList) -----
   function scrollToIndexSafe(index: number, animated: boolean) {
-    if (index < 0 || index >= flat.length) return;
+    if (index < 0 || index >= flatRef.current.length) return;
     try {
       listRef.current?.scrollToIndex({ index, viewPosition: 0.25, animated });
     } catch {
@@ -331,8 +301,9 @@ export function Reader({
       const p = (first.item as Sentence).page;
       setCurrentPage(p);
       currentPageRef.current = p;
-      // Bias background OCR toward what's on screen so scrolling keeps loading.
-      prioritizePageRef.current = p;
+      // Bias the background OCR engine toward what's on screen so scrolling keeps
+      // loading the pages just ahead of you.
+      OcrLoader.setPriority(docRef.current.docId, p);
     }
   }).current;
 
@@ -347,11 +318,12 @@ export function Reader({
   // ----- playback -----
   function speakAt(i: number) {
     const myEpoch = ++epochRef.current; // any earlier utterance's callback is now stale
-    if (i < 0 || i >= flat.length) {
+    const f = flatRef.current;
+    if (i < 0 || i >= f.length) {
       reachedEnd();
       return;
     }
-    const s = flat[i];
+    const s = f[i];
     if (s.page > freeCap()) {
       saveLastRead();
       playingRef.current = false;
@@ -372,22 +344,24 @@ export function Reader({
     const text = offset > 0 ? s.text.slice(offset) : s.text;
 
     // Warm the next sentence's audio so the natural voice has no gap.
-    const next = flat[i + 1];
+    const next = f[i + 1];
     if (next && next.page <= freeCap()) {
       ttsRef.current.prefetch?.(next.text, { language, rate: settingsRef.current.speed }).catch(
         () => {}
       );
     }
 
+    // Advance from the ANCHORED position (re-resolved against the latest list) so
+    // an OCR-driven index shift can never desync the voice from the highlight.
+    const advance = () => {
+      if (playingRef.current && myEpoch === epochRef.current) speakAt(resolveAnchorIndex() + 1);
+    };
+
     ttsRef.current.speak(text, {
       language,
       rate: settingsRef.current.speed,
-      onDone: () => {
-        if (playingRef.current && myEpoch === epochRef.current) speakAt(i + 1);
-      },
-      onError: () => {
-        if (playingRef.current && myEpoch === epochRef.current) speakAt(i + 1);
-      },
+      onDone: advance,
+      onError: advance,
     });
   }
 
@@ -476,7 +450,7 @@ export function Reader({
       return;
     }
     // Online + paid: prioritise OCR for this page and jump as soon as it loads.
-    prioritizePageRef.current = p;
+    OcrLoader.setPriority(doc.docId, p);
     pendingJumpRef.current = p;
     setLoadingPageMsg(`Loading page ${p}…`);
   }
@@ -657,9 +631,22 @@ export function Reader({
               <ActivityIndicator color={theme.colors.accent} size="small" />
               <Text style={styles.loadingBannerText}>{loadingPageMsg}</Text>
             </View>
-          ) : ocrNote ? (
-            <View style={styles.noteBanner}>
-              <Text style={styles.noteBannerText}>{ocrNote}</Text>
+          ) : ocrProgress && !ocrProgress.complete ? (
+            <View style={styles.progressWrap}>
+              <Text style={styles.progressLabel}>
+                {ocrProgress.offline
+                  ? "Paused — you're offline. Pages will finish loading when you reconnect."
+                  : `Loading pages… ${ocrProgress.percent}%  (${ocrProgress.done}/${ocrProgress.total})`}
+              </Text>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${Math.max(2, ocrProgress.percent)}%` },
+                    ocrProgress.offline && styles.progressFillOffline,
+                  ]}
+                />
+              </View>
             </View>
           ) : null}
         </>
@@ -909,6 +896,37 @@ const styles = StyleSheet.create({
     color: theme.colors.textDim,
     fontSize: 12,
     fontFamily: theme.fonts.sans,
+  },
+  progressWrap: {
+    marginHorizontal: theme.spacing(3),
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius,
+    paddingHorizontal: theme.spacing(1.2),
+    paddingVertical: theme.spacing(0.9),
+    gap: 6,
+  },
+  progressLabel: {
+    color: theme.colors.textDim,
+    fontSize: 12,
+    fontFamily: theme.fonts.sansMedium,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+    backgroundColor: theme.colors.accent,
+  },
+  progressFillOffline: {
+    backgroundColor: theme.colors.textMute,
   },
   pageNavBtn: { color: theme.colors.accent, fontSize: 14, fontFamily: theme.fonts.sansSemiBold },
   reader: { flex: 1 },
