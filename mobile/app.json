@@ -29,7 +29,12 @@
       "package": "com.urmiaworks.readflow",
       "versionCode": 1,
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -55,11 +60,14 @@
       "expo-audio"
     ],
     "extra": {
-      "apiUrl": "",
-      "appKey": "",
+      "apiUrl": "https://readflow-backend-internal.onrender.com",
+      "appKey": "8bdafe087ef5b82bdc6790a2b9d62d29",
       "supportEmail": "support@urmiaworks.com",
       "website": "https://urmiaworks.com",
-      "privacyPolicy": "https://urmiaworks.com/readflow/privacy"
+      "privacyPolicy": "https://urmiaworks.com/readflow/privacy",
+      "eas": {
+        "projectId": "097b0b5a-db90-46b4-b434-60836687b429"
+      }
     }
   }
 }

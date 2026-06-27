@@ -19,14 +19,12 @@
     },
     "internal": {
       "autoIncrement": false,
-      "channel": "internal",
       "android": {
         "buildType": "app-bundle"
       }
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       }
