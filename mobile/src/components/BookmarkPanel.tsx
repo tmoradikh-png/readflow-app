@@ -7,6 +7,7 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Keyboard,
 } from "react-native";
 import { Bookmark, Bookmarks } from "../services/Bookmarks";
 import { theme } from "../theme";
@@ -40,6 +41,19 @@ export function BookmarkPanel({
   const [items, setItems] = useState<Bookmark[]>([]);
   const [tag, setTag] = useState("");
   const [pageInput, setPageInput] = useState("");
+  // Lift the sheet above the on-screen keyboard so the input stays visible.
+  const [kb, setKb] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", (e) =>
+      setKb(e.endCoordinates?.height ?? 0)
+    );
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKb(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
 
   async function refresh() {
     setItems(await Bookmarks.list(docId));
@@ -79,7 +93,7 @@ export function BookmarkPanel({
   }
 
   return (
-    <View style={styles.panel}>
+    <View style={[styles.panel, { bottom: kb }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Bookmarks & navigation</Text>
         <Pressable onPress={onClose} hitSlop={10}>

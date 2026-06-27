@@ -128,3 +128,17 @@ async function safeError(res: Response): Promise<string> {
     return `Upload failed (${res.status})`;
   }
 }
+
+/**
+ * True when an error looks like a lost/absent network connection (airplane
+ * mode, no Wi-Fi) rather than a server response. `fetch` throws a TypeError
+ * ("Network request failed") in that case, so callers can fall back to the
+ * offline cache instead of showing a scary error.
+ */
+export function isNetworkError(e: unknown): boolean {
+  const msg = (e as any)?.message ? String((e as any).message) : "";
+  return (
+    e instanceof TypeError ||
+    /network request failed|network error|failed to fetch|timeout|timed out/i.test(msg)
+  );
+}

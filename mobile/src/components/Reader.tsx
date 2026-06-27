@@ -8,11 +8,13 @@ import {
   ViewToken,
   ListRenderItemInfo,
   BackHandler,
+  ActivityIndicator,
 } from "react-native";
 import Constants from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { ParsedPdf, PdfPage, PDFParser } from "../services/PDFParser";
+import { DocCache } from "../services/DocCache";
 import { Sentence, TextReflow } from "../services/TextReflow";
 import { Bookmark, Bookmarks } from "../services/Bookmarks";
 import { createTTSProvider } from "../services/tts";
@@ -95,12 +97,23 @@ export function Reader({
   const tapHandler = useRef((id: number, offset: number) => onTapWordRef.current(id, offset))
     .current;
 
-  // ----- on-demand OCR (so big scanned docs open fast) -----
+  // ----- background OCR (so big scanned docs open fast, then fill in fully) -----
   const pendingOcrRef = useRef<Set<number>>(new Set(doc.pendingOcr ?? []));
-  const ocrBusyRef = useRef(false);
-  const ensureOcrRef = useRef<(page: number) => void>(() => {});
+  const currentPageRef = useRef(1); // page currently in view (drives OCR priority)
+  const prioritizePageRef = useRef<number | null>(null); // page to OCR next
+  const pendingJumpRef = useRef<number | null>(null); // page to jump to once loaded
+  const ocrOfflineRef = useRef(false); // background OCR paused because we're offline
+  const anchorRef = useRef<{ page: number; within: number } | null>(null);
+  const [ocrNote, setOcrNote] = useState<string | null>(null);
+  const [loadingPageMsg, setLoadingPageMsg] = useState<string | null>(null);
   useEffect(() => {
     pendingOcrRef.current = new Set(doc.pendingOcr ?? []);
+    ocrOfflineRef.current = false;
+    prioritizePageRef.current = null;
+    pendingJumpRef.current = null;
+    anchorRef.current = null;
+    setOcrNote(null);
+    setLoadingPageMsg(null);
   }, [doc]);
 
   const langCode = language.split("-")[0];
@@ -124,6 +137,9 @@ export function Reader({
 
   useEffect(() => {
     return () => {
+      // Hard-stop on unmount so the voice never keeps reading after you leave.
+      epochRef.current++;
+      playingRef.current = false;
       ttsRef.current.stop();
     };
   }, []);
@@ -169,7 +185,15 @@ export function Reader({
   function setCurrent(id: number | null) {
     currentIdRef.current = id;
     setCurrentId(id);
-    if (id != null && flat[id]) setCurrentPage(flat[id].page);
+    if (id != null && flat[id]) {
+      const pg = flat[id].page;
+      setCurrentPage(pg);
+      currentPageRef.current = pg;
+      // Remember WHICH sentence (page + position within page) is active so the
+      // highlight can re-anchor if OCR later inserts pages and shifts indices.
+      const within = flat.filter((s) => s.page === pg).findIndex((s) => s.id === id);
+      anchorRef.current = { page: pg, within: Math.max(0, within) };
+    }
   }
   function currentSentence(): Sentence | undefined {
     const id = currentIdRef.current ?? indexRef.current;
@@ -180,57 +204,106 @@ export function Reader({
     return Math.min(totalPages, freePageLimit);
   }
 
-  // Fetch OCR for pages near `page` that still need it, then merge the text in.
-  // While playing we only OCR pages AHEAD of the current one so sentence indices
-  // for already-read content stay stable (keeps the highlight in sync).
-  async function ensureOcrAround(page: number) {
-    if (!canUseOcr) return;
-    const token = doc.docToken;
-    if (!token || ocrBusyRef.current || pendingOcrRef.current.size === 0) return;
-
-    const LOOKAHEAD = 6;
-    const curPage = currentSentence()?.page ?? page;
-    const lowerBound = playingRef.current ? curPage + 1 : Math.max(1, page - 1);
-    const batch: number[] = [];
-    for (const p of pendingOcrRef.current) {
-      if (p >= lowerBound && p <= page + LOOKAHEAD) batch.push(p);
-    }
-    if (batch.length === 0) return;
-    batch.sort((a, b) => a - b);
-    const want = batch.slice(0, 8);
-
-    ocrBusyRef.current = true;
-    try {
-      const results = await PDFParser.ocrPages(token, want);
-      // Drop everything we asked for from pending so we don't retry in a loop.
-      for (const p of want) pendingOcrRef.current.delete(p);
-      const improved = results.filter((r) => r.text && r.text.trim().length > 0);
-      if (improved.length > 0) {
-        setPages((prev) => {
-          const map = new Map(prev.map((p) => [p.page, p] as const));
-          for (const r of improved) {
-            const existing = map.get(r.page);
-            if (existing && r.text.length > existing.text.length) {
-              map.set(r.page, { ...existing, text: r.text, source: "ocr", confidence: r.confidence });
-            }
-          }
-          return Array.from(map.values()).sort((a, b) => a.page - b.page);
-        });
+  // Merge freshly OCR'd pages into the page list (kept sorted by page number).
+  function mergeOcrPages(improved: { page: number; text: string; confidence?: number }[]) {
+    setPages((prev) => {
+      const map = new Map(prev.map((p) => [p.page, p] as const));
+      for (const r of improved) {
+        const existing = map.get(r.page);
+        if (!existing || r.text.length > existing.text.length) {
+          map.set(r.page, { page: r.page, text: r.text, source: "ocr", confidence: r.confidence });
+        }
       }
-    } catch {
-      /* leave remaining pages pending; retry on next navigation */
-    } finally {
-      ocrBusyRef.current = false;
-    }
+      return Array.from(map.values()).sort((a, b) => a.page - b.page);
+    });
   }
-  ensureOcrRef.current = ensureOcrAround;
 
-  // Kick off OCR for the opening pages (covers fully-scanned docs).
+  // Continuously OCR every pending scanned page in the background, prioritised by
+  // whatever page you're looking at / jumping to, so pages keep loading as you
+  // scroll and never stall. Pauses cleanly (with a note) if the network drops.
   useEffect(() => {
-    const t = setTimeout(() => ensureOcrRef.current(currentPage), 400);
+    if (!canUseOcr || !doc.docToken || pendingOcrRef.current.size === 0) return;
+    const token = doc.docToken;
+    let cancelled = false;
+
+    (async () => {
+      await new Promise((r) => setTimeout(r, 300)); // let the first paint settle
+      while (!cancelled && pendingOcrRef.current.size > 0) {
+        const focus = prioritizePageRef.current ?? currentPageRef.current ?? 1;
+        const want = [...pendingOcrRef.current]
+          .sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus) || a - b)
+          .slice(0, 4);
+
+        let results;
+        try {
+          results = await PDFParser.ocrPages(token, want);
+        } catch {
+          // Likely offline — pause the loop and tell the reader why.
+          ocrOfflineRef.current = true;
+          if (!cancelled)
+            setOcrNote("You're offline — scanned pages will finish loading when you reconnect.");
+          break;
+        }
+        if (cancelled) break;
+
+        for (const p of want) pendingOcrRef.current.delete(p);
+        const improved = (results || []).filter((r) => r.text && r.text.trim().length > 0);
+        if (improved.length > 0) mergeOcrPages(improved);
+        if (
+          prioritizePageRef.current != null &&
+          !pendingOcrRef.current.has(prioritizePageRef.current)
+        ) {
+          prioritizePageRef.current = null;
+        }
+        await new Promise((r) => setTimeout(r, 120)); // be gentle on the backend
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, canUseOcr]);
+
+  // Persist merged OCR text so the book becomes fully available offline.
+  useEffect(() => {
+    if (!doc.docToken) return; // cache-only docs are already saved
+    const t = setTimeout(() => {
+      DocCache.update(doc.docId, pages, [...pendingOcrRef.current]).catch(() => {});
+    }, 800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc]);
+  }, [pages]);
+
+  // Re-anchor the highlight after OCR inserts pages (so it stays on the same
+  // sentence even though array indices shifted). Never moves the cursor while the
+  // voice is actively reading.
+  useEffect(() => {
+    const a = anchorRef.current;
+    if (!a || playingRef.current) return;
+    const onPage = flat.filter((s) => s.page === a.page);
+    if (onPage.length === 0) return;
+    const target = onPage[Math.min(a.within, onPage.length - 1)];
+    if (target && target.id !== currentIdRef.current) {
+      currentIdRef.current = target.id;
+      indexRef.current = target.id;
+      setCurrentId(target.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flat]);
+
+  // Perform a queued "go to page" once that page's text has finished loading.
+  useEffect(() => {
+    const target = pendingJumpRef.current;
+    if (target == null) return;
+    const idx = TextReflow.firstIndexOfPage(flat, target);
+    if (idx >= 0) {
+      pendingJumpRef.current = null;
+      setLoadingPageMsg(null);
+      jumpToSentence(idx, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flat]);
 
 
   // ----- scrolling / follow (FlatList) -----
@@ -257,7 +330,9 @@ export function Reader({
     if (first && first.item) {
       const p = (first.item as Sentence).page;
       setCurrentPage(p);
-      ensureOcrRef.current(p);
+      currentPageRef.current = p;
+      // Bias background OCR toward what's on screen so scrolling keeps loading.
+      prioritizePageRef.current = p;
     }
   }).current;
 
@@ -380,12 +455,30 @@ export function Reader({
   function goToPage(page: number) {
     const p = Math.max(1, Math.min(totalPages, page));
     const idx = TextReflow.firstIndexOfPage(flat, p);
-    if (idx < 0) {
-      ensureOcrRef.current(p);
+    if (idx >= 0) {
+      jumpToSentence(idx, false);
       return;
     }
-    ensureOcrRef.current(p);
-    jumpToSentence(idx, false);
+    // The page has no text yet (scanned page not OCR'd). Never silently fail —
+    // explain why, or load it on demand when we can.
+    if (!canUseOcr) {
+      openFeatureLock(
+        "Scanned page",
+        `Page ${p} is a scanned page. Reading it needs OCR, available on paid plans with an internet connection.`
+      );
+      return;
+    }
+    if (!doc.docToken || ocrOfflineRef.current) {
+      openFeatureLock(
+        "Not saved for offline yet",
+        `Page ${p} hasn't been saved for offline reading. Reconnect to the internet to load it — then it'll be available in airplane mode.`
+      );
+      return;
+    }
+    // Online + paid: prioritise OCR for this page and jump as soon as it loads.
+    prioritizePageRef.current = p;
+    pendingJumpRef.current = p;
+    setLoadingPageMsg(`Loading page ${p}…`);
   }
 
   function onJumpBookmark(b: Bookmark) {
@@ -446,14 +539,32 @@ export function Reader({
   }
 
   if (flat.length === 0) {
+    const loadingScan = canUseOcr && Boolean(doc.docToken) && !ocrOfflineRef.current;
     return (
       <View style={styles.center}>
-        <Text style={styles.dim}>No readable text found.</Text>
-        {doc.needsPaidOcr ? (
-          <Text style={styles.dim}>This document needs OCR, which is available on paid plans.</Text>
-        ) : doc.scanned ? (
-          <Text style={styles.dim}>This looks like a scanned PDF. OCR is coming soon.</Text>
-        ) : null}
+        {loadingScan ? (
+          <>
+            <ActivityIndicator color={theme.colors.accent} />
+            <Text style={styles.dim}>Loading scanned pages…</Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.dim}>No readable text found.</Text>
+            {doc.needsPaidOcr ? (
+              <Text style={styles.dim}>
+                This document needs OCR, available on paid plans with an internet connection.
+              </Text>
+            ) : doc.scanned && ocrOfflineRef.current ? (
+              <Text style={styles.dim}>
+                You're offline. Reconnect to the internet to load this scanned document.
+              </Text>
+            ) : doc.scanned ? (
+              <Text style={styles.dim}>
+                This looks like a scanned PDF. OCR requires a paid plan and an internet connection.
+              </Text>
+            ) : null}
+          </>
+        )}
         <Pressable style={styles.backBtn} onPress={handleBack}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
@@ -539,6 +650,16 @@ export function Reader({
               <Text style={styles.lockBannerText}>
                 Scanned-PDF OCR is locked on Free. Upgrade to Reader Plus or AI Pro.
               </Text>
+            </View>
+          ) : null}
+          {loadingPageMsg ? (
+            <View style={styles.loadingBanner}>
+              <ActivityIndicator color={theme.colors.accent} size="small" />
+              <Text style={styles.loadingBannerText}>{loadingPageMsg}</Text>
+            </View>
+          ) : ocrNote ? (
+            <View style={styles.noteBanner}>
+              <Text style={styles.noteBannerText}>{ocrNote}</Text>
             </View>
           ) : null}
         </>
@@ -750,6 +871,41 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(0.9),
   },
   lockBannerText: {
+    color: theme.colors.textDim,
+    fontSize: 12,
+    fontFamily: theme.fonts.sans,
+  },
+  loadingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: theme.spacing(3),
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius,
+    paddingHorizontal: theme.spacing(1.2),
+    paddingVertical: theme.spacing(0.9),
+  },
+  loadingBannerText: {
+    color: theme.colors.text,
+    fontSize: 12,
+    fontFamily: theme.fonts.sansMedium,
+  },
+  noteBanner: {
+    marginHorizontal: theme.spacing(3),
+    marginTop: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius,
+    paddingHorizontal: theme.spacing(1.2),
+    paddingVertical: theme.spacing(0.9),
+  },
+  noteBannerText: {
     color: theme.colors.textDim,
     fontSize: 12,
     fontFamily: theme.fonts.sans,

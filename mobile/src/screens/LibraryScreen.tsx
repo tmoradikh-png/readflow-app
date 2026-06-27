@@ -10,8 +10,9 @@ import {
 } from "react-native";
 import Constants from "expo-constants";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { PDFParser, ParsedPdf } from "../services/PDFParser";
+import { PDFParser, ParsedPdf, isNetworkError } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
+import { DocCache } from "../services/DocCache";
 import { EntitlementSnapshot } from "../services/Entitlements";
 import { theme } from "../theme";
 
@@ -50,10 +51,16 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
       const doc = await PDFParser.pickAndParse();
       if (!doc) return; // cancelled
       const item = await Library.saveOpened(doc, doc.sourceUri, doc.mimeType);
+      // Save the parsed text so this book can be reopened offline later.
+      await DocCache.save(doc);
       await refresh();
       onOpen(doc, item);
     } catch (e: any) {
-      setError(e?.message || "Could not read that PDF.");
+      setError(
+        isNetworkError(e)
+          ? "You're offline. Connect to the internet to add a new book — once added it works offline."
+          : e?.message || "Could not read that PDF."
+      );
     } finally {
       setLoading(false);
     }
@@ -67,11 +74,42 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
     setError(null);
     setBusyId(item.id);
     try {
-      const doc = await PDFParser.parseUri({
-        uri: item.storedUri,
-        fileName: item.fileName,
-        mimeType: item.mimeType || undefined,
-      });
+      const cached = await DocCache.load(item.id);
+      let doc: ParsedPdf;
+
+      if (cached && DocCache.isComplete(cached)) {
+        // Fully saved for offline — open instantly, no network needed.
+        doc = DocCache.toParsed(cached);
+      } else {
+        // Not fully cached yet (new, or scanned with pages still to OCR).
+        try {
+          const fresh = await PDFParser.parseUri({
+            uri: item.storedUri,
+            fileName: item.fileName,
+            mimeType: item.mimeType || undefined,
+          });
+          doc = cached ? DocCache.mergeCachedOcr(fresh, cached) : fresh;
+          await DocCache.save(doc);
+        } catch (netErr) {
+          if (cached && isNetworkError(netErr)) {
+            // Offline: open whatever text we already saved.
+            doc = DocCache.toParsed(cached);
+            setError(
+              "You're offline — opened the saved copy. Any scanned pages will finish loading when you reconnect."
+            );
+          } else if (isNetworkError(netErr)) {
+            setError(
+              "You're offline and this book isn't saved for offline reading yet. Open it once with internet, then it'll work in airplane mode."
+            );
+            return;
+          } else {
+            throw netErr;
+          }
+        }
+      }
+
+      doc.sourceUri = item.storedUri;
+      doc.mimeType = item.mimeType || undefined;
       await Library.saveOpened(doc, item.storedUri, item.mimeType || undefined);
       await refresh();
       onOpen(doc, item);
@@ -90,6 +128,7 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
         style: "destructive",
         onPress: async () => {
           await Library.remove(item.id);
+          await DocCache.remove(item.id);
           await refresh();
         },
       },
@@ -122,6 +161,12 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
+
+      {/* Offline tip: books open offline only after you've opened them once online. */}
+      <Text style={styles.offlineTip}>
+        Tip: to read in airplane mode, open a book once while online — it's then
+        saved on your device for offline reading.
+      </Text>
 
       {items.length === 0 ? (
         <Empty onAdd={importNew} loading={loading} isPaid={Boolean(entitlement.features.ai)} />
@@ -331,6 +376,14 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sansMedium,
     paddingHorizontal: theme.spacing(3),
     paddingBottom: theme.spacing(1),
+  },
+  offlineTip: {
+    color: theme.colors.textDim,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    lineHeight: 17,
+    paddingHorizontal: theme.spacing(3),
+    paddingBottom: theme.spacing(1.5),
   },
   scroll: { paddingHorizontal: theme.spacing(3), paddingBottom: theme.spacing(6) },
 

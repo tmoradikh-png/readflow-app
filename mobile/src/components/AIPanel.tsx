@@ -9,6 +9,7 @@ import {
   TextInput,
 } from "react-native";
 import { AIProvider, AITask, AIResult } from "../services/AIProvider";
+import { isNetworkError } from "../services/PDFParser";
 import { theme } from "../theme";
 
 interface Props {
@@ -38,7 +39,11 @@ export function AIPanel({ contextText, language = "en", onClose }: Props) {
       const res = await AIProvider.run({ task, text: contextText, question: q, language });
       setResult(res);
     } catch (e: any) {
-      setError(e?.message || "Something went wrong.");
+      setError(
+        isNetworkError(e)
+          ? "AI needs an internet connection. Reading and the device voice still work offline — reconnect to use AI."
+          : e?.message || "Something went wrong."
+      );
     } finally {
       setLoading(false);
     }
