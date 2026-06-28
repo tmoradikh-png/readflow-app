@@ -5,7 +5,9 @@ Updated: 2026-06-28
 Read this file first when taking over the project. It is the high-level map of
 accounts, services, release status, and operational habits. Then use
 `README.md` for local setup, `RELEASE_GUIDE.md` for Android builds, and
-`BACKEND_FEATURE_ENFORCEMENT.md` for paid-feature enforcement.
+`BACKEND_FEATURE_ENFORCEMENT.md` for paid-feature enforcement. Use
+`COST_MODEL.md` for pricing, OpenAI cost, free-tier limits, and cloud voice
+allowance decisions.
 
 ## Product
 
@@ -25,6 +27,8 @@ Current shape:
 
 - Git branch: `main`
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
+- GitHub account rule: always use `tmoradikh-png` for this project unless the
+  owner explicitly changes the repository owner.
 - Current source version: `1.0.17`
 - Current source Android `versionCode`: `17`
 - Latest finished EAS build: `1.0.16` / code `16`
@@ -53,7 +57,7 @@ manager.
 
 | Area | Account / owner | What it is used for | Notes |
 | --- | --- | --- | --- |
-| GitHub | `tmoradikh-png` | Source repository | Remote is `readflow-app`. User email given for account work: `t.moradi.kh@gmail.com`. |
+| GitHub | `tmoradikh-png` | Source repository | Always use this account/repo owner for ReadFlow. Remote is `readflow-app`. User email given for account work: `t.moradi.kh@gmail.com`. |
 | Expo / EAS | `tohid123` | Android builds and project ownership | Project is `tohid123/readflow`, projectId `097b0b5a-db90-46b4-b434-60836687b429`. User email given: `t.moradi.kh@gmail.com`. |
 | Google Play Console | Urmia Works developer account | Internal testing and later production release | Android package is permanent: `com.urmiaworks.readflow`. Verify exact login email before release. |
 | Render | `support@urmiaworks.com` | Hosted backend | Internal backend service currently targeted by the app: `readflow-backend-internal`. |
@@ -251,6 +255,8 @@ Important backend routes:
 
 Natural voice currently calls backend `/api/tts`, which calls OpenAI TTS using
 server-only `OPENAI_API_KEY`. The mobile app never receives the OpenAI key.
+See `COST_MODEL.md` before enabling cloud voice publicly; unlimited cloud voice
+is not economically safe at the current paid prices.
 
 ## Audio and Highlighting Notes
 
@@ -319,6 +325,11 @@ Recommended manual phone tests after installing a new build:
   Starter/Standard over Free.
 - OpenAI usage costs money. Monitor backend logs and rate limits when broadening
   testing.
+- Current code unlocks natural voice from the AI flag in the mobile reader even
+  though backend plan config says `cloudVoice: false`. Fix this before public
+  paid release so cloud voice cannot be accidentally bundled without a cap.
+- Current free-tier code/config does not yet match the latest product intent of
+  1 free book and about 100 pages. See `COST_MODEL.md`.
 
 ## Release Notes Template
 
@@ -334,6 +345,7 @@ ReadFlow X.Y.Z
 ## Documentation Rule
 
 When a developer changes accounts, service URLs, build codes, entitlement
-behavior, icon process, release process, or any production-impacting workflow,
-update this file and any specialized guide (`RELEASE_GUIDE.md` or
-`BACKEND_FEATURE_ENFORCEMENT.md`) in the same commit.
+behavior, pricing/cost assumptions, icon process, release process, or any
+production-impacting workflow, update this file and any specialized guide
+(`RELEASE_GUIDE.md`, `BACKEND_FEATURE_ENFORCEMENT.md`, or `COST_MODEL.md`) in
+the same commit.

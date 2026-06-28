@@ -27,8 +27,10 @@ ReadFlow/
 
 Start with **[PROJECT.md](PROJECT.md)** when taking over the project. It records
 the service accounts, public URLs/IDs, current build state, icon process,
-backend deployment notes, paid-feature enforcement, and release habits. Keep it
-updated whenever accounts, build codes, backend URLs, or production workflows
+backend deployment notes, paid-feature enforcement, pricing/cost notes, and
+release habits. Use **[COST_MODEL.md](COST_MODEL.md)** before changing paid
+tiers, free limits, AI features, or cloud voice allowances. Keep the docs updated
+whenever accounts, build codes, backend URLs, costs, or production workflows
 change.
 
 **Why a backend?** The OpenAI key must never ship inside the phone app. The app

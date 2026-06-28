@@ -2,7 +2,12 @@
 
 ## Overview
 
-**AI and TTS features are strictly enforced on the backend** to prevent free users from accessing cost-bearing services. Free users have unlimited local PDF reading but **cannot access any cloud AI, OCR, or TTS features**.
+**AI and TTS features are strictly enforced on the backend** to prevent free users from accessing cost-bearing services. Free users can use local/device reading, but **cannot access any cloud AI, OCR, or TTS features**.
+
+> Cost note: read `COST_MODEL.md` before changing paid tiers or natural voice.
+> Unlimited cloud TTS is not economically safe. Public release should gate
+> natural voice behind an explicit `cloudVoice` feature and monthly usage cap,
+> not the generic `ai` feature.
 
 ---
 
@@ -11,13 +16,14 @@
 | Feature | Free | Reader Plus | AI Pro | Power |
 |---------|------|-------------|--------|-------|
 | **Local PDF reading** | ✅ (30 pages/doc) | ✅ (unlimited) | ✅ | ✅ |
-| **Server PDF extraction** | ✅ (30 PDFs/mo) | ✅ (100/mo) | ✅ (300/mo) | ✅ (500/mo) |
+| **Server PDF extraction** | ✅ (30 PDFs/mo) | ✅ (100/mo) | ✅ (300/mo) | ✅ (1000/mo) |
 | **AI summary/explain/ask** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (500/mo) | ✅ (2000/mo) |
 | **Cloud OCR (scanned PDFs)** | ❌ 402 Blocked | ✅ (300 pages/mo) | ✅ (1000/mo) | ✅ (3000/mo) |
-| **Cloud TTS (natural voice)** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (unlimited*) | ✅ (unlimited*) |
+| **Cloud TTS (natural voice)** | ❌ 402 Blocked | ❌ 402 Blocked | ⚠️ currently AI-gated in app; must be capped before public | ⚠️ currently AI-gated in app; must be capped before public |
 | **Export** | ❌ 402 Blocked | ❌ 402 Blocked | ❌ 402 Blocked | ✅ |
 
-*TTS is cached in-memory; actual OpenAI usage varies by unique text/voice/speed combos.
+*TTS is cached in-memory; actual OpenAI usage varies by unique text/voice/speed
+combos. Caching does not make cloud voice safe to sell as unlimited.
 
 ---
 
@@ -39,6 +45,9 @@ if (!features.serverExtract) {
   return res.status(402).json({ error: "upgrade_required" });
 }
 ```
+
+The TTS route is currently gated by `ai` in code. Before public release, change
+this to an explicit `cloudVoice` gate plus a monthly character/minute quota.
 
 **Response for blocked access:**
 ```json
