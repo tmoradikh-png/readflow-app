@@ -312,7 +312,7 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 13 | 1.0.13 | 8f8723ce | finished | controls redesign + import progress |
 | 13 | 1.0.13 | f2511def | ⚠ **wasted** — code 13 reused | settings ▴ always visible + AI voice spotlight/promo |
 | 14 | 1.0.14 | 929c203d | finished | clean‑source icon fix (spine survives mask) + the above UX |
-| 15 | 1.0.15 | 34cd381c | building | finished reader design + AI voice sync/tail fix + exact clean icon |
+| 15 | 1.0.15 | 34cd381c | finished | finished reader design + AI voice sync/tail fix + exact clean icon |
 
 **Next free versionCode: 16.**
 
