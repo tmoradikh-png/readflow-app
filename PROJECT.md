@@ -29,14 +29,15 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.17`
-- Current source Android `versionCode`: `17`
+- Current source version: `1.0.18`
+- Current source Android `versionCode`: `18`
 - Latest finished EAS build: `1.0.17` / code `17`
 - Latest finished EAS build id: `2900d21c-48f4-42aa-9434-f3bd2dcb06a4`
 - Latest finished AAB:
   `https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab`
 - Next Android build should use code `18` unless another EAS build has already
-  consumed a higher code.
+  consumed a higher code. Source is prepared for code `18`; latest finished
+  build is still code `17`.
 
 Changes included in the latest finished build:
 - Paid/cloud audio background-mode support was added for lock-screen listening.
@@ -47,6 +48,18 @@ Changes included in the latest finished build:
 
 Important: code `17` has been built, but test phones still need that AAB
 uploaded/installed before the source changes can be verified on-device.
+
+Changes after the latest finished build and included in source `1.0.18`:
+- Cloud AI voice is gated by `features.cloudVoice`, not generic AI.
+- AI Pro includes 60k cloud voice characters/month; Power includes 180k.
+- Backend `/api/tts` checks monthly `cloudVoiceChars` before generating fresh
+  OpenAI audio.
+- Voice selection moved to the shelf/home screen with device, AI cloud, and
+  future local AI voice options.
+- Device voice selector uses installed phone voices when available.
+- Help/About sheet shows version, support contact, website, and button meanings.
+- Local AI voice path is documented in-app but the native Kokoro/ExecuTorch
+  engine is not installed in this build.
 
 ## Account Map
 
@@ -124,8 +137,12 @@ Mobile:
 - `mobile/eas.json`: EAS build profiles. Internal Android builds create `.aab`.
 - `mobile/src/components/Reader.tsx`: main reader, highlighting, controls,
   navigation, playback sequencing, OCR progress, AI entry point.
-- `mobile/src/components/Controls.tsx`: sound, voice mode, play/pause, reading
-  settings.
+- `mobile/src/components/Controls.tsx`: sound, play/pause, stop, reading
+  settings. Voice selection now lives on the shelf screen, not inside a book.
+- `mobile/src/services/Preferences.ts`: persists reading voice preferences
+  across app launches.
+- `mobile/src/services/LocalNeuralVoice.ts`: status/capability placeholder for
+  a future offline neural TTS engine.
 - `mobile/src/services/TextReflow.ts`: turns extracted page text into readable
   sentence units.
 - `mobile/src/services/tts/*`: device voice and cloud natural voice providers.
@@ -255,8 +272,11 @@ Important backend routes:
 
 Natural voice currently calls backend `/api/tts`, which calls OpenAI TTS using
 server-only `OPENAI_API_KEY`. The mobile app never receives the OpenAI key.
-See `COST_MODEL.md` before enabling cloud voice publicly; unlimited cloud voice
-is not economically safe at the current paid prices.
+Cloud AI voice is capped by plan:
+- AI Pro: 60,000 characters/month.
+- Power: 180,000 characters/month.
+See `COST_MODEL.md` before changing cloud voice allowances; unlimited cloud
+voice is not economically safe at the current paid prices.
 
 ## Audio and Highlighting Notes
 
@@ -265,6 +285,9 @@ Cloud voice:
 - Uses backend `/api/tts`.
 - Caches audio in app cache.
 - Prefetches upcoming text from the reader to reduce paragraph gaps.
+- Uses the selected cloud voice from shelf preferences.
+- Falls back to the selected device voice if cloud voice is offline or over
+  quota, and shows a one-time allowance message.
 - Uses `expo-audio` with `shouldPlayInBackground: true` for paid/natural voice
   lock-screen listening.
 - Keeps the native player alive between clips to avoid unnecessary handoff
@@ -299,6 +322,14 @@ Highlighting:
 - Exact word-level sync would require timestamp data from the TTS provider. The
   current backend returns MP3 audio only, not word timings.
 
+Local neural voice:
+- Best candidate is Kokoro TTS through `react-native-executorch`.
+- Current source exposes the option and phone compatibility message on the shelf
+  screen, but does not ship the native engine/model yet.
+- When implemented, it should use the same `TTSProvider` interface and should
+  be treated as unlimited from ReadFlow's billing perspective because it uses
+  phone CPU/battery instead of OpenAI.
+
 ## Validation Checklist Before a Build
 
 Always run:
@@ -313,6 +344,9 @@ Recommended manual phone tests after installing a new build:
 - Fresh install icon: red spine visible, no cropped `F`.
 - Import a normal PDF and verify reflowed reading.
 - Toggle Sound on/off.
+- Open Voice on the shelf, select a device voice, and verify the reader uses it.
+- Select AI cloud voice under an AI Pro/Power entitlement and verify `/api/tts`
+  consumes cloud voice characters, not generic AI actions.
 - Device voice reads in sync.
 - Natural/cloud voice reads the same text, highlights the current line, and does
   not skip final words.
@@ -339,8 +373,9 @@ Recommended manual phone tests after installing a new build:
 - OpenAI usage costs money. Monitor backend logs and rate limits when broadening
   testing.
 - Current code unlocks natural voice from the AI flag in the mobile reader even
-  though backend plan config says `cloudVoice: false`. Fix this before public
-  paid release so cloud voice cannot be accidentally bundled without a cap.
+- AI voice packs/top-ups are only a product path today. Play Billing/RevenueCat
+  purchases are not wired in this build, so the app must not present a fake
+  paid purchase button.
 - Current free-tier code/config does not yet match the latest product intent of
   1 free book and about 100 pages. See `COST_MODEL.md`.
 

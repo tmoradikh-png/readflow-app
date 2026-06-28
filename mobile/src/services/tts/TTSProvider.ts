@@ -18,6 +18,12 @@ export interface SpeakOptions {
   lockScreenTitle?: string;
   lockScreenSubtitle?: string;
   lockScreenAlbum?: string;
+  /** Provider-specific voice identifier. Device uses OS voice ids; cloud uses OpenAI voice ids. */
+  voiceId?: string;
+  /** Device voice to use if a paid/cloud provider falls back locally. */
+  fallbackVoiceId?: string;
+  /** Called when a provider keeps reading by falling back to a cheaper/local voice. */
+  onFallback?: (info: { reason: "quota" | "network" | "error"; message?: string }) => void;
 }
 
 export interface TTSProvider {

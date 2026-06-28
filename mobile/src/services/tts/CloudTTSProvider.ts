@@ -28,6 +28,19 @@ async function ensureAudioMode() {
   audioModeReady = true;
 }
 
+const CLOUD_VOICES = new Set([
+  "alloy",
+  "ash",
+  "ballad",
+  "coral",
+  "echo",
+  "fable",
+  "nova",
+  "onyx",
+  "sage",
+  "shimmer",
+]);
+
 export class CloudTTSProvider implements TTSProvider {
   readonly kind = "cloud" as const;
 
@@ -43,39 +56,52 @@ export class CloudTTSProvider implements TTSProvider {
   private removeListener: (() => void) | null = null;
   private finishTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private keyFor(text: string, speed: number) {
-    return `${this.voice}|${speed.toFixed(2)}|${text}`;
+  private keyFor(text: string, speed: number, voice: string) {
+    return `${voice}|${speed.toFixed(2)}|${text}`;
   }
 
   /** Download (and cache) the audio for one piece of text. Returns a file uri. */
-  private async fetchAudio(text: string, speed: number): Promise<string> {
-    const key = this.keyFor(text, speed);
+  private async fetchAudio(text: string, speed: number, voice: string): Promise<string> {
+    const key = this.keyFor(text, speed, voice);
     const cached = this.fileCache.get(key);
     if (cached) return cached;
 
     const inflight = this.inflightCache.get(key);
     if (inflight) return inflight;
 
-    const pending = this.downloadAudio(key, text, speed).finally(() => {
+    const pending = this.downloadAudio(key, text, speed, voice).finally(() => {
       this.inflightCache.delete(key);
     });
     this.inflightCache.set(key, pending);
     return pending;
   }
 
-  private async downloadAudio(key: string, text: string, speed: number): Promise<string> {
+  private async downloadAudio(
+    key: string,
+    text: string,
+    speed: number,
+    voice: string
+  ): Promise<string> {
     const res = await fetch(`${API_BASE}/api/tts`, {
       method: "POST",
       headers: apiHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ text, voice: this.voice, speed }),
+      body: JSON.stringify({ text, voice, speed }),
     });
     if (!res.ok) {
       let msg = `TTS failed (${res.status})`;
+      let feature = "";
+      let code = "";
       try {
         const j = await res.json();
-        msg = j.error || msg;
+        msg = j.message || j.error || msg;
+        feature = j.feature || "";
+        code = j.error || "";
       } catch {}
-      throw new Error(msg);
+      const err = new Error(msg) as Error & { status?: number; feature?: string; code?: string };
+      err.status = res.status;
+      err.feature = feature;
+      err.code = code;
+      throw err;
     }
 
     const blob = await res.blob();
@@ -113,7 +139,7 @@ export class CloudTTSProvider implements TTSProvider {
     const t = (text || "").trim();
     if (!t) return;
     try {
-      await this.fetchAudio(t, clampSpeed(opts.rate));
+      await this.fetchAudio(t, clampSpeed(opts.rate), normalizeCloudVoice(opts.voiceId || this.voice));
     } catch {
       /* ignore prefetch errors */
     }
@@ -132,11 +158,12 @@ export class CloudTTSProvider implements TTSProvider {
 
     let uri: string;
     try {
-      uri = await this.fetchAudio(t, speed);
+      uri = await this.fetchAudio(t, speed, normalizeCloudVoice(opts.voiceId || this.voice));
     } catch (e) {
       // Cloud unavailable → keep reading with the on-device voice.
       if (mySeq !== this.seq) return;
-      return this.device.speak(t, opts);
+      opts.onFallback?.(fallbackInfo(e));
+      return this.device.speak(t, { ...opts, voiceId: opts.fallbackVoiceId });
     }
     if (mySeq !== this.seq) return; // a newer speak()/stop() superseded us
 
@@ -216,7 +243,7 @@ export class CloudTTSProvider implements TTSProvider {
       opts.onStart?.();
     } catch (e) {
       if (mySeq !== this.seq) return;
-      return this.device.speak(t, opts);
+      return this.device.speak(t, { ...opts, voiceId: opts.fallbackVoiceId });
     }
   }
 
@@ -248,6 +275,14 @@ export class CloudTTSProvider implements TTSProvider {
       this.player?.play();
     } catch {}
   }
+
+  async getVoices() {
+    return Array.from(CLOUD_VOICES).map((id) => ({
+      id,
+      name: cloudVoiceName(id),
+      language: "en-US",
+    }));
+  }
 }
 
 function clampSpeed(rate?: number): number {
@@ -258,6 +293,30 @@ function clampSpeed(rate?: number): number {
 
 function tailGuardMs(speed: number): number {
   return Math.round(Math.max(180, Math.min(420, 360 / speed)));
+}
+
+function normalizeCloudVoice(voice: string): string {
+  return CLOUD_VOICES.has(voice) ? voice : "nova";
+}
+
+function cloudVoiceName(id: string): string {
+  return id.charAt(0).toUpperCase() + id.slice(1);
+}
+
+function fallbackInfo(e: unknown): { reason: "quota" | "network" | "error"; message?: string } {
+  const err = e as { status?: number; feature?: string; code?: string; message?: string };
+  if (err?.status === 429 || err?.code === "quota_exceeded" || err?.feature === "cloudVoice") {
+    return {
+      reason: "quota",
+      message:
+        err.message ||
+        "AI voice allowance is used up. Continuing with device voice.",
+    };
+  }
+  if (/network|fetch/i.test(err?.message || "")) {
+    return { reason: "network", message: "AI voice is offline. Continuing with device voice." };
+  }
+  return { reason: "error", message: "AI voice is unavailable. Continuing with device voice." };
 }
 
 function blobToBase64(blob: Blob): Promise<string> {

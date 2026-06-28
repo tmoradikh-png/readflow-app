@@ -22,25 +22,34 @@ can change.
   https://support.google.com/googleplay/android-developer/answer/10632485
 - Google Play lower service fee rollout:
   https://support.google.com/googleplay/android-developer/answer/16954621
+- React Native ExecuTorch TTS docs:
+  https://docs.swmansion.com/react-native-executorch/docs/hooks/natural-language-processing/useTextToSpeech
+- React Native ExecuTorch / Kokoro cost article:
+  https://swmansion.com/blog/on-device-ai-beats-cloud-for-tts-heres-why/
 
 ## Current Implementation Warning
 
-Before public release, fix these mismatches:
+Current cloud voice implementation:
 
-- `backend/src/config/plans.ts` currently says `cloudVoice: false` for every
-  tier and `cloudVoiceAvailable: false`.
-- `mobile/src/components/Reader.tsx` currently unlocks natural voice with
-  `canUseCloudVoice = canUseAI`, so AI Pro users can reach cloud TTS even though
-  the plan config says cloud voice is not a launch feature.
+- Free and Reader Plus cannot call `/api/tts`.
+- AI Pro includes `60,000` cloud AI voice characters/month.
+- Power includes `180,000` cloud AI voice characters/month.
+- The mobile reader now gates cloud AI voice from `features.cloudVoice`, not the
+  generic AI text feature.
+- The backend gates `/api/tts` with `ensureFeature(req, res, "cloudVoice")` and
+  checks `cloudVoiceChars` before generating fresh OpenAI audio.
+- Cache hits do not burn cloud voice allowance because they do not create a new
+  OpenAI TTS bill.
 - `backend/src/routes/tts.ts` defaults to `tts-1-hd`, and `render.yaml` also
-  sets `TTS_MODEL=tts-1-hd`. This is the more expensive legacy TTS model.
+  sets `TTS_MODEL=tts-1-hd`. This is the more expensive legacy TTS model, so the
+  current allowances are deliberately small.
 - Free-tier limits are not aligned with the latest product decision. The user
   wants roughly 1 free book and around 100 pages. Current backend config is
   `pdfsPerMonth: 30` and `perDocPageCap: 30`; the mobile reader also has
   `ENFORCE_FREE_LIMIT=false`, so local reading is not actually capped in-app.
 
-Do not launch public subscriptions until the cloud voice allowance and free
-limits are explicit and enforced by the backend.
+Do not launch public subscriptions until RevenueCat identity is wired and the
+free limits are explicit and enforced by the backend/mobile app.
 
 ## Key Principle
 
@@ -264,6 +273,48 @@ At 12 hours/day it would lose hundreds of dollars per user each month. Long
 listening must use device voice, with cloud voice sold as a capped allowance or
 usage pack.
 
+Current allowance economics with `tts-1-hd`:
+
+| Tier | Included cloud AI voice | Approx listening | OpenAI cost if fully used |
+| --- | ---: | ---: | ---: |
+| AI Pro | 60,000 chars/month | about 1.1 hours / 36 pages | about $1.80 |
+| Power | 180,000 chars/month | about 3.3 hours / 109 pages | about $5.40 |
+
+This is intentionally conservative. Extra AI voice should be sold as a top-up
+through Play Billing/RevenueCat, for example 100k characters at a price that
+nets well above the $3 OpenAI cost on `tts-1-hd`.
+
+## Local Neural Voice Plan
+
+Best current candidate for offline natural voice is Kokoro TTS through
+`react-native-executorch`. The library documents a `useTextToSpeech` hook for
+on-device Kokoro, and Software Mansion describes Kokoro as an 82M-parameter,
+Apache-2.0 model suitable for commercial use.
+
+Why it is useful:
+
+- No OpenAI per-character cost after the model is on the phone.
+- Works offline.
+- Keeps document text on device for narration.
+- Lets heavy readers listen for long sessions without destroying margins.
+
+Why it is not wired in the current build:
+
+- It requires native modules and model/resource loading, not only JavaScript.
+- It should be added in a dedicated native/EAS build with device compatibility,
+  battery, memory, download-size, and playback tests.
+- The current app exposes the product path on the first screen as "Local AI
+  voice" but marks the engine as not installed. Selecting it falls back to
+  normal device voice until the native engine is shipped.
+
+Implementation target:
+
+- Add `react-native-executorch` and the Kokoro model/resource fetcher.
+- Generate chunks on device and play them through the same provider interface as
+  cloud TTS.
+- Gate by phone capability and clearly tell users it uses battery/CPU.
+- Keep it outside the cloud voice quota because it has no OpenAI bill.
+
 ## AI Voice Cost Per Page
 
 For "read this book with best quality AI voice", use the `tts-1-hd` column unless
@@ -341,8 +392,8 @@ This is the conservative, profit-protecting plan shape:
 | --- | ---: | --- | --- |
 | Free | $0 | 1 saved book, about 100 pages, device voice, native text only | Render CPU/bandwidth only |
 | Reader Plus | $4.99/mo | Ad-free, bigger library, OCR allowance, device voice | OCR CPU on Render |
-| AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, maybe 1-2 cloud voice hours | Fine if cloud voice capped |
-| Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, maybe 5 cloud voice hours using cheaper TTS | Must hard-cap cloud voice |
+| AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, 60k cloud voice chars | Fine if cloud voice capped |
+| Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, 180k cloud voice chars | Must hard-cap cloud voice |
 | Natural Voice Pack | Separate add-on | Extra cloud voice hours or pay-as-you-go credits | Best match to real OpenAI cost |
 
 If cloud voice must be high quality (`tts-1-hd`), keep allowances very small:
@@ -372,11 +423,13 @@ are also weak and can punish shared networks. For public release, send a stable
 
 ## Implementation Checklist Before Public Pricing
 
-1. Decide whether cloud voice is included, capped, or sold only as an add-on.
-2. Add explicit cloud voice limits to backend plan config, for example
-   `cloudVoiceMinutesPerMonth` or `cloudVoiceCharactersPerMonth`.
-3. Gate mobile natural voice from `entitlement.features.cloudVoice`, not `ai`.
-4. Gate backend `/api/tts` with the cloud voice entitlement and monthly usage.
+1. DONE: cloud voice is capped in AI Pro/Power and extra use should be sold as
+   a top-up.
+2. DONE: explicit backend limit is `cloudVoiceCharsPerMonth`.
+3. DONE: mobile natural/cloud voice uses `entitlement.features.cloudVoice`, not
+   generic `ai`.
+4. DONE: backend `/api/tts` is gated by `cloudVoice` and monthly character
+   usage.
 5. Decide free tier: 1 book and about 100 pages, then update backend and mobile
    to match.
 6. Wire RevenueCat production SDK/user id so limits follow a user/install, not

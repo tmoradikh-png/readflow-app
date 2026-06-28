@@ -9,7 +9,8 @@
 # Docker image, and gives you an HTTPS URL like https://readflow-backend.onrender.com
 #
 # FEATURE ENFORCEMENT:
-#   AI access is gated by subscription tier (free tier cannot access /api/ai or /api/tts).
+#   AI access is gated by subscription tier, and cloud voice uses its own
+#   feature flag plus monthly character quota.
 #
 # This default file is PUBLIC-RELEASE SAFE:
 #   - ENTITLEMENTS_DEV_OVERRIDE is disabled

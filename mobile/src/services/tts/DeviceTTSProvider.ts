@@ -34,6 +34,7 @@ export class DeviceTTSProvider implements TTSProvider {
 
     Speech.speak(text, {
       language: opts.language || "en-US",
+      voice: opts.voiceId,
       rate: opts.rate ?? 1.0,
       pitch: opts.pitch ?? 1.0,
       onStart: () => {

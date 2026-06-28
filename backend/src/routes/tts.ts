@@ -2,6 +2,7 @@ import { Router } from "express";
 import crypto from "crypto";
 import OpenAI from "openai";
 import { ensureFeature } from "../middleware/gate";
+import { addUsage, checkQuota } from "../services/usage";
 
 export const ttsRouter = Router();
 
@@ -12,7 +13,8 @@ export const ttsRouter = Router();
  *
  * Natural cloud voice. The OpenAI key lives ONLY on the server; the mobile app
  * sends text and plays back the returned audio. Gated behind the same paid
- * feature flag as AI so the free tier keeps using the on-device voice (no cost).
+ * feature flag as cloudVoice so the free tier and Reader Plus keep using
+ * on-device voices (no OpenAI cost).
  */
 
 const VOICES = new Set([
@@ -61,8 +63,10 @@ function getClient(): OpenAI {
 
 ttsRouter.post("/", async (req, res) => {
   try {
-    // Cloud voice is a paid feature (free tier uses the device voice).
-    if (!ensureFeature(req, res, "ai")) return;
+    // Cloud voice has its own allowance because it is far more expensive than
+    // text AI actions. Free/Reader Plus users stay on device voice.
+    if (!ensureFeature(req, res, "cloudVoice")) return;
+    const ent = req.entitlement!;
 
     const body = (req.body || {}) as { text?: string; voice?: string; speed?: number };
     const text = typeof body.text === "string" ? body.text.trim().slice(0, MAX_CHARS) : "";
@@ -78,7 +82,27 @@ ttsRouter.post("/", async (req, res) => {
       .digest("hex");
 
     let audio = cacheGet(key);
-    if (!audio) {
+    if (audio) {
+      addUsage(ent.appUserId, "cacheHits");
+    } else {
+      const quota = checkQuota(
+        ent.appUserId,
+        "cloudVoiceChars",
+        ent.tier.limits.cloudVoiceCharsPerMonth,
+        text.length
+      );
+      if (!quota.ok) {
+        return res.status(429).json({
+          error: "quota_exceeded",
+          feature: "cloudVoice",
+          used: quota.used,
+          limit: quota.limit,
+          remaining: quota.remaining,
+          requested: text.length,
+          message:
+            "You've reached this month's AI voice allowance. Use device voice, renew next month, or buy an AI voice pack.",
+        });
+      }
       const speech = await getClient().audio.speech.create({
         model,
         voice: voice as any,
@@ -88,6 +112,7 @@ ttsRouter.post("/", async (req, res) => {
       });
       audio = Buffer.from(await speech.arrayBuffer());
       cacheSet(key, audio);
+      addUsage(ent.appUserId, "cloudVoiceChars", text.length);
     }
 
     res.setHeader("Content-Type", "audio/mpeg");

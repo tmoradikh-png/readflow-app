@@ -20,6 +20,8 @@ export interface PlanLimits {
   ocrPagesPerMonth: number;
   /** AI actions (summary/explain/ask/...) per calendar month. */
   aiActionsPerMonth: number;
+  /** Cloud AI voice characters allowed per calendar month. */
+  cloudVoiceCharsPerMonth: number;
   /** Server PDF extractions per calendar month (abuse guard). */
   pdfsPerMonth: number;
   /** Largest file (MB) the backend will accept for this tier. */
@@ -44,7 +46,7 @@ export interface PlanFeatures {
   serverExtract: boolean;
   /** Export notes/summaries. */
   export: boolean;
-  /** Cloud natural voice (not offered at launch). */
+  /** Cloud natural voice, capped by cloudVoiceCharsPerMonth. */
   cloudVoice: boolean;
   /** Save an unlimited local library (vs the small free cap). */
   unlimitedLibrary: boolean;
@@ -88,6 +90,7 @@ export const TIERS: Tier[] = [
     limits: {
       ocrPagesPerMonth: 0,
       aiActionsPerMonth: 0,
+      cloudVoiceCharsPerMonth: 0,
       pdfsPerMonth: 30,
       maxFileSizeMb: 20,
       maxPages: 2000,
@@ -115,6 +118,7 @@ export const TIERS: Tier[] = [
     limits: {
       ocrPagesPerMonth: 300,
       aiActionsPerMonth: 0,
+      cloudVoiceCharsPerMonth: 0,
       pdfsPerMonth: 100,
       maxFileSizeMb: 50,
       maxPages: 500,
@@ -143,6 +147,7 @@ export const TIERS: Tier[] = [
     limits: {
       ocrPagesPerMonth: 1000,
       aiActionsPerMonth: 500,
+      cloudVoiceCharsPerMonth: 60000,
       pdfsPerMonth: 300,
       maxFileSizeMb: 100,
       maxPages: 1500,
@@ -154,7 +159,7 @@ export const TIERS: Tier[] = [
       ocr: true,
       serverExtract: true,
       export: false,
-      cloudVoice: false,
+      cloudVoice: true,
       unlimitedLibrary: true,
     },
   },
@@ -170,6 +175,7 @@ export const TIERS: Tier[] = [
     limits: {
       ocrPagesPerMonth: 3000,
       aiActionsPerMonth: 2000,
+      cloudVoiceCharsPerMonth: 180000,
       pdfsPerMonth: 1000,
       maxFileSizeMb: 200,
       maxPages: 5000,
@@ -181,7 +187,7 @@ export const TIERS: Tier[] = [
       ocr: true,
       serverExtract: true,
       export: true,
-      cloudVoice: false,
+      cloudVoice: true,
       unlimitedLibrary: true,
     },
   },
@@ -225,7 +231,7 @@ export function publicConfig() {
   return {
     currency: "USD",
     recommendedTier: TIERS.find((t) => t.recommended)?.key ?? "ai_pro",
-    cloudVoiceAvailable: false, // not at launch
+    cloudVoiceAvailable: true,
     tiers: TIERS.map((t) => ({
       key: t.key,
       name: t.name,

@@ -17,6 +17,7 @@ const DATA_DIR = join(process.cwd(), ".usage");
 export type UsageField =
   | "ocrPages"
   | "aiActions"
+  | "cloudVoiceChars"
   | "pdfs"
   | "failedRequests"
   | "cacheHits";
@@ -24,6 +25,7 @@ export type UsageField =
 export interface UsageRecord {
   ocrPages: number;
   aiActions: number;
+  cloudVoiceChars: number;
   pdfs: number;
   failedRequests: number;
   cacheHits: number;
@@ -32,6 +34,7 @@ export interface UsageRecord {
 const ZERO: UsageRecord = {
   ocrPages: 0,
   aiActions: 0,
+  cloudVoiceChars: 0,
   pdfs: 0,
   failedRequests: 0,
   cacheHits: 0,

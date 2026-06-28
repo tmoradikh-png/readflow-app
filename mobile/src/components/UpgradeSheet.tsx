@@ -58,6 +58,7 @@ const PLANS: Plan[] = [
     perks: [
       "Everything in Reader Plus",
       "AI summaries, explain & Q&A - 500 / month",
+      "AI cloud voice - 60k characters / month",
       "OCR - 1,000 pages / month",
     ],
   },
@@ -71,6 +72,7 @@ const PLANS: Plan[] = [
     perks: [
       "Everything in AI Pro",
       "Export notes & summaries",
+      "AI cloud voice - 180k characters / month",
       "Highest limits - 3,000 OCR / 2,000 AI a month",
     ],
   },
@@ -137,7 +139,7 @@ export function UpgradeSheet({
           <Text style={styles.title}>{reasonTitle || "Unlock more of ReadFlow"}</Text>
           <Text style={styles.body}>
             {reasonBody ||
-              "Upgrade to read every document with no limits, OCR your scanned PDFs, and ask AI about anything you’re reading."}
+              "Upgrade to read every document with no limits, OCR your scanned PDFs, ask AI about anything you’re reading, and use capped AI cloud voice."}
           </Text>
 
           {/* billing toggle */}
@@ -219,7 +221,7 @@ export function UpgradeSheet({
           </Pressable>
           {!purchasingAvailable ? (
             <Text style={styles.ctaNote}>
-              Subscriptions are not live yet. No charge.
+              Subscriptions and AI voice packs are not live yet. No charge.
             </Text>
           ) : (
             <Text style={styles.ctaNote}>

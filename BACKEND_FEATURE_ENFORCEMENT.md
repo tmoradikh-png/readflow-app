@@ -5,9 +5,9 @@
 **AI and TTS features are strictly enforced on the backend** to prevent free users from accessing cost-bearing services. Free users can use local/device reading, but **cannot access any cloud AI, OCR, or TTS features**.
 
 > Cost note: read `COST_MODEL.md` before changing paid tiers or natural voice.
-> Unlimited cloud TTS is not economically safe. Public release should gate
-> natural voice behind an explicit `cloudVoice` feature and monthly usage cap,
-> not the generic `ai` feature.
+> Unlimited cloud TTS is not economically safe. Natural voice is gated behind
+> the explicit `cloudVoice` feature and a monthly character cap, not generic
+> `ai`.
 
 ---
 
@@ -19,7 +19,7 @@
 | **Server PDF extraction** | ✅ (30 PDFs/mo) | ✅ (100/mo) | ✅ (300/mo) | ✅ (1000/mo) |
 | **AI summary/explain/ask** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (500/mo) | ✅ (2000/mo) |
 | **Cloud OCR (scanned PDFs)** | ❌ 402 Blocked | ✅ (300 pages/mo) | ✅ (1000/mo) | ✅ (3000/mo) |
-| **Cloud TTS (natural voice)** | ❌ 402 Blocked | ❌ 402 Blocked | ⚠️ currently AI-gated in app; must be capped before public | ⚠️ currently AI-gated in app; must be capped before public |
+| **Cloud TTS (AI voice)** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (60k chars/mo) | ✅ (180k chars/mo) |
 | **Export** | ❌ 402 Blocked | ❌ 402 Blocked | ❌ 402 Blocked | ✅ |
 
 *TTS is cached in-memory; actual OpenAI usage varies by unique text/voice/speed
@@ -38,7 +38,7 @@ All cost-bearing endpoints call `ensureFeature(req, res, "feature")` at the star
 if (!ensureFeature(req, res, "ai")) return;
 
 // POST /api/tts
-if (!ensureFeature(req, res, "ai")) return;
+if (!ensureFeature(req, res, "cloudVoice")) return;
 
 // POST /api/pdf/extract (only checks serverExtract, not ai)
 if (!features.serverExtract) {
@@ -46,8 +46,9 @@ if (!features.serverExtract) {
 }
 ```
 
-The TTS route is currently gated by `ai` in code. Before public release, change
-this to an explicit `cloudVoice` gate plus a monthly character/minute quota.
+The TTS route is gated by `cloudVoice` and checks `cloudVoiceChars` before
+generating fresh OpenAI audio. Cache hits do not consume cloud voice quota
+because they do not create a new OpenAI charge.
 
 **Response for blocked access:**
 ```json
@@ -78,6 +79,7 @@ Free tier definition (from `src/config/plans.ts`):
   },
   limits: {
     aiActionsPerMonth: 0,     // ← Cannot make any AI requests
+    cloudVoiceCharsPerMonth: 0, // ← Cannot make cloud voice requests
     ocrPagesPerMonth: 0,      // ← Cannot OCR any pages
     pdfsPerMonth: 30,         // ✓ Can extract 30 PDFs
     maxFileSizeMb: 20,        // ✓ Max file size
@@ -289,6 +291,7 @@ Quotas are tracked per user per calendar month in `.usage/YYYY-MM.json`:
     "pdfs": 3,
     "ocrPages": 0,
     "aiActions": 0,
+    "cloudVoiceChars": 0,
     "failedRequests": 2,
     "cacheHits": 5
   }
@@ -379,6 +382,11 @@ Check this header to verify the backend correctly identified the user's tier.
 ✅ **Free users CANNOT use:**
 - AI summary/explain/ask
 - OCR for scanned PDFs
-- Cloud natural voice TTS
+- Cloud AI voice TTS
+
+✅ **AI Pro / Power cloud AI voice is capped:**
+- AI Pro: 60k generated characters/month
+- Power: 180k generated characters/month
+- Extra voice must be sold through a paid top-up or fall back to device voice
 
 No UI trick or client-side hack can bypass this. The backend is the source of truth.

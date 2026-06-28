@@ -1,7 +1,8 @@
 # ReadFlow
 
-Upload a clean PDF → it reflows to your phone screen → a natural voice reads it
-with **synchronized highlighting** → adjust **font size / spacing / speed** →
+Upload a clean PDF -> it reflows to your phone screen -> phone voice or capped
+AI voice reads it with **synchronized highlighting** -> adjust **font size /
+spacing / speed** ->
 tap **AI** to summarize, explain, simplify, extract key points, or ask questions.
 
 This repo is the MVP prototype. It is structured cleanly so each part can be
@@ -56,9 +57,9 @@ npm start                   # press the QR with Expo Go on your phone
 The app auto-detects your computer's LAN IP and calls the backend on port 4000,
 so your phone and computer must be on the **same Wi‑Fi**.
 
-> Reading aloud can use the **free on-device voice** (works offline, no cost) or
-> the backend-powered **natural cloud voice**. AI/cloud voice require the backend
-> and OpenAI key.
+> Reading aloud can use the **free on-device voice** (works offline after import,
+> no ReadFlow voice cost) or capped backend-powered **AI cloud voice**. AI/cloud
+> voice requires the backend and OpenAI key.
 
 ## Shipping a new Android build
 See **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** → the **"TL;DR — Cut a NEW build"** section
@@ -69,13 +70,23 @@ at the top is the step‑by‑step routine (bump `versionCode`, regenerate the i
 > 🛑 Never reuse a `versionCode` — a code is consumed the moment a build is made, and
 > reusing one wastes a paid EAS build. Always pick the next free code (see the guide).
 
-## Natural cloud voice
+## Voice
 
-Premium natural voice is implemented through
+Device voice is implemented through `expo-speech` and now supports choosing an
+installed phone voice from the shelf screen.
+
+Premium AI cloud voice is implemented through
 `mobile/src/services/tts/CloudTTSProvider.ts` and backend `POST /api/tts`.
 The mobile app never stores the OpenAI key; it sends text to the backend and
 plays the returned MP3. The reader keeps natural audio chunks intact while the
-UI highlights the active rendered line.
+UI highlights the active rendered line. Cloud voice is not unlimited:
+
+- AI Pro: 60k generated characters/month.
+- Power: 180k generated characters/month.
+
+The shelf screen also exposes a future local AI voice option. The current build
+does not ship the native Kokoro/ExecuTorch engine yet; it documents the path and
+falls back to device voice.
 
 ## Roadmap (after the prototype feels right)
 - RevenueCat mobile SDK + production subscriptions

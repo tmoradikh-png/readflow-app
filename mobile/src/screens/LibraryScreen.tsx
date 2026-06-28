@@ -7,19 +7,28 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Linking,
+  Modal,
 } from "react-native";
 import Constants from "expo-constants";
+import * as Speech from "expo-speech";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { PDFParser, ParsedPdf, isNetworkError } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
-import { EntitlementSnapshot } from "../services/Entitlements";
+import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
+import { getLocalNeuralVoiceStatus } from "../services/LocalNeuralVoice";
+import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
 import { theme } from "../theme";
 
 interface Props {
   /** Open a freshly parsed document in the reader. */
   onOpen: (doc: ParsedPdf, item: LibraryItem) => void;
   entitlement: EntitlementSnapshot;
+  usage: UsageSnapshot | null;
+  preferences: ReadingPreferences;
+  onPreferencesChange: (next: ReadingPreferences) => void;
+  onRefreshUsage?: () => void;
 }
 
 /** Deterministic cover variant from the document id. */
@@ -29,12 +38,24 @@ function coverVariant(id: string): 0 | 1 | 2 | 3 {
   return (h % 4) as 0 | 1 | 2 | 3;
 }
 
-export function LibraryScreen({ onOpen, entitlement }: Props) {
+export function LibraryScreen({
+  onOpen,
+  entitlement,
+  usage,
+  preferences,
+  onPreferencesChange,
+  onRefreshUsage,
+}: Props) {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showVoice, setShowVoice] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [deviceVoices, setDeviceVoices] = useState<
+    { id: string; name: string; language: string }[]
+  >([]);
 
   const refresh = useCallback(async () => {
     setItems(await Library.list());
@@ -43,6 +64,27 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    Speech.getAvailableVoicesAsync()
+      .then((voices) => {
+        setDeviceVoices(
+          voices
+            .filter((v) => /^en([-_]|$)/i.test(v.language || ""))
+            .slice(0, 24)
+            .map((v) => ({
+              id: v.identifier,
+              name: v.name || v.identifier,
+              language: v.language || "Unknown",
+            }))
+        );
+      })
+      .catch(() => setDeviceVoices([]));
+  }, []);
+
+  useEffect(() => {
+    onRefreshUsage?.();
+  }, [onRefreshUsage]);
 
   async function importNew() {
     setError(null);
@@ -141,6 +183,10 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
     entitlement.features.ai || entitlement.features.ocr || entitlement.features.unlimitedLibrary
   );
   const planLabel = isPaid ? entitlement.name : "Free";
+  const cloudVoiceRemaining =
+    usage?.remaining.cloudVoiceChars ?? entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
+  const cloudVoiceLimit = entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
+  const localStatus = getLocalNeuralVoiceStatus();
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
@@ -166,6 +212,12 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
               {planLabel}
             </Text>
           </View>
+          <Pressable style={styles.headerMiniBtn} onPress={() => setShowVoice(true)} hitSlop={8}>
+            <Text style={styles.headerMiniText}>Voice</Text>
+          </Pressable>
+          <Pressable style={styles.headerIconMiniBtn} onPress={() => setShowHelp(true)} hitSlop={8}>
+            <Text style={styles.headerIconMiniText}>?</Text>
+          </Pressable>
           <Pressable style={styles.addBtn} onPress={importNew} disabled={loading} hitSlop={8}>
             {loading ? (
               <ActivityIndicator color={theme.colors.onAccent} />
@@ -181,9 +233,23 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
       <View style={styles.statusStrip}>
         <View style={styles.statusDot} />
         <Text style={styles.statusText}>
-          Reflowed reading, device voice, and saved library are ready.
+          {preferences.voiceEngine === "cloud"
+            ? cloudVoiceLimit > 0
+              ? `AI voice selected - ${formatChars(cloudVoiceRemaining)} left this month.`
+              : "AI voice selected - upgrade or use device voice before reading."
+            : preferences.voiceEngine === "local_ai"
+              ? "Local AI voice selected - this build will use device voice until the engine is installed."
+              : "Device voice selected - unlimited reading with no ReadFlow voice cost."}
         </Text>
       </View>
+
+      <VoiceOverview
+        preferences={preferences}
+        cloudVoiceRemaining={cloudVoiceRemaining}
+        cloudVoiceLimit={cloudVoiceLimit}
+        localStatus={localStatus}
+        onPress={() => setShowVoice(true)}
+      />
 
       {items.length === 0 ? (
         <Empty onAdd={importNew} loading={loading} isPaid={isPaid} />
@@ -221,11 +287,341 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
           </View>
         </ScrollView>
       )}
+
+      <VoiceSettingsSheet
+        visible={showVoice}
+        entitlement={entitlement}
+        usage={usage}
+        preferences={preferences}
+        deviceVoices={deviceVoices}
+        localStatus={localStatus}
+        onClose={() => setShowVoice(false)}
+        onChange={onPreferencesChange}
+      />
+      <HelpAboutSheet visible={showHelp} onClose={() => setShowHelp(false)} />
     </SafeAreaView>
   );
 }
 
 /* ---------- pieces ---------- */
+
+const CLOUD_VOICES = [
+  "nova",
+  "alloy",
+  "ash",
+  "coral",
+  "echo",
+  "fable",
+  "onyx",
+  "sage",
+  "shimmer",
+  "ballad",
+];
+
+function formatChars(n: number): string {
+  if (n <= 0) return "0 chars";
+  if (n >= 1000) return `${Math.round(n / 1000)}k chars`;
+  return `${n} chars`;
+}
+
+function estimatePages(chars: number): number {
+  return Math.max(0, Math.floor(chars / 1650));
+}
+
+function VoiceOverview({
+  preferences,
+  cloudVoiceRemaining,
+  cloudVoiceLimit,
+  localStatus,
+  onPress,
+}: {
+  preferences: ReadingPreferences;
+  cloudVoiceRemaining: number;
+  cloudVoiceLimit: number;
+  localStatus: ReturnType<typeof getLocalNeuralVoiceStatus>;
+  onPress: () => void;
+}) {
+  const isCloud = preferences.voiceEngine === "cloud";
+  const isLocal = preferences.voiceEngine === "local_ai";
+  return (
+    <Pressable style={styles.voiceOverview} onPress={onPress}>
+      <View style={styles.voiceOverviewTop}>
+        <Text style={styles.voiceOverviewTitle}>Reading voice</Text>
+        <Text style={styles.voiceOverviewAction}>Change</Text>
+      </View>
+      <Text style={styles.voiceOverviewBody}>
+        {isCloud
+          ? cloudVoiceLimit > 0
+            ? `AI cloud voice: ${formatChars(cloudVoiceRemaining)} left, about ${estimatePages(cloudVoiceRemaining)} pages.`
+            : "AI cloud voice needs AI Pro or Power. Device voice remains unlimited."
+          : isLocal
+            ? `${localStatus.title}. Local AI will use battery and CPU, with no cloud cost.`
+            : "Device voice: unlimited, offline after import, and no ReadFlow AI voice cost."}
+      </Text>
+    </Pressable>
+  );
+}
+
+function VoiceSettingsSheet({
+  visible,
+  entitlement,
+  usage,
+  preferences,
+  deviceVoices,
+  localStatus,
+  onClose,
+  onChange,
+}: {
+  visible: boolean;
+  entitlement: EntitlementSnapshot;
+  usage: UsageSnapshot | null;
+  preferences: ReadingPreferences;
+  deviceVoices: { id: string; name: string; language: string }[];
+  localStatus: ReturnType<typeof getLocalNeuralVoiceStatus>;
+  onClose: () => void;
+  onChange: (next: ReadingPreferences) => void;
+}) {
+  const cloudLimit = entitlement.limits.cloudVoiceCharsPerMonth || 0;
+  const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
+  const canUseCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
+  const currentDeviceVoice = deviceVoices.find((v) => v.id === preferences.deviceVoiceId);
+
+  function selectEngine(engine: VoiceEngine) {
+    if (engine === "cloud" && !canUseCloud) {
+      Alert.alert(
+        "AI voice allowance",
+        "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Device voice stays unlimited."
+      );
+      return;
+    }
+    if (engine === "local_ai" && !localStatus.engineInstalled) {
+      Alert.alert("Local AI voice", localStatus.detail);
+      return;
+    }
+    onChange({ ...preferences, voiceEngine: engine });
+  }
+
+  function buyMoreVoice() {
+    Alert.alert(
+      "AI voice packs",
+      "The cost-safe product path is a Play Billing top-up, for example 100k AI voice characters. Purchases are not live in this build yet."
+    );
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Voice</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Text style={styles.modalClose}>x</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            <VoiceChoice
+              title="Device voice"
+              detail={
+                currentDeviceVoice
+                  ? `Using ${currentDeviceVoice.name}. Unlimited and no ReadFlow voice cost.`
+                  : "Unlimited, offline after import, and no ReadFlow voice cost."
+              }
+              active={preferences.voiceEngine === "device"}
+              onPress={() => selectEngine("device")}
+            />
+            <VoiceChoice
+              title="AI cloud voice"
+              detail={
+                canUseCloud
+                  ? `${formatChars(cloudRemaining)} left this month, about ${estimatePages(cloudRemaining)} pages. Uses ReadFlow AI voice allowance.`
+                  : "Included in AI Pro and Power only. Best quality, capped to protect pricing."
+              }
+              active={preferences.voiceEngine === "cloud"}
+              locked={!canUseCloud}
+              onPress={() => selectEngine("cloud")}
+            />
+            <VoiceChoice
+              title="Local AI voice"
+              detail={localStatus.detail}
+              active={preferences.voiceEngine === "local_ai"}
+              locked={!localStatus.engineInstalled}
+              onPress={() => selectEngine("local_ai")}
+            />
+
+            <View style={styles.voiceBlock}>
+              <Text style={styles.voiceBlockTitle}>Phone voices</Text>
+              <Text style={styles.voiceBlockHint}>
+                Better voices depend on what the phone has installed. Choose the clearest one here.
+              </Text>
+              <View style={styles.voiceList}>
+                {deviceVoices.length === 0 ? (
+                  <Text style={styles.voiceEmpty}>No downloadable phone voices were reported.</Text>
+                ) : (
+                  deviceVoices.map((voice) => {
+                    const active = preferences.deviceVoiceId === voice.id;
+                    return (
+                      <Pressable
+                        key={voice.id}
+                        style={[styles.voiceChip, active && styles.voiceChipOn]}
+                        onPress={() =>
+                          onChange({
+                            ...preferences,
+                            voiceEngine: "device",
+                            deviceVoiceId: voice.id,
+                          })
+                        }
+                      >
+                        <Text style={[styles.voiceChipText, active && styles.voiceChipTextOn]}>
+                          {voice.name}
+                        </Text>
+                        <Text style={[styles.voiceChipSub, active && styles.voiceChipTextOn]}>
+                          {voice.language}
+                        </Text>
+                      </Pressable>
+                    );
+                  })
+                )}
+              </View>
+            </View>
+
+            <View style={styles.voiceBlock}>
+              <Text style={styles.voiceBlockTitle}>Cloud voice style</Text>
+              <View style={styles.voiceList}>
+                {CLOUD_VOICES.map((voice) => {
+                  const active = preferences.cloudVoiceId === voice;
+                  return (
+                    <Pressable
+                      key={voice}
+                      style={[styles.cloudChip, active && styles.cloudChipOn]}
+                      onPress={() =>
+                        onChange({
+                          ...preferences,
+                          voiceEngine: canUseCloud ? "cloud" : preferences.voiceEngine,
+                          cloudVoiceId: voice,
+                        })
+                      }
+                    >
+                      <Text style={[styles.cloudChipText, active && styles.cloudChipTextOn]}>
+                        {voice.charAt(0).toUpperCase() + voice.slice(1)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.voiceBlock}>
+              <Text style={styles.voiceBlockTitle}>Need more AI voice?</Text>
+              <Text style={styles.voiceBlockHint}>
+                When the monthly allowance is used, ReadFlow should continue with device voice and offer a paid top-up.
+              </Text>
+              <Pressable style={styles.voicePackBtn} onPress={buyMoreVoice}>
+                <Text style={styles.voicePackText}>AI voice packs</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function VoiceChoice({
+  title,
+  detail,
+  active,
+  locked,
+  onPress,
+}: {
+  title: string;
+  detail: string;
+  active: boolean;
+  locked?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable style={[styles.voiceChoice, active && styles.voiceChoiceOn]} onPress={onPress}>
+      <View style={styles.voiceChoiceTop}>
+        <Text style={[styles.voiceChoiceTitle, active && styles.voiceChoiceTitleOn]}>
+          {title}
+        </Text>
+        <Text style={[styles.voiceChoiceState, active && styles.voiceChoiceStateOn]}>
+          {locked ? "Soon" : active ? "On" : "Use"}
+        </Text>
+      </View>
+      <Text style={[styles.voiceChoiceDetail, active && styles.voiceChoiceDetailOn]}>
+        {detail}
+      </Text>
+    </Pressable>
+  );
+}
+
+function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const expo = Constants.expoConfig as any;
+  const version = expo?.version || "dev";
+  const code = expo?.android?.versionCode || expo?.ios?.buildNumber || "";
+  const supportEmail = expo?.extra?.supportEmail || "support@urmiaworks.com";
+  const website = expo?.extra?.website || "https://urmiaworks.com";
+
+  function contact() {
+    Linking.openURL(`mailto:${supportEmail}?subject=ReadFlow support`).catch(() => {});
+  }
+
+  function openWebsite() {
+    Linking.openURL(website).catch(() => {});
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>About</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Text style={styles.modalClose}>x</Text>
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            <Text style={styles.aboutVersion}>
+              ReadFlow {version}
+              {code ? ` (${code})` : ""}
+            </Text>
+            <Text style={styles.aboutBody}>
+              ReadFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped cloud AI voice, or future local AI voice.
+            </Text>
+            <View style={styles.helpRows}>
+              <HelpRow label="+" text="Add a PDF or Word document." />
+              <HelpRow label="Voice" text="Choose unlimited phone voice, capped AI cloud voice, or local AI voice when installed." />
+              <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
+              <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />
+              <HelpRow label="Focus" text="Hides controls for a cleaner reading view." />
+              <HelpRow label="BM" text="Opens bookmarks and page navigation." />
+              <HelpRow label="AI" text="Summaries, explanations, and questions for AI Pro and Power." />
+            </View>
+            <View style={styles.aboutActions}>
+              <Pressable style={styles.aboutBtn} onPress={contact}>
+                <Text style={styles.aboutBtnText}>Contact support</Text>
+              </Pressable>
+              <Pressable style={styles.aboutBtnGhost} onPress={openWebsite}>
+                <Text style={styles.aboutBtnGhostText}>Website</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function HelpRow({ label, text }: { label: string; text: string }) {
+  return (
+    <View style={styles.helpRow}>
+      <Text style={styles.helpLabel}>{label}</Text>
+      <Text style={styles.helpText}>{text}</Text>
+    </View>
+  );
+}
 
 function Empty({
   onAdd,
@@ -362,7 +758,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(3),
     paddingBottom: theme.spacing(2),
   },
-  brandBlock: { flex: 1 },
+  brandBlock: { flex: 1, minWidth: 0 },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   brandMark: {
     width: 30,
@@ -399,7 +795,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginTop: 2,
   },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 7 },
   planPill: {
     height: 32,
     paddingHorizontal: 10,
@@ -420,6 +816,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   planPillTextPaid: { color: theme.colors.teal },
+  headerMiniBtn: {
+    height: 34,
+    paddingHorizontal: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerMiniText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12,
+  },
+  headerIconMiniBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerIconMiniText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansBold,
+    fontSize: 15,
+  },
   addBtn: {
     width: 44,
     height: 44,
@@ -465,6 +891,38 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sansMedium,
     fontSize: 12,
     lineHeight: 16,
+  },
+  voiceOverview: {
+    marginHorizontal: theme.spacing(3),
+    marginBottom: theme.spacing(2),
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(1.25),
+    borderRadius: 8,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  voiceOverviewTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 3,
+  },
+  voiceOverviewTitle: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 14,
+  },
+  voiceOverviewAction: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12,
+  },
+  voiceOverviewBody: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   scroll: { paddingHorizontal: theme.spacing(3), paddingBottom: theme.spacing(6) },
 
@@ -602,4 +1060,203 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   ctaText: { color: theme.colors.onAccent, fontFamily: theme.fonts.sansSemiBold, fontSize: 16 },
+
+  /* modals */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(20,17,11,0.55)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: theme.spacing(2.5),
+    paddingTop: theme.spacing(2),
+    paddingBottom: theme.spacing(2.5),
+    maxHeight: "92%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.serifSemiBold,
+    fontSize: 25,
+  },
+  modalClose: { color: theme.colors.textDim, fontSize: 18, paddingHorizontal: 4 },
+  modalContent: { gap: theme.spacing(1.25), paddingTop: theme.spacing(1.5), paddingBottom: 8 },
+
+  voiceChoice: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    padding: theme.spacing(1.5),
+    backgroundColor: theme.colors.card,
+  },
+  voiceChoiceOn: {
+    backgroundColor: theme.colors.tealSoft,
+    borderColor: theme.colors.teal,
+  },
+  voiceChoiceTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  voiceChoiceTitle: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 15,
+  },
+  voiceChoiceTitleOn: { color: theme.colors.teal },
+  voiceChoiceState: {
+    color: theme.colors.textDim,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12,
+  },
+  voiceChoiceStateOn: { color: theme.colors.teal },
+  voiceChoiceDetail: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 5,
+  },
+  voiceChoiceDetailOn: { color: theme.colors.textMute },
+  voiceBlock: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: theme.spacing(1.25),
+    gap: theme.spacing(0.75),
+  },
+  voiceBlockTitle: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 14,
+  },
+  voiceBlockHint: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  voiceList: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  voiceEmpty: { color: theme.colors.textDim, fontFamily: theme.fonts.sans, fontSize: 13 },
+  voiceChip: {
+    maxWidth: "100%",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    backgroundColor: theme.colors.surface,
+  },
+  voiceChipOn: {
+    backgroundColor: theme.colors.accentSoft,
+    borderColor: theme.colors.accent,
+  },
+  voiceChipText: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12.5,
+  },
+  voiceChipSub: {
+    color: theme.colors.textDim,
+    fontFamily: theme.fonts.sans,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  voiceChipTextOn: { color: theme.colors.accent },
+  cloudChip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: theme.colors.surface,
+  },
+  cloudChipOn: {
+    backgroundColor: theme.colors.ink,
+    borderColor: theme.colors.ink,
+  },
+  cloudChipText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 13,
+  },
+  cloudChipTextOn: { color: theme.colors.onAccent },
+  voicePackBtn: {
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.accent,
+  },
+  voicePackText: {
+    color: theme.colors.onAccent,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 13,
+  },
+
+  aboutVersion: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 15,
+  },
+  aboutBody: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  helpRows: { gap: 8 },
+  helpRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    paddingBottom: 8,
+  },
+  helpLabel: {
+    width: 48,
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 13,
+  },
+  helpText: {
+    flex: 1,
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 13.5,
+    lineHeight: 18,
+  },
+  aboutActions: { flexDirection: "row", gap: 10, marginTop: 4 },
+  aboutBtn: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+  },
+  aboutBtnText: {
+    color: theme.colors.onAccent,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 14,
+  },
+  aboutBtnGhost: {
+    flex: 1,
+    borderRadius: 8,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: "center",
+  },
+  aboutBtnGhostText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 14,
+  },
 });

@@ -69,8 +69,8 @@ export function HomeScreen({ onParsed }: Props) {
       <View style={styles.container}>
         <Text style={styles.logo}>ReadFlow</Text>
         <Text style={styles.tagline}>
-          Upload a PDF. It reflows to your screen, reads aloud with a natural voice, and explains
-          anything with AI.
+          Upload a PDF. It reflows to your screen, reads aloud with phone voice or capped AI voice,
+          and explains anything with AI.
         </Text>
 
         <Pressable style={styles.cta} onPress={pick} disabled={loading}>
@@ -87,7 +87,7 @@ export function HomeScreen({ onParsed }: Props) {
           <Feature icon="Aa" text="Readable text that fits the phone" />
           <Feature icon="Vo" text="Device voice with synced highlighting" />
           <Feature icon="Pg" text="Clean page navigation and progress" />
-          <Feature icon="AI" text="Paid plans unlock summaries and Q&A" />
+          <Feature icon="AI" text="Paid plans unlock summaries, Q&A, and capped AI voice" />
         </View>
 
         <Text style={styles.note}>First pages free • Premium unlocks unlimited reading</Text>

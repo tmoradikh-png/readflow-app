@@ -2,7 +2,7 @@
   "expo": {
     "name": "ReadFlow",
     "slug": "readflow",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urmiaworks.readflow",
-      "buildNumber": "17",
+      "buildNumber": "18",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "UIBackgroundModes": [
@@ -30,7 +30,7 @@
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 17,
+      "versionCode": 18,
       "permissions": [
         "INTERNET",
         "android.permission.RECORD_AUDIO",

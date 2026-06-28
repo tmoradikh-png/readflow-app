@@ -63,7 +63,7 @@ function upgradeMessage(feature: keyof PlanFeatures): string {
     case "export":
       return "Export is part of Power. Upgrade to export your notes and summaries.";
     case "cloudVoice":
-      return "Cloud natural voice isn't available yet.";
+      return "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Use device voice for unlimited free listening.";
     default:
       return "This feature requires a subscription.";
   }

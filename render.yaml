@@ -1,7 +1,8 @@
 # Render Blueprint for the ReadFlow repo root.
 # If your connected Git repo root is ReadFlow/, use this file directly.
 #
-# FEATURE ENFORCEMENT: AI access is gated by tier (free tier cannot access /api/ai or /api/tts).
+# FEATURE ENFORCEMENT: AI access is gated by tier; cloud voice is gated by the
+# explicit cloudVoice feature and monthly character quota.
 # This is enforced on the backend via RevenueCat integration (production) or dev override (testing).
 #
 # This default file is PUBLIC-RELEASE SAFE:

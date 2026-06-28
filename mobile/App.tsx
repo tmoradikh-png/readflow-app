@@ -24,7 +24,15 @@ import {
   EntitlementSnapshot,
   FREE_ENTITLEMENT,
   fetchEntitlement,
+  fetchUsage,
+  UsageSnapshot,
 } from "./src/services/Entitlements";
+import {
+  DEFAULT_PREFERENCES,
+  loadPreferences,
+  ReadingPreferences,
+  savePreferences,
+} from "./src/services/Preferences";
 import { theme } from "./src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -33,6 +41,8 @@ export default function App() {
   const [doc, setDoc] = useState<ParsedPdf | null>(null);
   const [item, setItem] = useState<LibraryItem | null>(null);
   const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(FREE_ENTITLEMENT);
+  const [usage, setUsage] = useState<UsageSnapshot | null>(null);
+  const [preferences, setPreferences] = useState<ReadingPreferences>(DEFAULT_PREFERENCES);
 
   const [fontsLoaded] = useFonts({
     Spectral_400Regular,
@@ -51,6 +61,17 @@ export default function App() {
 
   useEffect(() => {
     fetchEntitlement().then(setEntitlement).catch(() => {});
+    fetchUsage().then(setUsage).catch(() => {});
+    loadPreferences().then(setPreferences).catch(() => {});
+  }, []);
+
+  const updatePreferences = useCallback((next: ReadingPreferences) => {
+    setPreferences(next);
+    savePreferences(next).catch(() => {});
+  }, []);
+
+  const refreshUsage = useCallback(() => {
+    fetchUsage().then(setUsage).catch(() => {});
   }, []);
 
   const openDoc = useCallback((d: ParsedPdf, it: LibraryItem) => {
@@ -80,6 +101,7 @@ export default function App() {
           <Reader
             doc={doc}
             entitlement={entitlement}
+            preferences={preferences}
             language="en-US"
             freePageLimit={10}
             startSentenceId={item?.lastSentenceId ?? 0}
@@ -90,7 +112,14 @@ export default function App() {
             }}
           />
         ) : (
-          <LibraryScreen onOpen={openDoc} entitlement={entitlement} />
+          <LibraryScreen
+            onOpen={openDoc}
+            entitlement={entitlement}
+            usage={usage}
+            preferences={preferences}
+            onPreferencesChange={updatePreferences}
+            onRefreshUsage={refreshUsage}
+          />
         )}
       </View>
     </SafeAreaProvider>

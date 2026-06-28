@@ -25,11 +25,13 @@ import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
 import { UpgradeSheet } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
+import { ReadingPreferences } from "../services/Preferences";
 import { theme } from "../theme";
 
 interface Props {
   doc: ParsedPdf;
   entitlement: EntitlementSnapshot;
+  preferences: ReadingPreferences;
   language?: string; // BCP-47, e.g. "en-US"
   /** Pages readable for free before the subscribe gate. */
   freePageLimit?: number;
@@ -57,9 +59,24 @@ interface LineSegment extends LineRange {
 const ENFORCE_FREE_LIMIT = false;
 const TTS_PREFETCH_AHEAD = 8;
 
+function preferredVoiceMode(
+  preferences: ReadingPreferences,
+  entitlement: EntitlementSnapshot
+): "natural" | "device" {
+  if (
+    preferences.voiceEngine === "cloud" &&
+    entitlement.features.cloudVoice &&
+    entitlement.limits.cloudVoiceCharsPerMonth > 0
+  ) {
+    return "natural";
+  }
+  return "device";
+}
+
 export function Reader({
   doc,
   entitlement,
+  preferences,
   language = "en-US",
   freePageLimit = 10,
   startSentenceId = 0,
@@ -89,7 +106,9 @@ export function Reader({
   const [showAI, setShowAI] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [voiceMode, setVoiceMode] = useState<"natural" | "device">("device");
+  const [voiceMode, setVoiceMode] = useState<"natural" | "device">(
+    preferredVoiceMode(preferences, entitlement)
+  );
   const [paywallTitle, setPaywallTitle] = useState("Paid feature");
   const [paywallBody, setPaywallBody] = useState(
     "This feature is available on paid plans. Free users can continue with local reading and device voice."
@@ -106,8 +125,10 @@ export function Reader({
 
   const canUseAI = Boolean(entitlement.features.ai);
   const canUseOcr = Boolean(entitlement.features.ocr);
-  // TTS route is currently gated by the backend AI feature.
-  const canUseCloudVoice = canUseAI;
+  const canUseCloudVoice = Boolean(
+    entitlement.features.cloudVoice && entitlement.limits.cloudVoiceCharsPerMonth > 0
+  );
+  const desiredVoiceMode = preferredVoiceMode(preferences, entitlement);
 
   const insets = useSafeAreaInsets();
   const ttsRef = useRef(createTTSProvider(voiceMode === "natural" ? "cloud" : "device"));
@@ -121,6 +142,7 @@ export function Reader({
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const backgroundAudioAllowedRef = useRef(false);
+  const cloudVoiceLimitWarnedRef = useRef(false);
   const saveLastReadRef = useRef<() => void>(() => {});
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
@@ -161,6 +183,15 @@ export function Reader({
   useEffect(() => {
     backgroundAudioAllowedRef.current = entitlement.tier !== "free" && voiceMode === "natural";
   }, [entitlement.tier, voiceMode]);
+  useEffect(() => {
+    if (voiceMode === desiredVoiceMode) return;
+    epochRef.current++;
+    ttsRef.current.stop();
+    playingRef.current = false;
+    setIsPlaying(false);
+    ttsRef.current = createTTSProvider(desiredVoiceMode === "natural" ? "cloud" : "device");
+    setVoiceMode(desiredVoiceMode);
+  }, [desiredVoiceMode, voiceMode]);
   useEffect(() => {
     if (canUseCloudVoice || voiceMode !== "natural") return;
     epochRef.current++;
@@ -452,7 +483,13 @@ export function Reader({
       const next = f[i + ahead];
       if (!next || next.page > freeCap()) break;
       ttsRef.current
-        .prefetch?.(next.text, { language, rate: settingsRef.current.speed })
+        .prefetch?.(next.text, {
+          language,
+          rate: settingsRef.current.speed,
+          voiceId:
+            voiceMode === "natural" ? preferences.cloudVoiceId : preferences.deviceVoiceId,
+          fallbackVoiceId: preferences.deviceVoiceId,
+        })
         .catch(() => {});
     }
 
@@ -465,9 +502,22 @@ export function Reader({
     ttsRef.current.speak(text, {
       language,
       rate: settingsRef.current.speed,
+      voiceId: voiceMode === "natural" ? preferences.cloudVoiceId : preferences.deviceVoiceId,
+      fallbackVoiceId: preferences.deviceVoiceId,
       lockScreenTitle: docRef.current.fileName || "ReadFlow",
-      lockScreenSubtitle: `Page ${s.page} - Natural voice`,
+      lockScreenSubtitle: `Page ${s.page} - ${
+        voiceMode === "natural" ? "AI voice" : "Device voice"
+      }`,
       lockScreenAlbum: "ReadFlow",
+      onFallback: (info) => {
+        if (info.reason === "quota" && !cloudVoiceLimitWarnedRef.current) {
+          cloudVoiceLimitWarnedRef.current = true;
+          openFeatureLock(
+            "AI voice allowance used",
+            "Your cloud AI voice allowance is used for this month. Device voice will keep reading for free. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
+          );
+        }
+      },
       onStart: () => {
         if (myEpoch !== epochRef.current) return;
         setCurrent(s.id);
@@ -514,23 +564,6 @@ export function Reader({
 
   function onPlayPause() {
     isPlaying ? pause() : play();
-  }
-
-  function toggleVoice() {
-    if (voiceMode === "device" && !canUseCloudVoice) {
-      openFeatureLock(
-        "Cloud voice is paid",
-        "Natural cloud voice requires a paid plan. Free users can continue with device voice."
-      );
-      return;
-    }
-    const next = voiceMode === "natural" ? "device" : "natural";
-    epochRef.current++;
-    ttsRef.current.stop();
-    playingRef.current = false;
-    setIsPlaying(false);
-    ttsRef.current = createTTSProvider(next === "natural" ? "cloud" : "device");
-    setVoiceMode(next);
   }
 
   // ----- tap-to-read -----
@@ -848,7 +881,7 @@ export function Reader({
           onPress={() =>
             openFeatureLock(
               "Unlock AI",
-              "Summaries, explanations, Q&A, and real AI narration are part of AI Pro. Upgrade to bring your books to life."
+              "Summaries, explanations, Q&A, and capped AI cloud voice are part of AI Pro. Device voice stays unlimited."
             )
           }
         >
@@ -866,15 +899,6 @@ export function Reader({
           onStop={stop}
           soundEnabled={soundEnabled}
           onToggleSound={toggleSound}
-          voiceMode={voiceMode}
-          onToggleVoice={toggleVoice}
-          canUseCloudVoice={canUseCloudVoice}
-          onCloudVoiceLocked={() =>
-            openFeatureLock(
-              "Cloud voice is paid",
-              "Natural cloud voice requires a paid plan. Free users can continue with device voice."
-            )
-          }
           expanded={controlsOpen}
           onToggleExpand={() => setControlsOpen((v) => !v)}
           bottomInset={insets.bottom}

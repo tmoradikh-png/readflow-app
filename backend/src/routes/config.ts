@@ -41,11 +41,13 @@ configRouter.get("/usage", (req, res) => {
     limits: {
       ocrPagesPerMonth: limits.ocrPagesPerMonth,
       aiActionsPerMonth: limits.aiActionsPerMonth,
+      cloudVoiceCharsPerMonth: limits.cloudVoiceCharsPerMonth,
       pdfsPerMonth: limits.pdfsPerMonth,
     },
     remaining: {
       ocrPages: Math.max(0, limits.ocrPagesPerMonth - usage.ocrPages),
       aiActions: Math.max(0, limits.aiActionsPerMonth - usage.aiActions),
+      cloudVoiceChars: Math.max(0, limits.cloudVoiceCharsPerMonth - usage.cloudVoiceChars),
       pdfs: Math.max(0, limits.pdfsPerMonth - usage.pdfs),
     },
   });

@@ -18,11 +18,7 @@ interface Props {
   /** Master switch: when off, tapping text won't read and this bar collapses. */
   soundEnabled: boolean;
   onToggleSound: () => void;
-  voiceMode: "natural" | "device";
-  onToggleVoice: () => void;
-  canUseCloudVoice: boolean;
-  onCloudVoiceLocked?: () => void;
-  /** Whether the full settings (voice, font, spacing, speed) are shown. */
+  /** Whether the full settings (font, spacing, speed) are shown. */
   expanded: boolean;
   onToggleExpand: () => void;
   /** Safe-area bottom inset (gesture nav bar). */
@@ -37,10 +33,6 @@ export function Controls({
   onStop,
   soundEnabled,
   onToggleSound,
-  voiceMode,
-  onToggleVoice,
-  canUseCloudVoice,
-  onCloudVoiceLocked,
   expanded,
   onToggleExpand,
   bottomInset = 0,
@@ -56,64 +48,6 @@ export function Controls({
 
       {expanded && (
         <>
-          <View style={styles.row}>
-            <Text style={styles.label}>Voice</Text>
-            <View style={styles.segment}>
-              <Pressable
-                style={[
-                  styles.segOption,
-                  voiceMode === "natural" && styles.segOptionOn,
-                  !canUseCloudVoice && styles.segOptionLocked,
-                ]}
-                onPress={() => {
-                  if (canUseCloudVoice) {
-                    if (voiceMode !== "natural") onToggleVoice();
-                    return;
-                  }
-                  onCloudVoiceLocked?.();
-                }}
-              >
-                <Text
-                  style={[
-                    styles.segText,
-                    voiceMode === "natural" && styles.segTextOn,
-                    !canUseCloudVoice && styles.segTextLocked,
-                  ]}
-                >
-                  {canUseCloudVoice ? "AI Voice" : "AI Voice Pro"}
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.segOption, voiceMode === "device" && styles.segOptionOn]}
-                onPress={() => {
-                  if (voiceMode !== "device") onToggleVoice();
-                }}
-              >
-                <Text style={[styles.segText, voiceMode === "device" && styles.segTextOn]}>
-                  Device
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-
-          {/* AI voice spotlight — make the premium feature obvious. */}
-          {canUseCloudVoice ? (
-            voiceMode === "natural" ? (
-              <View style={styles.aiHint}>
-                <Text style={styles.aiHintText}>
-                  AI narration is active.
-                </Text>
-              </View>
-            ) : null
-          ) : (
-            <Pressable style={styles.aiPromo} onPress={onCloudVoiceLocked} hitSlop={6}>
-              <Text style={styles.aiPromoTitle}>AI narration</Text>
-              <Text style={styles.aiPromoBody}>
-                Human-like cloud voice is included in paid plans.
-              </Text>
-            </Pressable>
-          )}
-
           <View style={styles.row}>
             <Text style={styles.label}>Font {Math.round(settings.fontSize)}</Text>
             <Slider
@@ -227,58 +161,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: theme.spacing(1) },
   label: { color: theme.colors.textDim, fontSize: 13, width: 64 },
   slider: { flex: 1, height: 36 },
-  segment: {
-    flexDirection: "row",
-    flex: 1,
-    backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 8,
-    padding: 3,
-  },
-  segOption: {
-    flex: 1,
-    paddingVertical: 7,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  segOptionOn: { backgroundColor: theme.colors.accent },
-  segText: { color: theme.colors.textDim, fontSize: 13, fontWeight: "600" },
-  segTextOn: { color: theme.colors.onAccent },
-  segOptionLocked: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  segTextLocked: { color: theme.colors.textDim },
-  // AI voice spotlight
-  aiHint: {
-    backgroundColor: theme.colors.tealSoft,
-    borderRadius: 8,
-    paddingHorizontal: theme.spacing(1.25),
-    paddingVertical: theme.spacing(0.75),
-  },
-  aiHintText: {
-    color: theme.colors.teal,
-    fontSize: 12.5,
-    fontFamily: theme.fonts.sansSemiBold,
-  },
-  aiPromo: {
-    backgroundColor: theme.colors.ink,
-    borderRadius: 8,
-    paddingHorizontal: theme.spacing(1.5),
-    paddingVertical: theme.spacing(1),
-    gap: 2,
-  },
-  aiPromoTitle: {
-    color: theme.colors.onAccent,
-    fontSize: 14,
-    fontFamily: theme.fonts.sansSemiBold,
-    fontWeight: "700",
-  },
-  aiPromoBody: {
-    color: theme.colors.onAccent,
-    fontSize: 12,
-    opacity: 0.92,
-  },
   stepper: {
     flexDirection: "row",
     alignItems: "center",
