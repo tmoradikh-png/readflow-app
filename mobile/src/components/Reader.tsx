@@ -38,6 +38,20 @@ interface Props {
   onBack: () => void;
 }
 
+interface LineRange {
+  start: number;
+  end: number;
+}
+
+interface ActiveLine {
+  sentenceId: number | null;
+  lineIndex: number;
+}
+
+interface LineSegment extends LineRange {
+  text: string;
+}
+
 const ENFORCE_FREE_LIMIT = false;
 const TTS_PREFETCH_AHEAD = 8;
 
@@ -65,6 +79,7 @@ export function Reader({
     speed: 1.0,
   });
   const [currentId, setCurrentId] = useState<number | null>(null);
+  const [activeLine, setActiveLine] = useState<ActiveLine>({ sentenceId: null, lineIndex: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoFollow, setAutoFollow] = useState(true);
@@ -99,6 +114,9 @@ export function Reader({
   const epochRef = useRef(0); // invalidates stale TTS onDone callbacks
   const pendingOffsetRef = useRef(0); // mid-sentence start offset for tap-to-read
   const currentIdRef = useRef<number | null>(null);
+  const activeLineRef = useRef<ActiveLine>({ sentenceId: null, lineIndex: 0 });
+  const activeCharRef = useRef<{ sentenceId: number; charOffset: number } | null>(null);
+  const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
   const settingsRef = useRef(settings);
@@ -122,6 +140,10 @@ export function Reader({
     ocrOfflineRef.current = false;
     pendingJumpRef.current = null;
     anchorRef.current = null;
+    activeCharRef.current = null;
+    activeLineRef.current = { sentenceId: null, lineIndex: 0 };
+    lineRangesRef.current.clear();
+    setActiveLine({ sentenceId: null, lineIndex: 0 });
     setOcrProgress(null);
     setLoadingPageMsg(null);
   }, [doc]);
@@ -198,6 +220,14 @@ export function Reader({
   // and the highlight drift a few lines apart. Reading from flatRef fixes that.
   flatRef.current = flat;
 
+  const handleLineRanges = useRef((sentenceId: number, ranges: LineRange[]) => {
+    lineRangesRef.current.set(sentenceId, ranges);
+    const active = activeCharRef.current;
+    if (active?.sentenceId === sentenceId) {
+      setActiveLineByChar(sentenceId, active.charOffset);
+    }
+  }).current;
+
   function setCurrent(id: number | null) {
     currentIdRef.current = id;
     setCurrentId(id);
@@ -211,6 +241,24 @@ export function Reader({
       const within = f.filter((s) => s.page === pg).findIndex((s) => s.id === id);
       anchorRef.current = { page: pg, within: Math.max(0, within) };
     }
+  }
+  function setActiveLineIndex(sentenceId: number | null, lineIndex: number) {
+    const next = { sentenceId, lineIndex };
+    const prev = activeLineRef.current;
+    if (prev.sentenceId === next.sentenceId && prev.lineIndex === next.lineIndex) return;
+    activeLineRef.current = next;
+    setActiveLine(next);
+  }
+  function setActiveLineByChar(sentenceId: number, charOffset: number) {
+    activeCharRef.current = { sentenceId, charOffset };
+    const ranges = lineRangesRef.current.get(sentenceId);
+    if (!ranges || ranges.length === 0) {
+      setActiveLineIndex(sentenceId, 0);
+      return;
+    }
+    const boundedOffset = Math.max(0, charOffset);
+    const idx = ranges.findIndex((r) => boundedOffset >= r.start && boundedOffset <= r.end);
+    setActiveLineIndex(sentenceId, Math.max(0, idx >= 0 ? idx : ranges.length - 1));
   }
   function currentSentence(): Sentence | undefined {
     const f = flatRef.current;
@@ -350,7 +398,9 @@ export function Reader({
 
     const offset = pendingOffsetRef.current;
     pendingOffsetRef.current = 0;
-    const text = offset > 0 ? s.text.slice(offset) : s.text;
+    const baseOffset = Math.max(0, offset);
+    const text = baseOffset > 0 ? s.text.slice(baseOffset) : s.text;
+    const spokenLength = Math.max(1, text.length);
 
     // Warm upcoming clips through the provider's in-flight cache so natural
     // voice can hand off smoothly without charging/fetching duplicates.
@@ -374,7 +424,13 @@ export function Reader({
       onStart: () => {
         if (myEpoch !== epochRef.current) return;
         setCurrent(s.id);
+        setActiveLineByChar(s.id, baseOffset);
         if (followRef.current) scrollToIndexSafe(i, true);
+      },
+      onProgress: ({ currentTime, duration }) => {
+        if (myEpoch !== epochRef.current || duration <= 0) return;
+        const ratio = Math.max(0, Math.min(0.999, currentTime / duration));
+        setActiveLineByChar(s.id, baseOffset + Math.floor(spokenLength * ratio));
       },
       onDone: advance,
       onError: advance,
@@ -701,14 +757,16 @@ export function Reader({
         ref={listRef}
         data={flat}
         keyExtractor={(s) => String(s.id)}
-        extraData={currentId}
+        extraData={`${currentId ?? "n"}:${activeLine.sentenceId ?? "n"}:${activeLine.lineIndex}:${settings.fontSize}:${lineHeight}`}
         renderItem={({ item, index }: ListRenderItemInfo<Sentence>) => (
           <SentenceRow
             sentence={item}
             active={item.id === currentId}
+            activeLineIndex={item.id === activeLine.sentenceId ? activeLine.lineIndex : null}
             fontSize={settings.fontSize}
             lineHeight={lineHeight}
             onTapWord={tapHandler}
+            onLineRanges={handleLineRanges}
             showPageDivider={index === 0 || flat[index - 1].page !== item.page}
           />
         )}
@@ -812,20 +870,51 @@ export function Reader({
 interface SentenceRowProps {
   sentence: Sentence;
   active: boolean;
+  activeLineIndex: number | null;
   fontSize: number;
   lineHeight: number;
   onTapWord: (globalId: number, charOffset: number) => void;
+  onLineRanges: (sentenceId: number, ranges: LineRange[]) => void;
   showPageDivider?: boolean;
 }
 const SentenceRow = React.memo(function SentenceRow({
   sentence,
   active,
+  activeLineIndex,
   fontSize,
   lineHeight,
   onTapWord,
+  onLineRanges,
   showPageDivider,
 }: SentenceRowProps) {
   const tokens = useMemo(() => TextReflow.tokenizeWords(sentence.text), [sentence.text]);
+  const [lines, setLines] = useState<LineSegment[] | null>(null);
+
+  useEffect(() => {
+    setLines(null);
+  }, [sentence.text, fontSize, lineHeight]);
+
+  function handleTextLayout(e: any) {
+    if (!active) return;
+    const next = buildLineSegments(sentence.text, e?.nativeEvent?.lines || []);
+    if (next.length === 0) return;
+    setLines((prev) => (sameLineSegments(prev, next) ? prev : next));
+    onLineRanges(
+      sentence.id,
+      next.map((line) => ({ start: line.start, end: line.end }))
+    );
+  }
+
+  function renderTokenText(tokenSource: { word: string; offset: number }[], baseOffset = 0) {
+    return tokenSource.map((t, wi) => (
+      <Text key={`${baseOffset}-${wi}`} onPress={() => onTapWord(sentence.id, baseOffset + t.offset)}>
+        {t.word}
+        {wi < tokenSource.length - 1 ? " " : ""}
+      </Text>
+    ));
+  }
+
+  const textStyle = { fontSize, lineHeight };
   return (
     <View>
       {showPageDivider ? (
@@ -835,17 +924,71 @@ const SentenceRow = React.memo(function SentenceRow({
           <View style={styles.pageDividerLine} />
         </View>
       ) : null}
-      <Text style={[styles.row, { fontSize, lineHeight }, active && styles.activeSentence]}>
-        {tokens.map((t, wi) => (
-          <Text key={wi} onPress={() => onTapWord(sentence.id, t.offset)}>
-            {t.word}
-            {wi < tokens.length - 1 ? " " : ""}
-          </Text>
-        ))}
-      </Text>
+      {active && lines?.length ? (
+        <View style={styles.activeLineBlock}>
+          {lines.map((line, lineIndex) => {
+            const lineTokens = TextReflow.tokenizeWords(line.text);
+            return (
+              <Text
+                key={`${line.start}-${lineIndex}`}
+                style={[
+                  styles.rowLine,
+                  textStyle,
+                  activeLineIndex === lineIndex && styles.activeLine,
+                ]}
+              >
+                {renderTokenText(lineTokens, line.start)}
+              </Text>
+            );
+          })}
+        </View>
+      ) : (
+        <Text style={[styles.row, textStyle]} onTextLayout={active ? handleTextLayout : undefined}>
+          {renderTokenText(tokens)}
+        </Text>
+      )}
     </View>
   );
 });
+
+function buildLineSegments(text: string, nativeLines: any[]): LineSegment[] {
+  const out: LineSegment[] = [];
+  let searchFrom = 0;
+
+  for (const nativeLine of nativeLines) {
+    const rawText = String(nativeLine?.text || "").replace(/\s+$/g, "");
+    const trimmedText = rawText.trim();
+    if (!trimmedText) continue;
+
+    let lineText = rawText;
+    let start = text.indexOf(lineText, searchFrom);
+    if (start < 0) {
+      lineText = trimmedText;
+      start = text.indexOf(lineText, searchFrom);
+    }
+    if (start < 0) {
+      lineText = trimmedText;
+      start = searchFrom;
+    }
+
+    const end = Math.min(text.length, start + lineText.length);
+    out.push({ text: lineText, start, end });
+    searchFrom = end;
+    while (searchFrom < text.length && /\s/.test(text[searchFrom])) searchFrom++;
+  }
+
+  return out.length ? out : [{ text, start: 0, end: text.length }];
+}
+
+function sameLineSegments(prev: LineSegment[] | null, next: LineSegment[]): boolean {
+  if (!prev || prev.length !== next.length) return false;
+  return prev.every(
+    (line, index) =>
+      line.start === next[index].start &&
+      line.end === next[index].end &&
+      line.text === next[index].text
+  );
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
@@ -984,6 +1127,14 @@ const styles = StyleSheet.create({
   reader: { flex: 1 },
   readerContent: { padding: theme.spacing(3) },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
+  activeLineBlock: { paddingVertical: 3 },
+  rowLine: {
+    alignSelf: "flex-start",
+    color: theme.colors.body,
+    fontFamily: theme.fonts.serif,
+    borderRadius: 6,
+    paddingHorizontal: 2,
+  },
   pageDivider: {
     flexDirection: "row",
     alignItems: "center",
@@ -1001,6 +1152,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.highlight,
     color: theme.colors.text,
     borderRadius: 6,
+  },
+  activeLine: {
+    backgroundColor: theme.colors.highlight,
+    color: theme.colors.text,
   },
   aiFab: {
     position: "absolute",

@@ -182,6 +182,14 @@ export class CloudTTSProvider implements TTSProvider {
       const sub = player.addListener("playbackStatusUpdate", (status) => {
         if (mySeq !== this.seq) return;
         if (status.playing) started = true;
+        const duration = Number(status.duration || 0);
+        const currentTime = Number(status.currentTime || 0);
+        if (duration > 0 && currentTime >= 0) {
+          opts.onProgress?.({
+            currentTime: Math.min(currentTime, duration),
+            duration,
+          });
+        }
         if (status.didJustFinish) finish();
       });
       this.removeListener = () => sub.remove();

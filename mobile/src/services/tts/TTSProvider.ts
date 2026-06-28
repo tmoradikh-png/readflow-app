@@ -11,6 +11,7 @@ export interface SpeakOptions {
   rate?: number; // 1.0 = normal
   pitch?: number;
   onStart?: () => void;
+  onProgress?: (progress: { currentTime: number; duration: number }) => void;
   onDone?: () => void;
   onError?: (e?: unknown) => void;
 }
