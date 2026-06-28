@@ -274,9 +274,14 @@ Cloud voice:
 Leaving the app/reader:
 - The reader explicitly stops playback on back/unmount so voice does not keep
   reading after returning to the library.
+- Device voice also stops when the app leaves the foreground. This prevents the
+  free/on-device `expo-speech` engine from continuing after screen lock, Home,
+  or app switch.
 - React Native cannot always distinguish phone lock from Home/app switch in JS.
-  If exact "lock continues, Home stops" behavior becomes mandatory, add a small
-  native Android signal/module later.
+  Natural/cloud voice is still allowed to use background audio for paid
+  lock-screen listening. If exact "lock continues, Home stops" behavior becomes
+  mandatory for natural voice too, add a small native Android signal/module
+  later.
 
 Highlighting:
 - TTS still reads natural chunks. Do not reduce chunk/buffer size just to make

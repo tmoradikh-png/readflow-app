@@ -9,6 +9,8 @@ import {
   ListRenderItemInfo,
   BackHandler,
   ActivityIndicator,
+  AppState,
+  AppStateStatus,
 } from "react-native";
 import Constants from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -117,6 +119,9 @@ export function Reader({
   const activeLineRef = useRef<ActiveLine>({ sentenceId: null, lineIndex: 0 });
   const activeCharRef = useRef<{ sentenceId: number; charOffset: number } | null>(null);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const voiceModeRef = useRef(voiceMode);
+  const saveLastReadRef = useRef<() => void>(() => {});
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
   const settingsRef = useRef(settings);
@@ -153,19 +158,40 @@ export function Reader({
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
-    useEffect(() => {
-      if (canUseCloudVoice || voiceMode !== "natural") return;
-      epochRef.current++;
-      ttsRef.current.stop();
-      ttsRef.current = createTTSProvider("device");
-      setVoiceMode("device");
-    }, [canUseCloudVoice, voiceMode]);
+  useEffect(() => {
+    voiceModeRef.current = voiceMode;
+  }, [voiceMode]);
+  useEffect(() => {
+    if (canUseCloudVoice || voiceMode !== "natural") return;
+    epochRef.current++;
+    ttsRef.current.stop();
+    ttsRef.current = createTTSProvider("device");
+    setVoiceMode("device");
+  }, [canUseCloudVoice, voiceMode]);
 
-    function openFeatureLock(title: string, body: string) {
-      setPaywallTitle(title);
-      setPaywallBody(body);
-      setShowPaywall(true);
-    }
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      const previous = appStateRef.current;
+      appStateRef.current = nextState;
+      if (previous !== "active" || nextState === "active") return;
+      if (voiceModeRef.current !== "device" || !playingRef.current) return;
+
+      // Android can keep expo-speech alive after lock/app-switch. Device voice
+      // is the free foreground reader, so stop it as soon as the app backgrounds.
+      epochRef.current++;
+      playingRef.current = false;
+      setIsPlaying(false);
+      saveLastReadRef.current();
+      ttsRef.current.stop();
+    });
+    return () => sub.remove();
+  }, []);
+
+  function openFeatureLock(title: string, body: string) {
+    setPaywallTitle(title);
+    setPaywallBody(body);
+    setShowPaywall(true);
+  }
 
   useEffect(() => {
     return () => {
@@ -598,6 +624,7 @@ export function Reader({
       preview: s.text.slice(0, 60),
     }).catch(() => {});
   }
+  saveLastReadRef.current = saveLastRead;
 
   function handleBack() {
     // Fully halt playback so the voice never keeps reading back on the Library.
