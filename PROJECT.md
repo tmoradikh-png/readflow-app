@@ -278,6 +278,10 @@ Leaving the app/reader:
   the foreground, which covers screen lock, Home, and app switch.
 - Paid natural/cloud voice is the only mode currently allowed to continue in the
   background for lock-screen listening.
+- Natural/cloud voice registers an Expo Audio lock-screen media session with
+  book/page metadata and native play/pause controls. Expo Audio does not expose
+  a separate stop button in the current lock-screen API; pause is the supported
+  lock-screen control.
 - React Native cannot always distinguish phone lock from Home/app switch in JS.
   If exact "paid lock continues, Home/app switch stops" behavior becomes
   mandatory for natural voice too, add a small native Android signal/module

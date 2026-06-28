@@ -14,6 +14,10 @@ export interface SpeakOptions {
   onProgress?: (progress: { currentTime: number; duration: number }) => void;
   onDone?: () => void;
   onError?: (e?: unknown) => void;
+  /** Metadata shown by providers that support lock-screen controls. */
+  lockScreenTitle?: string;
+  lockScreenSubtitle?: string;
+  lockScreenAlbum?: string;
 }
 
 export interface TTSProvider {

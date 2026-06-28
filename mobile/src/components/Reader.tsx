@@ -446,6 +446,9 @@ export function Reader({
     ttsRef.current.speak(text, {
       language,
       rate: settingsRef.current.speed,
+      lockScreenTitle: docRef.current.fileName || "ReadFlow",
+      lockScreenSubtitle: `Page ${s.page} - Natural voice`,
+      lockScreenAlbum: "ReadFlow",
       onStart: () => {
         if (myEpoch !== epochRef.current) return;
         setCurrent(s.id);

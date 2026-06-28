@@ -194,10 +194,20 @@ export class CloudTTSProvider implements TTSProvider {
       });
       this.removeListener = () => sub.remove();
       try {
+        const metadata = {
+          title: opts.lockScreenTitle || "ReadFlow",
+          artist: opts.lockScreenSubtitle || "Natural voice",
+          albumTitle: opts.lockScreenAlbum || "ReadFlow",
+        };
         player.setActiveForLockScreen(true, {
-          title: "ReadFlow",
-          artist: "Natural voice",
+          ...metadata,
+        }, {
+          // Generated clips are short paragraph chunks. Play/pause is useful;
+          // seek buttons add clutter and behave poorly across chunk handoffs.
+          showSeekBackward: false,
+          showSeekForward: false,
         });
+        player.updateLockScreenMetadata(metadata);
       } catch {
         /* lock-screen controls are best-effort */
       }
