@@ -114,6 +114,29 @@ open Voice, download the local Piper voice, select it, and verify local
 reading/highlighting. Expo Go and older installed builds cannot test the Sherpa
 native module.
 
+Local AI build note: `mobile/plugins/withSherpaCodegenGradleFix.js` is required.
+It patches generated `android/app/build.gradle` during Expo prebuild so the app
+CMake task waits for `react-native-sherpa-onnx` codegen. Without that plugin, a
+clean native build can fail because
+`react-native-sherpa-onnx/android/build/generated/source/codegen/jni` does not
+exist yet.
+
+To test a native build locally before spending EAS quota, use a short physical
+path on Windows:
+
+```powershell
+# example temp workflow
+robocopy C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile C:\rf-mobile-test /E /XD node_modules android .expo
+cd C:\rf-mobile-test
+npm ci
+npx expo prebuild --platform android --clean
+.\android\gradlew.bat :app:assembleDebug -x lint -x test
+npx expo run:android
+```
+
+The OneDrive workspace path can exceed Windows/CMake path limits. A `subst` drive
+mapped too deep also caused mixed-root errors, so prefer a real short temp copy.
+
 ### Icon troubleshooting note — if a fresh install still shows cropped `rF`
 
 Symptom: the launcher icon shows only `rF`, the red book spine is missing, or the
@@ -357,4 +380,6 @@ must never be reused (a code is consumed the moment a build is made — see Step
   or the launcher mask crops it off and you see only "rF".
 - **To see a new icon/version on the phone, uninstall then reinstall** — the launcher and Play
   both cache aggressively.
-
+- **Local AI needs the Sherpa codegen plugin.** Keep
+  `plugins/withSherpaCodegenGradleFix.js` in `app.json`; it was verified by
+  deleting Sherpa's generated codegen output and running a clean debug assemble.

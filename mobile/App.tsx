@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { View, StyleSheet } from "react-native";
+import { LogBox, View, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
@@ -36,6 +36,7 @@ import {
 import { theme } from "./src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
+LogBox.ignoreLogs(["SherpaOnnxModelList: Unsupported model espeak-ng-data"]);
 
 export default function App() {
   const [doc, setDoc] = useState<ParsedPdf | null>(null);

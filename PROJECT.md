@@ -1,6 +1,6 @@
 # ReadFlow Developer Handoff
 
-Updated: 2026-06-28
+Updated: 2026-06-29
 
 Read this file first when taking over the project. It is the high-level map of
 accounts, services, release status, and operational habits. Then use
@@ -64,6 +64,15 @@ Changes after the latest finished build and included in source `1.0.18`:
 - Important: local AI voice is a native dependency. It needs a new EAS/native
   build to run on the phone; Expo Go or an older installed build will fall back
   to device voice.
+- Connected-phone dev test on 2026-06-29: a debug native build was installed on
+  Samsung `SM_G975F` (`R58M168KTSZ`) from a short temp path. The Piper Lessac
+  local model was present on-device, Sherpa resolved it, ReadFlow played local AI
+  audio, and Android reported an active ReadFlow media session with
+  "Page 18 - Local AI voice". No EAS quota was consumed for this test.
+- Source now includes `mobile/plugins/withSherpaCodegenGradleFix.js`. Keep it:
+  it makes clean native builds run Sherpa's React Native codegen before the app
+  CMake/autolinking step. Without it, clean Gradle builds can fail with missing
+  `react-native-sherpa-onnx/android/build/generated/source/codegen/jni`.
 
 ## Account Map
 
@@ -122,6 +131,28 @@ Primary Windows workspace used during development:
 C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow
 ```
 
+Local Android tooling installed during the 2026-06-29 phone test:
+
+```powershell
+C:\Users\Greencom\android-sdk
+C:\Users\Greencom\android-sdk\platform-tools\adb.exe
+C:\Program Files\Zulu\zulu-17
+```
+
+Use these env vars for local native Android commands on this machine:
+
+```powershell
+$env:JAVA_HOME='C:\Program Files\Zulu\zulu-17'
+$env:ANDROID_HOME='C:\Users\Greencom\android-sdk'
+$env:ANDROID_SDK_ROOT='C:\Users\Greencom\android-sdk'
+$env:PATH="$env:JAVA_HOME\bin;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
+```
+
+Windows path warning: native builds from the OneDrive path hit long-path/CMake
+problems. For local phone testing, use a short physical temp copy such as
+`C:\rf-mobile-test`; mapping the mobile folder itself to a `subst` drive caused
+Expo/Gradle mixed-root errors.
+
 Important local design source for icons:
 
 ```powershell
@@ -147,6 +178,8 @@ Mobile:
   across app launches.
 - `mobile/src/services/LocalNeuralVoice.ts`: Sherpa/Piper local voice status,
   model download, and local model path lookup.
+- `mobile/plugins/withSherpaCodegenGradleFix.js`: Expo config plugin that patches
+  generated `android/app/build.gradle` so Sherpa codegen runs before app CMake.
 - `mobile/src/services/TextReflow.ts`: turns extracted page text into readable
   sentence units.
 - `mobile/src/services/tts/*`: device, cloud natural voice, and local neural
@@ -195,6 +228,16 @@ Short version:
 8. Upload the `.aab` to Google Play Console internal testing.
 9. On the phone, uninstall the old app before reinstalling. Android launchers and
    Play cache icons/version metadata aggressively.
+
+Local native smoke test without spending EAS quota:
+1. Copy `mobile/` to a short physical path such as `C:\rf-mobile-test`, excluding
+   `node_modules`, `.expo`, and generated `android/`.
+2. Run `npm ci`.
+3. Run `npx expo prebuild --platform android --clean`.
+4. Run `.\android\gradlew.bat :app:assembleDebug -x lint -x test` or
+   `npx expo run:android`.
+5. If testing local AI, open Voice, download/select Local AI voice, tap Listen,
+   and watch logs for Sherpa model resolution and Android media-session playback.
 
 Critical rule: never reuse an Android `versionCode`. EAS/Play consume codes even
 when a build is only for testing or later rejected.
@@ -337,6 +380,11 @@ Local neural voice:
 - Playback uses `LocalNeuralTTSProvider`, which generates WAV clips on-device,
   caches them in app cache, and reports progress through the same line-highlighter
   path as cloud voice.
+- The dev-only warning
+  `SherpaOnnxModelList: Unsupported model espeak-ng-data` is from Sherpa's model
+  catalog seeing the support-data folder in the Piper model. It is not a playback
+  failure. The app suppresses that warning in LogBox and avoids refreshing the
+  full model catalog during ordinary status checks.
 - If native support/model download is missing, the provider falls back to the
   selected device voice and shows a one-time "Local AI voice not ready" message.
 - Treat local AI as unlimited from ReadFlow's billing perspective because it uses

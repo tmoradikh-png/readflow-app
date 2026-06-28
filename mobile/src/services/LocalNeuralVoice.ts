@@ -52,23 +52,11 @@ export async function loadLocalNeuralVoiceStatus(): Promise<LocalNeuralVoiceStat
     const category = download.ModelCategory.Tts;
     const downloaded = await download.isModelDownloadedByCategory(category, LOCAL_NEURAL_MODEL_ID);
 
-    let modelSizeBytes = LOCAL_NEURAL_MODEL_SIZE_BYTES;
-    try {
-      const models = await download.refreshModelsByCategory(category, {
-        cacheTtlMinutes: 60 * 24,
-        maxRetries: 1,
-      });
-      const model = models.find((m) => m.id === LOCAL_NEURAL_MODEL_ID);
-      if (model?.bytes) modelSizeBytes = model.bytes;
-    } catch {
-      /* A cached/downloaded model can still be used while offline. */
-    }
-
     return buildStatus({
       supportedDevice,
       nativeAvailable: true,
       modelDownloaded: downloaded,
-      modelSizeBytes,
+      modelSizeBytes: LOCAL_NEURAL_MODEL_SIZE_BYTES,
     });
   } catch {
     return buildStatus({

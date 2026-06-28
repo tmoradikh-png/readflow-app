@@ -60,7 +60,8 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "./plugins/withSherpaCodegenGradleFix"
     ],
     "extra": {
       "apiUrl": "https://readflow-backend-internal.onrender.com",

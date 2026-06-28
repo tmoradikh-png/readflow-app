@@ -57,6 +57,18 @@ npm start                   # press the QR with Expo Go on your phone
 The app auto-detects your computer's LAN IP and calls the backend on port 4000,
 so your phone and computer must be on the **same Wi‑Fi**.
 
+Expo Go is enough for normal JS/UI work and device voice. Local AI voice needs
+the native Sherpa module, so use a development/native build:
+
+```pwsh
+cd mobile
+npm run android             # runs expo run:android for a connected Android phone
+```
+
+On Windows, local native builds are more reliable from a short physical path
+such as `C:\rf-mobile-test`; see `RELEASE_GUIDE.md` for the no-EAS local test
+workflow.
+
 > Reading aloud can use the **free on-device voice** (works offline after import,
 > no ReadFlow voice cost), capped backend-powered **AI cloud voice**, or the
 > downloaded **local AI voice** in a native build. AI/cloud voice requires the
