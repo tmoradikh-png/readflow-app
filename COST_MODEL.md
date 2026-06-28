@@ -264,6 +264,33 @@ At 12 hours/day it would lose hundreds of dollars per user each month. Long
 listening must use device voice, with cloud voice sold as a capped allowance or
 usage pack.
 
+## AI Voice Cost Per Page
+
+For "read this book with best quality AI voice", use the `tts-1-hd` column unless
+we intentionally switch models. The current backend defaults to `tts-1-hd`.
+
+Assumption:
+
+- Typical book page: 250-300 words.
+- Character estimate: about 6 characters per word including spaces/punctuation.
+- So one page is roughly 1,500-1,800 characters.
+
+| Amount read | Characters | `tts-1` cost | `tts-1-hd` cost |
+| --- | ---: | ---: | ---: |
+| 1 page, 250 words | 1,500 | $0.023 | $0.045 |
+| 1 page, 300 words | 1,800 | $0.027 | $0.054 |
+| 100 pages | 150k-180k | $2.25-$2.70 | $4.50-$5.40 |
+| 500 pages | 750k-900k | $11.25-$13.50 | $22.50-$27.00 |
+| 1,000 pages | 1.5M-1.8M | $22.50-$27.00 | $45.00-$54.00 |
+
+Dense textbooks or PDFs can be much higher. A 500-word page is about 3,000
+characters, which is about $0.09/page on `tts-1-hd` or $9 per 100 pages.
+
+Conclusion: best-quality AI voice is too expensive to include as unlimited
+monthly listening. Treat it as a capped premium allowance or a separate natural
+voice pack. Device voice and future on-device AI voice are the long-listening
+paths.
+
 ## AI Text Cost
 
 AI text is much cheaper than cloud TTS if context size is controlled.
