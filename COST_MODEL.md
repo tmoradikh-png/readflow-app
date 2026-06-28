@@ -103,6 +103,48 @@ with device voice. The risky part is not reading time; it is many large imports
 and scanned/OCR-heavy books. Keep OCR capped, queue or throttle concurrent OCR,
 and move long-term caching/storage carefully.
 
+## OCR Cost Per Page
+
+Reader Plus currently has a 300 OCR pages/month allowance. This is not a limit
+on normal reading pages. It only applies to scanned/image pages that need OCR.
+A normal text PDF can be read and listened to with device voice for no per-hour
+vendor cost after import.
+
+OCR page cash cost:
+
+- OpenAI/API cost: $0/page in the current implementation.
+- Render billing: no direct per-page charge; it is fixed monthly compute plus
+  bandwidth/storage overages.
+- Practical cost: CPU time, memory pressure, latency, and whether we need a
+  larger Render instance as usage grows.
+
+CPU-time estimate if a Render instance is already running:
+
+| Render compute | Monthly cost | 5 sec/page | 15 sec/page | 60 sec/page |
+| --- | ---: | ---: | ---: | ---: |
+| Standard web service | $25/mo | $0.005 / 100 pages | $0.014 / 100 pages | $0.057 / 100 pages |
+| Pro web service | $85/mo | $0.016 / 100 pages | $0.048 / 100 pages | $0.192 / 100 pages |
+
+Those numbers are the theoretical compute value of the CPU seconds, not an
+extra bill from Render. The fixed monthly allocation matters more:
+
+| Monthly OCR volume | $25 compute effective cost | $85 compute effective cost |
+| ---: | ---: | ---: |
+| 1,000 pages | $2.50 / 100 pages | $8.50 / 100 pages |
+| 3,000 pages | $0.83 / 100 pages | $2.83 / 100 pages |
+| 10,000 pages | $0.25 / 100 pages | $0.85 / 100 pages |
+| 30,000 pages | $0.08 / 100 pages | $0.28 / 100 pages |
+
+At $4.99/month, Reader Plus nets roughly $4.19 after conservative Play +
+RevenueCat fees. If a user consumes the full 300 OCR pages, revenue is about
+$1.40 per 100 OCR pages. This is healthy at moderate shared volume, but a very
+small user base with many OCR-heavy users can feel expensive because the fixed
+server cost is spread over too few subscriptions.
+
+Recommendation: allow unlimited normal reading/device listening in Reader Plus,
+but keep OCR capped, measured, and queue-limited. Start with 300 OCR pages/month,
+then adjust after real telemetry.
+
 ## Device Voice Quality, No Extra Cost
 
 Device voice quality can be improved without paying OpenAI by improving the
