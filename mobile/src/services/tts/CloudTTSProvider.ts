@@ -17,7 +17,11 @@ let audioModeReady = false;
 async function ensureAudioMode() {
   if (audioModeReady) return;
   try {
-    await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: "duckOthers" });
+    await setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: "duckOthers",
+    });
   } catch {
     /* non-fatal */
   }
@@ -140,12 +144,16 @@ export class CloudTTSProvider implements TTSProvider {
       this.clearFinishTimer();
       this.removeListener?.();
       this.removeListener = null;
-      this.releasePlayer();
+      const reusablePlayer = this.player && !this.player.playing ? this.player : null;
+      if (!reusablePlayer) this.releasePlayer();
 
-      const player = createAudioPlayer(uri, {
-        updateInterval: 80,
-        keepAudioSessionActive: true,
-      });
+      const player =
+        reusablePlayer ||
+        createAudioPlayer(uri, {
+          updateInterval: 40,
+          keepAudioSessionActive: true,
+        });
+      if (reusablePlayer) reusablePlayer.replace(uri);
       this.player = player;
 
       let started = false;
@@ -162,7 +170,10 @@ export class CloudTTSProvider implements TTSProvider {
         this.clearFinishTimer();
         this.finishTimer = setTimeout(() => {
           if (mySeq !== this.seq) return;
-          this.releasePlayer(player);
+          // Keep the finished player around so the next sentence can replace
+          // its source instead of tearing down and creating a native player.
+          // That trims paragraph gaps while the tail guard still protects the
+          // final words from being cut off.
           this.finishTimer = null;
           opts.onDone?.();
         }, tailGuardMs(speed));
@@ -174,6 +185,14 @@ export class CloudTTSProvider implements TTSProvider {
         if (status.didJustFinish) finish();
       });
       this.removeListener = () => sub.remove();
+      try {
+        player.setActiveForLockScreen(true, {
+          title: "ReadFlow",
+          artist: "Natural voice",
+        });
+      } catch {
+        /* lock-screen controls are best-effort */
+      }
       player.play();
       started = true;
       opts.onStart?.();
@@ -188,6 +207,9 @@ export class CloudTTSProvider implements TTSProvider {
     this.clearFinishTimer();
     this.removeListener?.();
     this.removeListener = null;
+    try {
+      this.player?.clearLockScreenControls();
+    } catch {}
     this.releasePlayer();
     await this.device.stop();
   }
@@ -217,7 +239,7 @@ function clampSpeed(rate?: number): number {
 }
 
 function tailGuardMs(speed: number): number {
-  return Math.round(Math.max(260, Math.min(700, 520 / speed)));
+  return Math.round(Math.max(180, Math.min(420, 360 / speed)));
 }
 
 function blobToBase64(blob: Blob): Promise<string> {

@@ -39,7 +39,7 @@ interface Props {
 }
 
 const ENFORCE_FREE_LIMIT = false;
-const TTS_PREFETCH_AHEAD = 4;
+const TTS_PREFETCH_AHEAD = 8;
 
 export function Reader({
   doc,
@@ -338,6 +338,7 @@ export function Reader({
       saveLastRead();
       playingRef.current = false;
       setIsPlaying(false);
+      ttsRef.current.stop();
       openFeatureLock(
         "Page limit reached",
         `You've reached the free reading limit (${freePageLimit} pages). Upgrade to continue reading this document.`
@@ -384,6 +385,7 @@ export function Reader({
     saveLastRead();
     playingRef.current = false;
     setIsPlaying(false);
+    ttsRef.current.stop();
   }
 
   function play() {

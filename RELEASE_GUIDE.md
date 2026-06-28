@@ -106,6 +106,26 @@ https://expo.dev/accounts/tohid123/projects/readflow/builds
 > new icon or version: **uninstall** the old ReadFlow from the phone, then **reinstall**
 > from the Play internal‑testing link. A plain in‑place update may keep the old icon.
 
+### Icon troubleshooting note — if a fresh install still shows cropped `rF`
+
+Symptom: the launcher icon shows only `rF`, the red book spine is missing, or the
+right side of `F` is clipped even after uninstalling and reinstalling.
+
+Cause: Android adaptive icons are not the same as the normal app icon. Android
+takes `assets/adaptive-icon.png` as a foreground layer and then applies a launcher
+mask/zoom. If the approved icon is used edge-to-edge as the adaptive foreground,
+some launchers crop the spine and outer letters.
+
+Fix:
+1. Keep `assets/icon.png` and `assets/splash.png` as the exact clean PNG.
+2. In `mobile/gen-clean-icons.js`, reduce `ADAPTIVE_SCALE` slightly (current
+   value: `0.66`; try `0.60` if a launcher still crops it).
+3. Run `node gen-clean-icons.js` from `ReadFlow/mobile`.
+4. Open `assets/adaptive-icon.png` and confirm the whole book mark sits well
+   inside the transparent padding.
+5. Bump to a new Android `versionCode`, rebuild, uninstall the old app, then
+   reinstall from the Play internal-testing link.
+
 ---
 
 ## 0) CRITICAL — Deploy the backend first (the app cannot work without it)
