@@ -311,9 +311,10 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 12 | 1.0.12 | 47e0e2d5 | finished | designer's exact `app-icon-rF.png` |
 | 13 | 1.0.13 | 8f8723ce | finished | controls redesign + import progress |
 | 13 | 1.0.13 | f2511def | ⚠ **wasted** — code 13 reused | settings ▴ always visible + AI voice spotlight/promo |
-| 14 | 1.0.14 | 929c203d | building | clean‑source icon fix (spine survives mask) + the above UX |
+| 14 | 1.0.14 | 929c203d | finished | clean‑source icon fix (spine survives mask) + the above UX |
+| 15 | 1.0.15 | 34cd381c | building | finished reader design + AI voice sync/tail fix + exact clean icon |
 
-**Next free versionCode: 15.**
+**Next free versionCode: 16.**
 
 ### Lessons baked into this guide (do not relearn the hard way)
 - **Never reuse a versionCode.** Build `f2511def` reused code 13 → a paid build was
