@@ -17,7 +17,14 @@ import { PDFParser, ParsedPdf, isNetworkError } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
 import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
-import { getLocalNeuralVoiceStatus } from "../services/LocalNeuralVoice";
+import {
+  downloadLocalNeuralVoice,
+  formatLocalModelSize,
+  getLocalNeuralVoiceStatus,
+  loadLocalNeuralVoiceStatus,
+  LocalNeuralDownloadProgress,
+  LocalNeuralVoiceStatus,
+} from "../services/LocalNeuralVoice";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
 import { theme } from "../theme";
 
@@ -56,14 +63,41 @@ export function LibraryScreen({
   const [deviceVoices, setDeviceVoices] = useState<
     { id: string; name: string; language: string }[]
   >([]);
+  const [localStatus, setLocalStatus] = useState<LocalNeuralVoiceStatus>(
+    getLocalNeuralVoiceStatus()
+  );
+  const [localDownloading, setLocalDownloading] = useState(false);
+  const [localDownloadProgress, setLocalDownloadProgress] =
+    useState<LocalNeuralDownloadProgress | null>(null);
 
   const refresh = useCallback(async () => {
     setItems(await Library.list());
   }, []);
 
+  const refreshLocalVoiceStatus = useCallback(async () => {
+    const status = await loadLocalNeuralVoiceStatus();
+    setLocalStatus(status);
+  }, []);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    let alive = true;
+    loadLocalNeuralVoiceStatus()
+      .then((status) => {
+        if (alive) setLocalStatus(status);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (showVoice) refreshLocalVoiceStatus().catch(() => {});
+  }, [refreshLocalVoiceStatus, showVoice]);
 
   useEffect(() => {
     Speech.getAvailableVoicesAsync()
@@ -177,6 +211,29 @@ export function LibraryScreen({
     ]);
   }
 
+  async function installLocalVoice() {
+    if (localDownloading) return;
+    setLocalDownloading(true);
+    setLocalDownloadProgress(null);
+    try {
+      const status = await downloadLocalNeuralVoice((progress) => {
+        setLocalDownloadProgress(progress);
+      });
+      setLocalStatus(status);
+      onPreferencesChange({ ...preferences, voiceEngine: "local_ai" });
+    } catch (e: any) {
+      Alert.alert(
+        "Local AI voice",
+        e?.message ||
+          "Could not download the local AI voice. Check your connection and try again."
+      );
+      refreshLocalVoiceStatus().catch(() => {});
+    } finally {
+      setLocalDownloading(false);
+      setLocalDownloadProgress(null);
+    }
+  }
+
   const recent = items[0];
   const rest = items.slice(1);
   const isPaid = Boolean(
@@ -186,7 +243,6 @@ export function LibraryScreen({
   const cloudVoiceRemaining =
     usage?.remaining.cloudVoiceChars ?? entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
   const cloudVoiceLimit = entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
-  const localStatus = getLocalNeuralVoiceStatus();
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
@@ -238,7 +294,11 @@ export function LibraryScreen({
               ? `AI voice selected - ${formatChars(cloudVoiceRemaining)} left this month.`
               : "AI voice selected - upgrade or use device voice before reading."
             : preferences.voiceEngine === "local_ai"
-              ? "Local AI voice selected - this build will use device voice until the engine is installed."
+              ? localStatus.engineInstalled
+                ? "Local AI voice selected - ready on this phone with no cloud voice cost."
+                : localStatus.nativeAvailable
+                  ? "Local AI voice selected - download the voice model before reading."
+                  : "Local AI voice selected - install the new native build first."
               : "Device voice selected - unlimited reading with no ReadFlow voice cost."}
         </Text>
       </View>
@@ -295,8 +355,11 @@ export function LibraryScreen({
         preferences={preferences}
         deviceVoices={deviceVoices}
         localStatus={localStatus}
+        localDownloading={localDownloading}
+        localDownloadProgress={localDownloadProgress}
         onClose={() => setShowVoice(false)}
         onChange={onPreferencesChange}
+        onDownloadLocalVoice={installLocalVoice}
       />
       <HelpAboutSheet visible={showHelp} onClose={() => setShowHelp(false)} />
     </SafeAreaView>
@@ -338,7 +401,7 @@ function VoiceOverview({
   preferences: ReadingPreferences;
   cloudVoiceRemaining: number;
   cloudVoiceLimit: number;
-  localStatus: ReturnType<typeof getLocalNeuralVoiceStatus>;
+  localStatus: LocalNeuralVoiceStatus;
   onPress: () => void;
 }) {
   const isCloud = preferences.voiceEngine === "cloud";
@@ -355,7 +418,9 @@ function VoiceOverview({
             ? `AI cloud voice: ${formatChars(cloudVoiceRemaining)} left, about ${estimatePages(cloudVoiceRemaining)} pages.`
             : "AI cloud voice needs AI Pro or Power. Device voice remains unlimited."
           : isLocal
-            ? `${localStatus.title}. Local AI will use battery and CPU, with no cloud cost.`
+            ? localStatus.engineInstalled
+              ? "Local AI voice: ready on this phone. It uses battery and CPU, with no cloud cost."
+              : `${localStatus.title}. ${localStatus.detail}`
             : "Device voice: unlimited, offline after import, and no ReadFlow AI voice cost."}
       </Text>
     </Pressable>
@@ -369,17 +434,23 @@ function VoiceSettingsSheet({
   preferences,
   deviceVoices,
   localStatus,
+  localDownloading,
+  localDownloadProgress,
   onClose,
   onChange,
+  onDownloadLocalVoice,
 }: {
   visible: boolean;
   entitlement: EntitlementSnapshot;
   usage: UsageSnapshot | null;
   preferences: ReadingPreferences;
   deviceVoices: { id: string; name: string; language: string }[];
-  localStatus: ReturnType<typeof getLocalNeuralVoiceStatus>;
+  localStatus: LocalNeuralVoiceStatus;
+  localDownloading: boolean;
+  localDownloadProgress: LocalNeuralDownloadProgress | null;
   onClose: () => void;
   onChange: (next: ReadingPreferences) => void;
+  onDownloadLocalVoice: () => void;
 }) {
   const cloudLimit = entitlement.limits.cloudVoiceCharsPerMonth || 0;
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
@@ -395,6 +466,13 @@ function VoiceSettingsSheet({
       return;
     }
     if (engine === "local_ai" && !localStatus.engineInstalled) {
+      if (localStatus.nativeAvailable && !localStatus.modelDownloaded) {
+        Alert.alert("Download local AI voice", localStatus.detail, [
+          { text: "Not now", style: "cancel" },
+          { text: "Download", onPress: onDownloadLocalVoice },
+        ]);
+        return;
+      }
       Alert.alert("Local AI voice", localStatus.detail);
       return;
     }
@@ -446,8 +524,54 @@ function VoiceSettingsSheet({
               detail={localStatus.detail}
               active={preferences.voiceEngine === "local_ai"}
               locked={!localStatus.engineInstalled}
+              stateLabel={
+                localStatus.engineInstalled
+                  ? undefined
+                  : localStatus.nativeAvailable
+                    ? "Download"
+                    : "Build"
+              }
               onPress={() => selectEngine("local_ai")}
             />
+
+            <View style={styles.voiceBlock}>
+              <Text style={styles.voiceBlockTitle}>Local AI model</Text>
+              <Text style={styles.voiceBlockHint}>
+                {localStatus.engineInstalled
+                  ? `${localStatus.modelName} is ready. It reads on-device, uses battery and CPU, and does not use OpenAI.`
+                  : localStatus.nativeAvailable
+                    ? `${localStatus.modelName} downloads once, about ${formatLocalModelSize(localStatus.modelSizeBytes)}.`
+                    : localStatus.detail}
+              </Text>
+              {localDownloading ? (
+                <View style={styles.localProgressWrap}>
+                  <View style={styles.localProgressTrack}>
+                    <View
+                      style={[
+                        styles.localProgressFill,
+                        {
+                          width: `${Math.max(
+                            3,
+                            Math.min(100, localDownloadProgress?.percent ?? 3)
+                          )}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.voiceBlockHint}>
+                    {localDownloadProgress?.phase === "extracting"
+                      ? "Installing voice..."
+                      : `Downloading ${Math.round(localDownloadProgress?.percent ?? 0)}%`}
+                  </Text>
+                </View>
+              ) : localStatus.nativeAvailable && !localStatus.modelDownloaded ? (
+                <Pressable style={styles.voicePackBtn} onPress={onDownloadLocalVoice}>
+                  <Text style={styles.voicePackText}>Download local voice</Text>
+                </Pressable>
+              ) : localStatus.engineInstalled ? (
+                <Text style={styles.localReadyText}>Ready for local AI reading.</Text>
+              ) : null}
+            </View>
 
             <View style={styles.voiceBlock}>
               <Text style={styles.voiceBlockTitle}>Phone voices</Text>
@@ -532,12 +656,14 @@ function VoiceChoice({
   detail,
   active,
   locked,
+  stateLabel,
   onPress,
 }: {
   title: string;
   detail: string;
   active: boolean;
   locked?: boolean;
+  stateLabel?: string;
   onPress: () => void;
 }) {
   return (
@@ -547,7 +673,7 @@ function VoiceChoice({
           {title}
         </Text>
         <Text style={[styles.voiceChoiceState, active && styles.voiceChoiceStateOn]}>
-          {locked ? "Soon" : active ? "On" : "Use"}
+          {stateLabel || (locked ? "Soon" : active ? "On" : "Use")}
         </Text>
       </View>
       <Text style={[styles.voiceChoiceDetail, active && styles.voiceChoiceDetailOn]}>
@@ -588,7 +714,7 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
               {code ? ` (${code})` : ""}
             </Text>
             <Text style={styles.aboutBody}>
-              ReadFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped cloud AI voice, or future local AI voice.
+              ReadFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped cloud AI voice, or downloaded local AI voice.
             </Text>
             <View style={styles.helpRows}>
               <HelpRow label="+" text="Add a PDF or Word document." />
@@ -1142,6 +1268,25 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sans,
     fontSize: 12.5,
     lineHeight: 17,
+  },
+  localProgressWrap: {
+    gap: 6,
+  },
+  localProgressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  localProgressFill: {
+    height: "100%",
+    borderRadius: 3,
+    backgroundColor: theme.colors.teal,
+  },
+  localReadyText: {
+    color: theme.colors.teal,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12.5,
   },
   voiceList: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   voiceEmpty: { color: theme.colors.textDim, fontFamily: theme.fonts.sans, fontSize: 13 },

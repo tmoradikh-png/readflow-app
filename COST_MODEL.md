@@ -26,6 +26,14 @@ can change.
   https://docs.swmansion.com/react-native-executorch/docs/hooks/natural-language-processing/useTextToSpeech
 - React Native ExecuTorch / Kokoro cost article:
   https://swmansion.com/blog/on-device-ai-beats-cloud-for-tts-heres-why/
+- React Native Sherpa-ONNX installation:
+  https://xdcobra-react-native-sherpa-onnx-99.mintlify.app/installation
+- React Native Sherpa-ONNX text-to-speech:
+  https://xdcobra-react-native-sherpa-onnx-99.mintlify.app/features/text-to-speech
+- React Native Sherpa-ONNX TTS model guidance:
+  https://xdcobra-react-native-sherpa-onnx-99.mintlify.app/models/tts/overview
+- React Native Sherpa-ONNX VITS/Piper models:
+  https://xdcobra-react-native-sherpa-onnx-99.mintlify.app/models/tts/vits
 
 ## Current Implementation Warning
 
@@ -43,6 +51,10 @@ Current cloud voice implementation:
 - `backend/src/routes/tts.ts` defaults to `tts-1-hd`, and `render.yaml` also
   sets `TTS_MODEL=tts-1-hd`. This is the more expensive legacy TTS model, so the
   current allowances are deliberately small.
+- Source `1.0.18` adds a real local AI voice path with `react-native-sherpa-onnx`
+  and an on-demand Piper VITS model. It has no OpenAI per-character bill, but it
+  requires a new native/EAS build and consumes the user's phone CPU, storage, and
+  battery.
 - Free-tier limits are not aligned with the latest product decision. The user
   wants roughly 1 free book and around 100 pages. Current backend config is
   `pdfsPerMonth: 30` and `perDocPageCap: 30`; the mobile reader also has
@@ -286,10 +298,10 @@ nets well above the $3 OpenAI cost on `tts-1-hd`.
 
 ## Local Neural Voice Plan
 
-Best current candidate for offline natural voice is Kokoro TTS through
-`react-native-executorch`. The library documents a `useTextToSpeech` hook for
-on-device Kokoro, and Software Mansion describes Kokoro as an 82M-parameter,
-Apache-2.0 model suitable for commercial use.
+First implementation choice: `react-native-sherpa-onnx` with Piper/VITS,
+specifically `vits-piper-en_US-lessac-medium-int8` (Piper Lessac Medium, int8).
+The model is downloaded on demand from the Sherpa model registry instead of
+being bundled in every app install.
 
 Why it is useful:
 
@@ -298,22 +310,35 @@ Why it is useful:
 - Keeps document text on device for narration.
 - Lets heavy readers listen for long sessions without destroying margins.
 
-Why it is not wired in the current build:
+Tradeoffs:
 
-- It requires native modules and model/resource loading, not only JavaScript.
-- It should be added in a dedicated native/EAS build with device compatibility,
-  battery, memory, download-size, and playback tests.
-- The current app exposes the product path on the first screen as "Local AI
-  voice" but marks the engine as not installed. Selecting it falls back to
-  normal device voice until the native engine is shipped.
+- Requires native modules (`react-native-sherpa-onnx` and
+  `@dr.pogodin/react-native-fs`), so it must be tested in a fresh native build.
+- Compressed model download is about 20 MB for the first voice. It is not part
+  of the base app package.
+- Generated WAV clips use app cache; repeated paragraphs can replay without
+  regenerating.
+- Quality should be better than many default device voices, but not as polished
+  as high-quality cloud TTS.
+- Uses phone CPU/battery. Long listening has no ReadFlow vendor bill but may
+  warm/drain weaker phones.
 
-Implementation target:
+Implementation status:
 
-- Add `react-native-executorch` and the Kokoro model/resource fetcher.
-- Generate chunks on device and play them through the same provider interface as
-  cloud TTS.
-- Gate by phone capability and clearly tell users it uses battery/CPU.
-- Keep it outside the cloud voice quota because it has no OpenAI bill.
+- DONE in source: shelf Voice sheet checks native support/model status and can
+  download the local voice with progress.
+- DONE in source: `LocalNeuralTTSProvider` generates WAV clips through Sherpa,
+  caches them, plays them with `expo-audio`, and reports progress to the same
+  line-highlighting path as cloud voice.
+- DONE in source: if local AI is not ready, the reader falls back to the selected
+  device voice and explains the issue once.
+- Still required: build and test on the connected Android phone. Expo Go and old
+  installed builds cannot test this native module.
+
+Kokoro through `react-native-executorch` remains a possible higher-quality
+future path, but it is much heavier for a first shipping attempt. The first
+version should prove demand and device behavior with the smaller Piper/VITS
+model before adding hundreds of MB of model/runtime weight.
 
 ## AI Voice Cost Per Page
 
@@ -392,8 +417,8 @@ This is the conservative, profit-protecting plan shape:
 | --- | ---: | --- | --- |
 | Free | $0 | 1 saved book, about 100 pages, device voice, native text only | Render CPU/bandwidth only |
 | Reader Plus | $4.99/mo | Ad-free, bigger library, OCR allowance, device voice | OCR CPU on Render |
-| AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, 60k cloud voice chars | Fine if cloud voice capped |
-| Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, 180k cloud voice chars | Must hard-cap cloud voice |
+| AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, local AI voice, 60k cloud voice chars | Fine if cloud voice capped |
+| Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, device/local AI voice, 180k cloud voice chars | Must hard-cap cloud voice |
 | Natural Voice Pack | Separate add-on | Extra cloud voice hours or pay-as-you-go credits | Best match to real OpenAI cost |
 
 If cloud voice must be high quality (`tts-1-hd`), keep allowances very small:
@@ -430,14 +455,18 @@ are also weak and can punish shared networks. For public release, send a stable
    generic `ai`.
 4. DONE: backend `/api/tts` is gated by `cloudVoice` and monthly character
    usage.
-5. Decide free tier: 1 book and about 100 pages, then update backend and mobile
+5. DONE in source: first local AI voice uses Sherpa-ONNX plus on-demand Piper
+   VITS, outside cloud voice quota. Needs native phone QA before product claims.
+6. Decide whether local AI voice is Free, Reader Plus+, or AI Pro+. It has no
+   vendor bill, but it is still a premium-feeling AI feature.
+7. Decide free tier: 1 book and about 100 pages, then update backend and mobile
    to match.
-6. Wire RevenueCat production SDK/user id so limits follow a user/install, not
+8. Wire RevenueCat production SDK/user id so limits follow a user/install, not
    only a local device state.
-7. Move OpenAI production billing to a dedicated ReadFlow project/key with spend
+9. Move OpenAI production billing to a dedicated ReadFlow project/key with spend
    alerts.
-8. Re-check OpenAI model pricing and choose the AI text model/TTS model
+10. Re-check OpenAI model pricing and choose the AI text model/TTS model
    intentionally.
-9. Add usage logging for AI actions, OCR pages, PDF extractions, and cloud voice
+11. Add usage logging for AI actions, OCR pages, PDF extractions, and cloud voice
    characters.
-10. Recalculate margins after real beta telemetry.
+12. Recalculate margins after real beta telemetry.

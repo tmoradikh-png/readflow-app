@@ -55,11 +55,15 @@ Changes after the latest finished build and included in source `1.0.18`:
 - Backend `/api/tts` checks monthly `cloudVoiceChars` before generating fresh
   OpenAI audio.
 - Voice selection moved to the shelf/home screen with device, AI cloud, and
-  future local AI voice options.
+  local AI voice options.
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
-- Local AI voice path is documented in-app but the native Kokoro/ExecuTorch
-  engine is not installed in this build.
+- Local AI voice now uses `react-native-sherpa-onnx` plus an on-demand Piper
+  VITS voice model (`vits-piper-en_US-lessac-medium-int8`). The model is not
+  bundled into the app; the user downloads it from the Voice sheet.
+- Important: local AI voice is a native dependency. It needs a new EAS/native
+  build to run on the phone; Expo Go or an older installed build will fall back
+  to device voice.
 
 ## Account Map
 
@@ -141,11 +145,12 @@ Mobile:
   settings. Voice selection now lives on the shelf screen, not inside a book.
 - `mobile/src/services/Preferences.ts`: persists reading voice preferences
   across app launches.
-- `mobile/src/services/LocalNeuralVoice.ts`: status/capability placeholder for
-  a future offline neural TTS engine.
+- `mobile/src/services/LocalNeuralVoice.ts`: Sherpa/Piper local voice status,
+  model download, and local model path lookup.
 - `mobile/src/services/TextReflow.ts`: turns extracted page text into readable
   sentence units.
-- `mobile/src/services/tts/*`: device voice and cloud natural voice providers.
+- `mobile/src/services/tts/*`: device, cloud natural voice, and local neural
+  voice providers.
 - `mobile/src/services/Entitlements.ts`: reads backend entitlement response and
   exposes feature flags to the app.
 - `mobile/gen-clean-icons.js`: regenerates mobile icon assets from the clean
@@ -299,9 +304,10 @@ Leaving the app/reader:
   reading after returning to the library.
 - Free/device audio is foreground-only. The reader stops it when the app leaves
   the foreground, which covers screen lock, Home, and app switch.
-- Paid natural/cloud voice is the only mode currently allowed to continue in the
-  background for lock-screen listening.
-- Natural/cloud voice registers an Expo Audio lock-screen media session with
+- Paid natural/cloud voice and paid local AI voice are allowed to continue in
+  the background for lock-screen listening. Free voice modes stop when the app
+  leaves the foreground.
+- Natural/cloud/local voice registers an Expo Audio lock-screen media session with
   book/page metadata and native play/pause controls. Expo Audio does not expose
   a separate stop button in the current lock-screen API; pause is the supported
   lock-screen control.
@@ -323,12 +329,21 @@ Highlighting:
   current backend returns MP3 audio only, not word timings.
 
 Local neural voice:
-- Best candidate is Kokoro TTS through `react-native-executorch`.
-- Current source exposes the option and phone compatibility message on the shelf
-  screen, but does not ship the native engine/model yet.
-- When implemented, it should use the same `TTSProvider` interface and should
-  be treated as unlimited from ReadFlow's billing perspective because it uses
-  phone CPU/battery instead of OpenAI.
+- Current implementation uses `react-native-sherpa-onnx` and
+  `@dr.pogodin/react-native-fs`.
+- First model: `vits-piper-en_US-lessac-medium-int8` (Piper Lessac Medium,
+  int8), downloaded on demand from the Sherpa model release. Compressed download
+  is about 20 MB; the model is not bundled in the app package.
+- Playback uses `LocalNeuralTTSProvider`, which generates WAV clips on-device,
+  caches them in app cache, and reports progress through the same line-highlighter
+  path as cloud voice.
+- If native support/model download is missing, the provider falls back to the
+  selected device voice and shows a one-time "Local AI voice not ready" message.
+- Treat local AI as unlimited from ReadFlow's billing perspective because it uses
+  phone CPU/battery instead of OpenAI. Product can still decide to make it a paid
+  perk, but it has no per-character vendor bill.
+- Kokoro/ExecuTorch remains a possible higher-quality future option, but it is
+  too large/heavy for this first lightweight implementation.
 
 ## Validation Checklist Before a Build
 
@@ -347,11 +362,16 @@ Recommended manual phone tests after installing a new build:
 - Open Voice on the shelf, select a device voice, and verify the reader uses it.
 - Select AI cloud voice under an AI Pro/Power entitlement and verify `/api/tts`
   consumes cloud voice characters, not generic AI actions.
+- Open Voice, download the local AI voice, select it, and verify the first
+  paragraph generates locally, then subsequent/repeated paragraphs play from
+  cache.
 - Device voice reads in sync.
 - Natural/cloud voice reads the same text, highlights the current line, and does
   not skip final words.
+- Local AI voice reads the same text, highlights the current line, and falls
+  back to the selected device voice if the model is missing.
 - Paragraph handoff feels acceptable.
-- Lock screen while paid/natural voice is reading.
+- Lock screen while paid natural/cloud/local voice is reading.
 - Back out to Library and confirm playback stops.
 - AI button opens, summary/explain/Q&A route works under internal paid override.
 - Scanned PDF/OCR path shows correct paid messaging and progress.
@@ -372,7 +392,6 @@ Recommended manual phone tests after installing a new build:
   Starter/Standard over Free.
 - OpenAI usage costs money. Monitor backend logs and rate limits when broadening
   testing.
-- Current code unlocks natural voice from the AI flag in the mobile reader even
 - AI voice packs/top-ups are only a product path today. Play Billing/RevenueCat
   purchases are not wired in this build, so the app must not present a fake
   paid purchase button.

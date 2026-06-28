@@ -11,7 +11,7 @@ upgraded independently later (OCR quality, accounts, subscriptions, etc.).
 ```
 ReadFlow/
 ├── backend/   Node + Express + TypeScript  (PDF text extraction + AI via OpenAI)
-└── mobile/    Expo React Native + TypeScript (reader UI + device/cloud voice)
+└── mobile/    Expo React Native + TypeScript (reader UI + device/cloud/local voice)
 ```
 
 ## Architecture at a glance
@@ -58,8 +58,9 @@ The app auto-detects your computer's LAN IP and calls the backend on port 4000,
 so your phone and computer must be on the **same Wi‑Fi**.
 
 > Reading aloud can use the **free on-device voice** (works offline after import,
-> no ReadFlow voice cost) or capped backend-powered **AI cloud voice**. AI/cloud
-> voice requires the backend and OpenAI key.
+> no ReadFlow voice cost), capped backend-powered **AI cloud voice**, or the
+> downloaded **local AI voice** in a native build. AI/cloud voice requires the
+> backend and OpenAI key; local AI voice uses phone CPU/battery instead.
 
 ## Shipping a new Android build
 See **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** → the **"TL;DR — Cut a NEW build"** section
@@ -84,9 +85,11 @@ UI highlights the active rendered line. Cloud voice is not unlimited:
 - AI Pro: 60k generated characters/month.
 - Power: 180k generated characters/month.
 
-The shelf screen also exposes a future local AI voice option. The current build
-does not ship the native Kokoro/ExecuTorch engine yet; it documents the path and
-falls back to device voice.
+Local AI voice is implemented through `react-native-sherpa-onnx` with an
+on-demand Piper VITS voice (`vits-piper-en_US-lessac-medium-int8`, about 20 MB
+compressed). It requires a fresh native/EAS build and will not run in Expo Go or
+older installed builds. If the model is missing, the reader falls back to the
+selected device voice.
 
 ## Roadmap (after the prototype feels right)
 - RevenueCat mobile SDK + production subscriptions

@@ -59,10 +59,15 @@ interface LineSegment extends LineRange {
 const ENFORCE_FREE_LIMIT = false;
 const TTS_PREFETCH_AHEAD = 8;
 
+type RuntimeVoiceMode = "natural" | "device" | "local";
+
 function preferredVoiceMode(
   preferences: ReadingPreferences,
   entitlement: EntitlementSnapshot
-): "natural" | "device" {
+): RuntimeVoiceMode {
+  if (preferences.voiceEngine === "local_ai") {
+    return "local";
+  }
   if (
     preferences.voiceEngine === "cloud" &&
     entitlement.features.cloudVoice &&
@@ -71,6 +76,22 @@ function preferredVoiceMode(
     return "natural";
   }
   return "device";
+}
+
+function providerKindFor(mode: RuntimeVoiceMode): "device" | "cloud" | "local" {
+  return mode === "natural" ? "cloud" : mode;
+}
+
+function voiceIdFor(mode: RuntimeVoiceMode, preferences: ReadingPreferences): string | undefined {
+  if (mode === "natural") return preferences.cloudVoiceId;
+  if (mode === "device") return preferences.deviceVoiceId;
+  return undefined;
+}
+
+function voiceLabelFor(mode: RuntimeVoiceMode): string {
+  if (mode === "natural") return "AI voice";
+  if (mode === "local") return "Local AI voice";
+  return "Device voice";
 }
 
 export function Reader({
@@ -106,7 +127,7 @@ export function Reader({
   const [showAI, setShowAI] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [voiceMode, setVoiceMode] = useState<"natural" | "device">(
+  const [voiceMode, setVoiceMode] = useState<RuntimeVoiceMode>(
     preferredVoiceMode(preferences, entitlement)
   );
   const [paywallTitle, setPaywallTitle] = useState("Paid feature");
@@ -131,7 +152,7 @@ export function Reader({
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement);
 
   const insets = useSafeAreaInsets();
-  const ttsRef = useRef(createTTSProvider(voiceMode === "natural" ? "cloud" : "device"));
+  const ttsRef = useRef(createTTSProvider(providerKindFor(voiceMode)));
   const playingRef = useRef(false);
   const indexRef = useRef(0); // global sentence index being read
   const epochRef = useRef(0); // invalidates stale TTS onDone callbacks
@@ -143,6 +164,7 @@ export function Reader({
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const backgroundAudioAllowedRef = useRef(false);
   const cloudVoiceLimitWarnedRef = useRef(false);
+  const localVoiceWarnedRef = useRef(false);
   const saveLastReadRef = useRef<() => void>(() => {});
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
@@ -181,7 +203,8 @@ export function Reader({
     settingsRef.current = settings;
   }, [settings]);
   useEffect(() => {
-    backgroundAudioAllowedRef.current = entitlement.tier !== "free" && voiceMode === "natural";
+    backgroundAudioAllowedRef.current =
+      entitlement.tier !== "free" && (voiceMode === "natural" || voiceMode === "local");
   }, [entitlement.tier, voiceMode]);
   useEffect(() => {
     if (voiceMode === desiredVoiceMode) return;
@@ -189,7 +212,7 @@ export function Reader({
     ttsRef.current.stop();
     playingRef.current = false;
     setIsPlaying(false);
-    ttsRef.current = createTTSProvider(desiredVoiceMode === "natural" ? "cloud" : "device");
+    ttsRef.current = createTTSProvider(providerKindFor(desiredVoiceMode));
     setVoiceMode(desiredVoiceMode);
   }, [desiredVoiceMode, voiceMode]);
   useEffect(() => {
@@ -486,8 +509,7 @@ export function Reader({
         .prefetch?.(next.text, {
           language,
           rate: settingsRef.current.speed,
-          voiceId:
-            voiceMode === "natural" ? preferences.cloudVoiceId : preferences.deviceVoiceId,
+          voiceId: voiceIdFor(voiceMode, preferences),
           fallbackVoiceId: preferences.deviceVoiceId,
         })
         .catch(() => {});
@@ -502,12 +524,10 @@ export function Reader({
     ttsRef.current.speak(text, {
       language,
       rate: settingsRef.current.speed,
-      voiceId: voiceMode === "natural" ? preferences.cloudVoiceId : preferences.deviceVoiceId,
+      voiceId: voiceIdFor(voiceMode, preferences),
       fallbackVoiceId: preferences.deviceVoiceId,
       lockScreenTitle: docRef.current.fileName || "ReadFlow",
-      lockScreenSubtitle: `Page ${s.page} - ${
-        voiceMode === "natural" ? "AI voice" : "Device voice"
-      }`,
+      lockScreenSubtitle: `Page ${s.page} - ${voiceLabelFor(voiceMode)}`,
       lockScreenAlbum: "ReadFlow",
       onFallback: (info) => {
         if (info.reason === "quota" && !cloudVoiceLimitWarnedRef.current) {
@@ -515,6 +535,14 @@ export function Reader({
           openFeatureLock(
             "AI voice allowance used",
             "Your cloud AI voice allowance is used for this month. Device voice will keep reading for free. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
+          );
+        } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
+          localVoiceWarnedRef.current = true;
+          backgroundAudioAllowedRef.current = false;
+          openFeatureLock(
+            "Local AI voice not ready",
+            info.message ||
+              "Download the local AI voice from the Voice panel, or keep reading with device voice."
           );
         }
       },

@@ -1,9 +1,8 @@
 /**
  * TTSProvider — the ONLY place the app knows about a voice engine.
  *
- * Today: DeviceTTSProvider (free, on-device, expo-speech).
- * Later: CloudTTSProvider (OpenAI/ElevenLabs/Azure) — switching is a single
- * line in ./index.ts, no Reader/UI changes required.
+ * Today: DeviceTTSProvider (free), CloudTTSProvider (capped paid), and
+ * LocalNeuralTTSProvider (downloaded on-device model).
  */
 
 export interface SpeakOptions {
@@ -23,11 +22,14 @@ export interface SpeakOptions {
   /** Device voice to use if a paid/cloud provider falls back locally. */
   fallbackVoiceId?: string;
   /** Called when a provider keeps reading by falling back to a cheaper/local voice. */
-  onFallback?: (info: { reason: "quota" | "network" | "error"; message?: string }) => void;
+  onFallback?: (info: {
+    reason: "quota" | "network" | "error" | "local_unavailable";
+    message?: string;
+  }) => void;
 }
 
 export interface TTSProvider {
-  readonly kind: "device" | "cloud";
+  readonly kind: "device" | "cloud" | "local";
   /** Speak one piece of text. Resolves when speaking starts (not when done). */
   speak(text: string, opts: SpeakOptions): Promise<void>;
   stop(): Promise<void>;

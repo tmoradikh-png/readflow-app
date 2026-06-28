@@ -109,6 +109,11 @@ https://expo.dev/accounts/tohid123/projects/readflow/builds
 > new icon or version: **uninstall** the old ReadFlow from the phone, then **reinstall**
 > from the Play internal‑testing link. A plain in‑place update may keep the old icon.
 
+If the build includes local AI voice, test it only in the fresh native build:
+open Voice, download the local Piper voice, select it, and verify local
+reading/highlighting. Expo Go and older installed builds cannot test the Sherpa
+native module.
+
 ### Icon troubleshooting note — if a fresh install still shows cropped `rF`
 
 Symptom: the launcher icon shows only `rF`, the red book spine is missing, or the

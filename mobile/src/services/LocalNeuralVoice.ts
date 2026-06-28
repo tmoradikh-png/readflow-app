@@ -1,33 +1,183 @@
 import { Platform } from "react-native";
 
+export const LOCAL_NEURAL_MODEL_ID = "vits-piper-en_US-lessac-medium-int8";
+export const LOCAL_NEURAL_VOICE_ID = "piper-lessac-medium-int8";
+export const LOCAL_NEURAL_MODEL_NAME = "Piper Lessac Medium";
+export const LOCAL_NEURAL_MODEL_SIZE_BYTES = 20 * 1024 * 1024;
+
 export interface LocalNeuralVoiceStatus {
   supportedDevice: boolean;
+  nativeAvailable: boolean;
+  modelDownloaded: boolean;
   engineInstalled: boolean;
+  modelId: string;
+  modelName: string;
+  modelSizeBytes: number;
   title: string;
   detail: string;
 }
 
-/**
- * Product path for a future offline neural TTS engine.
- *
- * Best current candidate: Kokoro via react-native-executorch. It needs native
- * modules, New Architecture, and a model/resource fetcher, so this Expo build
- * exposes the option honestly but keeps playback on stable device/cloud TTS.
- */
+export interface LocalNeuralDownloadProgress {
+  bytesDownloaded: number;
+  totalBytes: number;
+  percent: number;
+  phase?: "downloading" | "extracting";
+}
+
 export function getLocalNeuralVoiceStatus(): LocalNeuralVoiceStatus {
-  const supportedDevice =
-    Platform.OS === "ios"
-      ? Number.parseInt(String(Platform.Version), 10) >= 17
-      : Platform.OS === "android"
-        ? Number(Platform.Version) >= 33
-        : false;
+  const supportedDevice = isSupportedDevice();
 
   return {
     supportedDevice,
+    nativeAvailable: false,
+    modelDownloaded: false,
     engineInstalled: false,
-    title: supportedDevice ? "Phone looks compatible" : "Phone may be too old",
+    modelId: LOCAL_NEURAL_MODEL_ID,
+    modelName: LOCAL_NEURAL_MODEL_NAME,
+    modelSizeBytes: LOCAL_NEURAL_MODEL_SIZE_BYTES,
+    title: supportedDevice ? "Checking local AI voice" : "Phone may be too old",
     detail: supportedDevice
-      ? "Offline AI voice needs the native Kokoro/ExecuTorch engine in a future build. It will use battery and CPU but no cloud allowance."
-      : "Offline AI voice needs a newer phone. Device voice still works without any ReadFlow cost.",
+      ? "Checking whether the native local AI engine and voice model are ready on this phone."
+      : "Local AI voice needs a newer phone. Device voice still works without any ReadFlow cost.",
+  };
+}
+
+export async function loadLocalNeuralVoiceStatus(): Promise<LocalNeuralVoiceStatus> {
+  const supportedDevice = isSupportedDevice();
+  const base = getLocalNeuralVoiceStatus();
+  if (!supportedDevice) return base;
+
+  try {
+    const download = await import("react-native-sherpa-onnx/download");
+    const category = download.ModelCategory.Tts;
+    const downloaded = await download.isModelDownloadedByCategory(category, LOCAL_NEURAL_MODEL_ID);
+
+    let modelSizeBytes = LOCAL_NEURAL_MODEL_SIZE_BYTES;
+    try {
+      const models = await download.refreshModelsByCategory(category, {
+        cacheTtlMinutes: 60 * 24,
+        maxRetries: 1,
+      });
+      const model = models.find((m) => m.id === LOCAL_NEURAL_MODEL_ID);
+      if (model?.bytes) modelSizeBytes = model.bytes;
+    } catch {
+      /* A cached/downloaded model can still be used while offline. */
+    }
+
+    return buildStatus({
+      supportedDevice,
+      nativeAvailable: true,
+      modelDownloaded: downloaded,
+      modelSizeBytes,
+    });
+  } catch {
+    return buildStatus({
+      supportedDevice,
+      nativeAvailable: false,
+      modelDownloaded: false,
+      modelSizeBytes: LOCAL_NEURAL_MODEL_SIZE_BYTES,
+    });
+  }
+}
+
+export async function downloadLocalNeuralVoice(
+  onProgress?: (progress: LocalNeuralDownloadProgress) => void
+): Promise<LocalNeuralVoiceStatus> {
+  if (!isSupportedDevice()) {
+    throw new Error("This phone is below the minimum version for local AI voice.");
+  }
+
+  const download = await import("react-native-sherpa-onnx/download");
+  const category = download.ModelCategory.Tts;
+
+  await download.refreshModelsByCategory(category, {
+    cacheTtlMinutes: 60 * 24,
+    maxRetries: 2,
+  });
+
+  await download.ensureModelByCategory(category, LOCAL_NEURAL_MODEL_ID, {
+    deleteArchiveAfterExtract: true,
+    onProgress: (progress) => {
+      onProgress?.({
+        bytesDownloaded: progress.bytesDownloaded,
+        totalBytes: progress.totalBytes,
+        percent: progress.percent,
+        phase: progress.phase,
+      });
+    },
+  });
+
+  return loadLocalNeuralVoiceStatus();
+}
+
+export async function getLocalNeuralModelPath(): Promise<string> {
+  const download = await import("react-native-sherpa-onnx/download");
+  const path = await download.getLocalModelPathByCategory(
+    download.ModelCategory.Tts,
+    LOCAL_NEURAL_MODEL_ID
+  );
+  if (!path) {
+    throw new Error("Local AI voice model is not downloaded.");
+  }
+  return path;
+}
+
+export function formatLocalModelSize(bytes = LOCAL_NEURAL_MODEL_SIZE_BYTES): string {
+  const mb = bytes / (1024 * 1024);
+  return `${Math.max(1, Math.round(mb))} MB`;
+}
+
+function isSupportedDevice(): boolean {
+  if (Platform.OS === "ios") {
+    return Number.parseInt(String(Platform.Version), 10) >= 13;
+  }
+  if (Platform.OS === "android") {
+    return Number(Platform.Version) >= 24;
+  }
+  return false;
+}
+
+function buildStatus({
+  supportedDevice,
+  nativeAvailable,
+  modelDownloaded,
+  modelSizeBytes,
+}: {
+  supportedDevice: boolean;
+  nativeAvailable: boolean;
+  modelDownloaded: boolean;
+  modelSizeBytes: number;
+}): LocalNeuralVoiceStatus {
+  const modelSize = formatLocalModelSize(modelSizeBytes);
+  const engineInstalled = supportedDevice && nativeAvailable && modelDownloaded;
+  let title = "Local AI voice";
+  let detail = "";
+
+  if (!supportedDevice) {
+    title = "Phone may be too old";
+    detail =
+      "Local AI voice needs Android 7 or newer, or iOS 13 or newer. Device voice still works without any ReadFlow cost.";
+  } else if (!nativeAvailable) {
+    title = "Needs the new app build";
+    detail =
+      "Install the next native build to enable the local AI engine. Device voice keeps working now.";
+  } else if (!modelDownloaded) {
+    title = "Download local AI voice";
+    detail = `Download ${LOCAL_NEURAL_MODEL_NAME} once (about ${modelSize}). It then reads on this phone with no OpenAI cost.`;
+  } else {
+    title = "Ready on this phone";
+    detail = `${LOCAL_NEURAL_MODEL_NAME} is downloaded. It reads locally, uses battery and CPU, and has no cloud voice cost.`;
+  }
+
+  return {
+    supportedDevice,
+    nativeAvailable,
+    modelDownloaded,
+    engineInstalled,
+    modelId: LOCAL_NEURAL_MODEL_ID,
+    modelName: LOCAL_NEURAL_MODEL_NAME,
+    modelSizeBytes,
+    title,
+    detail,
   };
 }
