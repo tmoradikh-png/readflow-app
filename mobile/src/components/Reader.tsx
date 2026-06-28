@@ -120,7 +120,7 @@ export function Reader({
   const activeCharRef = useRef<{ sentenceId: number; charOffset: number } | null>(null);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
-  const voiceModeRef = useRef(voiceMode);
+  const backgroundAudioAllowedRef = useRef(false);
   const saveLastReadRef = useRef<() => void>(() => {});
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
@@ -159,8 +159,8 @@ export function Reader({
     settingsRef.current = settings;
   }, [settings]);
   useEffect(() => {
-    voiceModeRef.current = voiceMode;
-  }, [voiceMode]);
+    backgroundAudioAllowedRef.current = entitlement.tier !== "free" && voiceMode === "natural";
+  }, [entitlement.tier, voiceMode]);
   useEffect(() => {
     if (canUseCloudVoice || voiceMode !== "natural") return;
     epochRef.current++;
@@ -174,10 +174,9 @@ export function Reader({
       const previous = appStateRef.current;
       appStateRef.current = nextState;
       if (previous !== "active" || nextState === "active") return;
-      if (voiceModeRef.current !== "device" || !playingRef.current) return;
+      if (!playingRef.current || backgroundAudioAllowedRef.current) return;
 
-      // Android can keep expo-speech alive after lock/app-switch. Device voice
-      // is the free foreground reader, so stop it as soon as the app backgrounds.
+      // Free/device audio is foreground-only. Stop on lock, Home, or app switch.
       epochRef.current++;
       playingRef.current = false;
       setIsPlaying(false);
