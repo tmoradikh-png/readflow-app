@@ -5,12 +5,12 @@ with **synchronized highlighting** → adjust **font size / spacing / speed** �
 tap **AI** to summarize, explain, simplify, extract key points, or ask questions.
 
 This repo is the MVP prototype. It is structured cleanly so each part can be
-upgraded independently later (cloud voice, OCR, accounts, etc.).
+upgraded independently later (OCR quality, accounts, subscriptions, etc.).
 
 ```
 ReadFlow/
 ├── backend/   Node + Express + TypeScript  (PDF text extraction + AI via OpenAI)
-└── mobile/    Expo React Native + TypeScript (reader UI, free on-device voice)
+└── mobile/    Expo React Native + TypeScript (reader UI + device/cloud voice)
 ```
 
 ## Architecture at a glance
@@ -19,9 +19,17 @@ ReadFlow/
 | -------------- | --------------------------------------- | ------------------------------------- |
 | PDF → text     | `backend/src/services/pdfExtract.ts`    | add OCR for scanned PDFs              |
 | Reflow/sentences | `mobile/src/services/TextReflow.ts`   | tune splitting, paragraphs           |
-| Voice (TTS)    | `mobile/src/services/tts/*`             | `device` → `cloud` is one line        |
+| Voice (TTS)    | `mobile/src/services/tts/*`             | device/cloud providers                |
 | AI             | `backend/src/providers/*`               | `openai` → `claude`/`ollama`          |
 | Reader UI      | `mobile/src/components/Reader.tsx`      | —                                     |
+
+## Developer handoff
+
+Start with **[PROJECT.md](PROJECT.md)** when taking over the project. It records
+the service accounts, public URLs/IDs, current build state, icon process,
+backend deployment notes, paid-feature enforcement, and release habits. Keep it
+updated whenever accounts, build codes, backend URLs, or production workflows
+change.
 
 **Why a backend?** The OpenAI key must never ship inside the phone app. The app
 talks only to our backend; the backend talks to OpenAI. The backend also caches
@@ -46,8 +54,9 @@ npm start                   # press the QR with Expo Go on your phone
 The app auto-detects your computer's LAN IP and calls the backend on port 4000,
 so your phone and computer must be on the **same Wi‑Fi**.
 
-> Reading aloud uses the **free on-device voice** (works offline, no cost).
-> The AI buttons require the backend + an OpenAI key.
+> Reading aloud can use the **free on-device voice** (works offline, no cost) or
+> the backend-powered **natural cloud voice**. AI/cloud voice require the backend
+> and OpenAI key.
 
 ## Shipping a new Android build
 See **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** → the **"TL;DR — Cut a NEW build"** section
@@ -58,16 +67,17 @@ at the top is the step‑by‑step routine (bump `versionCode`, regenerate the i
 > 🛑 Never reuse a `versionCode` — a code is consumed the moment a build is made, and
 > reusing one wastes a paid EAS build. Always pick the next free code (see the guide).
 
-## Switching to premium cloud voice later
-Implement `mobile/src/services/tts/CloudTTSProvider.ts`, add a `POST /api/tts`
-route on the backend, then change `ACTIVE_TTS` in
-`mobile/src/services/tts/index.ts` from `"device"` to `"cloud"`. No Reader/UI
-changes needed.
+## Natural cloud voice
+
+Premium natural voice is implemented through
+`mobile/src/services/tts/CloudTTSProvider.ts` and backend `POST /api/tts`.
+The mobile app never stores the OpenAI key; it sends text to the backend and
+plays the returned MP3. The reader keeps natural audio chunks intact while the
+UI highlights the active rendered line.
 
 ## Roadmap (after the prototype feels right)
-- Cloud TTS (OpenAI/ElevenLabs/Azure) for premium natural voices
-- OCR: scanned/image PDFs → clean text
-- Accounts + subscriptions (RevenueCat) replacing the test paywall
+- RevenueCat mobile SDK + production subscriptions
+- OCR quality/performance tuning for scanned/image PDFs
 - Per-document AI cache in a real DB/Redis
-- Word-level highlighting (iOS boundary events) and gaze pause/resume
-- Bookmarks, reading position memory, multi-language voice picker
+- Exact word-level highlighting if the TTS provider returns timestamps
+- Multi-language voice picker and richer audiobook controls

@@ -6,6 +6,9 @@ Org: Urmia Works · Free app (in‑app purchases added later)
 EAS account: **tohid123** · Project: **tohid123/readflow**
 (projectId `097b0b5a-db90-46b4-b434-60836687b429`)
 
+For the full account map, service ownership, current build state, and takeover
+notes, start with **[PROJECT.md](PROJECT.md)**.
+
 > **Sections 0–5 below are the original first‑time setup guide.**
 > **If you just want to ship a new version, read [TL;DR — Cut a NEW build](#tldr--cut-a-new-build-do-this-every-release) first.**
 
