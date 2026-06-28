@@ -72,10 +72,10 @@ node gen-clean-icons.js
 - Source PNG: `C:\Users\Greencom\Downloads\Icon cleanup request\uploads\PDF Reader App Design (1)\app-icon-rF-clean.png`
 - `gen-clean-icons.js` produces:
   - `icon.png` — full‑bleed, red book‑spine flush to the **left edge** (for iOS/Play; no mask is applied there).
-  - `adaptive-icon.png` — the **whole mark scaled to 0.82 and centered on cream** so the
+  - `adaptive-icon.png` — the **whole mark scaled to 0.66 and centered on transparent padding** so the
     red spine stays **inside the Android adaptive safe zone** and survives the launcher
     mask. (Earlier builds put the spine at the literal edge → Android cropped it off →
-    the launcher showed only "rF". The 0.82 inset fixes that.)
+    the launcher showed only "rF". The 0.66 foreground scale fixes that.)
 - **Verify before building** (Android launchers mask the icon to a circle or squircle):
   preview both masks and eyeball that the red spine survives. A quick check is to open
   `assets/adaptive-icon.png` and confirm the spine sits well inside the left margin, not at
@@ -323,7 +323,7 @@ must never be reused (a code is consumed the moment a build is made — see Step
 - **Bump in BOTH `app.json` and `check-release-config.mjs`**, then run `npm run check:release`
   before building — it fails loudly if they disagree.
 - **Icons come from the clean source PNG via `gen-clean-icons.js`**, never hand‑rendered from
-  SVG. The Android adaptive icon must keep the red spine inside the safe zone (0.82 inset),
+  SVG. The Android adaptive icon must keep the red spine inside the safe zone (0.66 scale),
   or the launcher mask crops it off and you see only "rF".
 - **To see a new icon/version on the phone, uninstall then reinstall** — the launcher and Play
   both cache aggressively.

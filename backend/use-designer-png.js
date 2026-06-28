@@ -1,7 +1,7 @@
 // Use the DESIGNER'S exact exported PNG (app-icon-rF-clean.png) as source of truth.
 // No font re-rendering, no SVG re-draw — just the designer's own pixels.
 //   icon.png          : the exact art, including transparent rounded corners
-//   adaptive-icon.png : the same exact art for Android
+//   adaptive-icon.png : Android-safe foreground, inset so launchers do not crop it
 //   splash.png        : same clean icon, for a consistent launch screen
 //   favicon.png       : 64 downscale
 const fs = require("fs");
@@ -13,6 +13,7 @@ const SRC =
 const OUT = path.resolve(__dirname, "../mobile/assets");
 const CREAM = "#F4ECD6";
 const S = 1024;
+const ADAPTIVE_SCALE = 0.66;
 
 (async () => {
   const art = await loadImage(fs.readFileSync(SRC));
@@ -35,8 +36,18 @@ const S = 1024;
   fs.writeFileSync(path.join(OUT, "icon.png"), srcBytes);
   console.log("wrote icon.png (1024, exact designer PNG)");
 
-  fs.writeFileSync(path.join(OUT, "adaptive-icon.png"), srcBytes);
-  console.log("wrote adaptive-icon.png (1024, exact designer PNG)");
+  {
+    const size = Math.round(S * ADAPTIVE_SCALE);
+    const off = Math.round((S - size) / 2);
+    const c = createCanvas(S, S);
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, S, S);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(art, off, off, size, size);
+    fs.writeFileSync(path.join(OUT, "adaptive-icon.png"), c.toBuffer("image/png"));
+    console.log("wrote adaptive-icon.png (Android safe-zone foreground)");
+  }
 
   fs.writeFileSync(path.join(OUT, "splash.png"), srcBytes);
   console.log("wrote splash.png (1024, exact designer PNG)");
