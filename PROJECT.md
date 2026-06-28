@@ -31,22 +31,22 @@ Current shape:
   owner explicitly changes the repository owner.
 - Current source version: `1.0.17`
 - Current source Android `versionCode`: `17`
-- Latest finished EAS build: `1.0.16` / code `16`
-- Latest finished EAS build id: `7b4d5904-e502-4419-acb1-fade591e505a`
+- Latest finished EAS build: `1.0.17` / code `17`
+- Latest finished EAS build id: `2900d21c-48f4-42aa-9434-f3bd2dcb06a4`
 - Latest finished AAB:
-  `https://expo.dev/artifacts/eas/rKL6Q1KnJ_48xDnHhx8sdghmNGtcNBPLvX1CD6o5zhc.aab`
-- Next Android build should use code `17` unless another EAS build has already
+  `https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab`
+- Next Android build should use code `18` unless another EAS build has already
   consumed a higher code.
 
-Changes present in source after the latest finished build:
+Changes included in the latest finished build:
 - Paid/cloud audio background-mode support was added for lock-screen listening.
 - Cloud voice paragraph handoff was improved with wider prefetch, player reuse,
   and a shorter tail guard.
 - Highlighting now targets the active rendered line while keeping the same TTS
   audio chunk size for natural voice.
 
-Important: because code `17` source has not been built yet, test phones still
-need a new EAS build before those source changes can be verified on-device.
+Important: code `17` has been built, but test phones still need that AAB
+uploaded/installed before the source changes can be verified on-device.
 
 ## Account Map
 

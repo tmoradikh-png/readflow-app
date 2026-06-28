@@ -337,8 +337,9 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 14 | 1.0.14 | 929c203d | finished | clean‑source icon fix (spine survives mask) + the above UX |
 | 15 | 1.0.15 | 34cd381c | finished | finished reader design + AI voice sync/tail fix + exact clean icon |
 | 16 | 1.0.16 | 7b4d5904 | finished | Android adaptive icon safe-zone fix (0.66 foreground scale) |
+| 17 | 1.0.17 | 2900d21c | finished | active line highlight + free audio foreground-only + natural voice lock-screen controls. AAB: https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab |
 
-**Next free versionCode: 17.**
+**Next free versionCode: 18.**
 
 ### Lessons baked into this guide (do not relearn the hard way)
 - **Never reuse a versionCode.** Build `f2511def` reused code 13 → a paid build was
