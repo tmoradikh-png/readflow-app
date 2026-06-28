@@ -6,13 +6,13 @@
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
-    "primaryColor": "#E5533A",
-    "backgroundColor": "#F4ECD6",
+    "primaryColor": "#D95D39",
+    "backgroundColor": "#F7F1E7",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F4ECD6"
+      "backgroundColor": "#F7F1E7"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -38,7 +38,7 @@
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#F4ECD6"
+        "backgroundColor": "#F7F1E7"
       },
       "edgeToEdgeEnabled": true
     },
@@ -53,7 +53,7 @@
         {
           "image": "./assets/splash.png",
           "imageWidth": 220,
-          "backgroundColor": "#F4ECD6",
+          "backgroundColor": "#F7F1E7",
           "resizeMode": "contain"
         }
       ],

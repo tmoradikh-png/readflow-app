@@ -77,17 +77,17 @@ export function HomeScreen({ onParsed }: Props) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.ctaText}>＋  Upload PDF</Text>
+            <Text style={styles.ctaText}>Upload PDF</Text>
           )}
         </Pressable>
 
         {error && <Text style={styles.error}>{error}</Text>}
 
         <View style={styles.features}>
-          <Feature icon="🅰" text="Slide to resize text — it fills the screen" />
-          <Feature icon="🔊" text="Natural voice reads with synced highlighting" />
-          <Feature icon="📖" text="Reads 10 pages at a time, with understanding" />
-          <Feature icon="✨" text="Summarize, explain, simplify, ask questions" />
+          <Feature icon="Aa" text="Readable text that fits the phone" />
+          <Feature icon="Vo" text="Device voice with synced highlighting" />
+          <Feature icon="Pg" text="Clean page navigation and progress" />
+          <Feature icon="AI" text="Paid plans unlock summaries and Q&A" />
         </View>
 
         <Text style={styles.note}>First pages free • Premium unlocks unlimited reading</Text>
@@ -108,11 +108,11 @@ function Feature({ icon, text }: { icon: string; text: string }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   container: { flex: 1, padding: theme.spacing(3), justifyContent: "center", gap: theme.spacing(2) },
-  logo: { color: theme.colors.text, fontSize: 40, fontWeight: "900", letterSpacing: -1 },
+  logo: { color: theme.colors.text, fontSize: 40, fontWeight: "900", letterSpacing: 0 },
   tagline: { color: theme.colors.textDim, fontSize: 16, lineHeight: 23 },
   cta: {
     backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: theme.spacing(1),
@@ -121,7 +121,13 @@ const styles = StyleSheet.create({
   error: { color: theme.colors.danger },
   features: { gap: 12, marginTop: theme.spacing(2) },
   feature: { flexDirection: "row", alignItems: "center", gap: 12 },
-  featureIcon: { fontSize: 20, width: 28, textAlign: "center" },
+  featureIcon: {
+    color: theme.colors.teal,
+    fontFamily: theme.fonts.sansBold,
+    fontSize: 12,
+    width: 30,
+    textAlign: "center",
+  },
   featureText: { color: theme.colors.text, fontSize: 15, flex: 1 },
   note: { color: theme.colors.textDim, fontSize: 12, marginTop: theme.spacing(2) },
 });

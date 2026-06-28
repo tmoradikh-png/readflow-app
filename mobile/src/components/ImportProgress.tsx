@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   page: {
     width: 148,
     height: 196,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.borderStrong,
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.serifSemiBold,
     fontSize: 46,
     color: theme.colors.ink,
-    letterSpacing: -1,
+    letterSpacing: 0,
   },
   pct: {
     fontFamily: theme.fonts.serifMedium,

@@ -34,8 +34,10 @@ export class CloudTTSProvider implements TTSProvider {
   private dir = (FileSystem.cacheDirectory || "") + "tts/";
   private dirReady = false;
   private fileCache = new Map<string, string>(); // key -> file uri
+  private inflightCache = new Map<string, Promise<string>>(); // key -> pending file uri
   private fileId = 0;
   private removeListener: (() => void) | null = null;
+  private finishTimer: ReturnType<typeof setTimeout> | null = null;
 
   private keyFor(text: string, speed: number) {
     return `${this.voice}|${speed.toFixed(2)}|${text}`;
@@ -47,6 +49,17 @@ export class CloudTTSProvider implements TTSProvider {
     const cached = this.fileCache.get(key);
     if (cached) return cached;
 
+    const inflight = this.inflightCache.get(key);
+    if (inflight) return inflight;
+
+    const pending = this.downloadAudio(key, text, speed).finally(() => {
+      this.inflightCache.delete(key);
+    });
+    this.inflightCache.set(key, pending);
+    return pending;
+  }
+
+  private async downloadAudio(key: string, text: string, speed: number): Promise<string> {
     const res = await fetch(`${API_BASE}/api/tts`, {
       method: "POST",
       headers: apiHeaders({ "Content-Type": "application/json" }),
@@ -73,6 +86,22 @@ export class CloudTTSProvider implements TTSProvider {
     });
     this.fileCache.set(key, uri);
     return uri;
+  }
+
+  private clearFinishTimer() {
+    if (!this.finishTimer) return;
+    clearTimeout(this.finishTimer);
+    this.finishTimer = null;
+  }
+
+  private releasePlayer(player = this.player) {
+    try {
+      player?.pause();
+    } catch {}
+    try {
+      player?.remove();
+    } catch {}
+    if (player === this.player) this.player = null;
   }
 
   /** Optional: warm the cache for the next sentence so playback has no gap. */
@@ -108,24 +137,46 @@ export class CloudTTSProvider implements TTSProvider {
     if (mySeq !== this.seq) return; // a newer speak()/stop() superseded us
 
     try {
-      if (!this.player) {
-        this.player = createAudioPlayer(uri);
-      } else {
-        this.player.replace(uri);
-      }
-      // (Re)attach the finish listener for this utterance.
+      this.clearFinishTimer();
       this.removeListener?.();
-      const sub = this.player.addListener("playbackStatusUpdate", (status) => {
+      this.removeListener = null;
+      this.releasePlayer();
+
+      const player = createAudioPlayer(uri, {
+        updateInterval: 80,
+        keepAudioSessionActive: true,
+      });
+      this.player = player;
+
+      let started = false;
+      let finished = false;
+
+      const finish = () => {
         if (mySeq !== this.seq) return;
-        if (status.didJustFinish) {
-          this.removeListener?.();
-          this.removeListener = null;
+        if (!started || finished) return;
+        finished = true;
+        this.removeListener?.();
+        this.removeListener = null;
+        // Give the native audio output a small drain window before replacing
+        // the clip. Without this, some devices drop the final word or two.
+        this.clearFinishTimer();
+        this.finishTimer = setTimeout(() => {
+          if (mySeq !== this.seq) return;
+          this.releasePlayer(player);
+          this.finishTimer = null;
           opts.onDone?.();
-        }
+        }, tailGuardMs(speed));
+      };
+
+      const sub = player.addListener("playbackStatusUpdate", (status) => {
+        if (mySeq !== this.seq) return;
+        if (status.playing) started = true;
+        if (status.didJustFinish) finish();
       });
       this.removeListener = () => sub.remove();
+      player.play();
+      started = true;
       opts.onStart?.();
-      this.player.play();
     } catch (e) {
       if (mySeq !== this.seq) return;
       return this.device.speak(t, opts);
@@ -134,16 +185,16 @@ export class CloudTTSProvider implements TTSProvider {
 
   async stop(): Promise<void> {
     this.seq++;
+    this.clearFinishTimer();
     this.removeListener?.();
     this.removeListener = null;
-    try {
-      this.player?.pause();
-    } catch {}
+    this.releasePlayer();
     await this.device.stop();
   }
 
   async pause(): Promise<void> {
     this.seq++;
+    this.clearFinishTimer();
     this.removeListener?.();
     this.removeListener = null;
     try {
@@ -163,6 +214,10 @@ function clampSpeed(rate?: number): number {
   const r = Number(rate);
   if (!Number.isFinite(r) || r <= 0) return 1;
   return Math.min(4, Math.max(0.25, r));
+}
+
+function tailGuardMs(speed: number): number {
+  return Math.round(Math.max(260, Math.min(700, 520 / speed)));
 }
 
 function blobToBase64(blob: Blob): Promise<string> {

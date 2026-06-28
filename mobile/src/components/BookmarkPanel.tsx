@@ -93,16 +93,18 @@ export function BookmarkPanel({
   }
 
   return (
+    <>
+    <Pressable style={styles.backdrop} onPress={onClose} />
     <View style={[styles.panel, { bottom: kb }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>Bookmarks & navigation</Text>
+        <Text style={styles.title}>Navigation</Text>
         <Pressable onPress={onClose} hitSlop={10}>
-          <Text style={styles.close}>✕</Text>
+          <Text style={styles.close}>x</Text>
         </Pressable>
       </View>
 
       {/* Go to page */}
-      <Text style={styles.sectionLabel}>Go to page (1–{pageCount})</Text>
+      <Text style={styles.sectionLabel}>Go to page (1-{pageCount})</Text>
       <View style={styles.row}>
         <TextInput
           style={styles.input}
@@ -120,7 +122,7 @@ export function BookmarkPanel({
       </View>
 
       {/* Save current as a named tag */}
-      <Text style={styles.sectionLabel}>Save current position (page {current.page})</Text>
+      <Text style={styles.sectionLabel}>Bookmark page {current.page}</Text>
       <View style={styles.row}>
         <TextInput
           style={styles.input}
@@ -149,16 +151,23 @@ export function BookmarkPanel({
               </Text>
             </Pressable>
             <Pressable onPress={() => del(b)} hitSlop={8}>
-              <Text style={styles.bmDelete}>🗑</Text>
+              <Text style={styles.bmDelete}>Remove</Text>
             </Pressable>
           </View>
         ))}
       </ScrollView>
     </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(20,17,11,0.3)",
+    zIndex: 40,
+    elevation: 40,
+  },
   panel: {
     position: "absolute",
     left: 0,
@@ -166,15 +175,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     maxHeight: "80%",
     backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     borderTopWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing(2),
+    zIndex: 41,
+    elevation: 41,
   },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  title: { color: theme.colors.text, fontSize: 18, fontWeight: "700" },
-  close: { color: theme.colors.textDim, fontSize: 18 },
+  title: { color: theme.colors.text, fontSize: 18, fontFamily: theme.fonts.serifSemiBold },
+  close: { color: theme.colors.textDim, fontSize: 18, fontFamily: theme.fonts.sansBold },
   sectionLabel: {
     color: theme.colors.accent,
     fontWeight: "700",
@@ -186,14 +197,14 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: theme.colors.text,
   },
   primaryBtn: {
     backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: 18,
     justifyContent: "center",
   },
@@ -210,5 +221,9 @@ const styles = StyleSheet.create({
   },
   bmTag: { color: theme.colors.text, fontWeight: "700", fontSize: 15 },
   bmMeta: { color: theme.colors.textDim, fontSize: 12, marginTop: 2 },
-  bmDelete: { fontSize: 18 },
+  bmDelete: {
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12,
+  },
 });

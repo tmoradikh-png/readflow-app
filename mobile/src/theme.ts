@@ -1,9 +1,9 @@
 import { Platform } from "react-native";
 
 /**
- * ReadFlow "Paper" theme — warm, book-like palette inspired by the Reflow design.
- * Cream paper backgrounds, ink text, a single warm read-orange accent, and the
- * Spectral / Hanken Grotesk type pairing (loaded in App.tsx via expo-google-fonts).
+ * ReadFlow reading theme.
+ * Warm page surfaces with cool ink and teal support tones, so the app feels
+ * book-like without becoming a single beige/orange palette.
  */
 export const fontFamilies = {
   // Reading & titles (serif)
@@ -23,39 +23,43 @@ export const fontFamilies = {
 export const theme = {
   colors: {
     // Surfaces
-    bg: "#F4ECD6", // paper
-    surface: "#FBF4E6", // cards / panels
-    surfaceAlt: "#EFE6D0", // chips / steppers / inset
-    card: "#FCF6EA", // document cards
+    bg: "#F7F1E7", // page
+    surface: "#FFFDF8", // panels
+    surfaceAlt: "#ECE8DE", // controls / inset
+    card: "#FFFCF4", // document cards
 
     // Ink
-    text: "#2A2620", // primary ink
-    body: "#33302A", // reading body
-    textDim: "#9C9384", // secondary
-    textMute: "#6E665A", // tertiary
+    text: "#1F2523", // primary ink
+    body: "#252A28", // reading body
+    textDim: "#7D8580", // secondary
+    textMute: "#59635E", // tertiary
 
-    // Brand accent (warm read-orange)
-    accent: "#E5533A",
-    accentSoft: "#F7DDD4", // light tint — icon chips, underlines
-    accentMid: "#F4C5B5", // medium tint — active sentence highlight
-    onAccent: "#FBF6EC", // text/icons on accent
+    // Brand accent
+    accent: "#D95D39",
+    accentSoft: "#FBE3D9",
+    accentMid: "#F2B79E",
+    onAccent: "#FFFDF8",
 
     // Marks
-    ink: "#20180F", // dark book "spine"
-    night: "#14110B",
-    gold: "#EAD08A",
+    ink: "#17201D",
+    night: "#101816",
+    gold: "#D4B25F",
+    teal: "#1F7A6D",
+    tealSoft: "#DDEDE8",
+    sky: "#DDEAF2",
+    premium: "#6F5BA7",
 
     // Reading themes (selectable later)
-    sepia: "#F0E2C8",
+    sepia: "#F0E4CF",
 
     // Lines & states
-    border: "#E8DBC0",
-    borderStrong: "#E2D4B8",
-    highlight: "#F4C5B5", // active sentence bg
-    highlightWord: "#E5533A",
-    danger: "#C0392B",
+    border: "#DED8CA",
+    borderStrong: "#CCC3B2",
+    highlight: "#FFE1D5",
+    highlightWord: "#C94828",
+    danger: "#B73A30",
   },
   fonts: fontFamilies,
-  radius: 16,
+  radius: 8,
   spacing: (n: number) => n * 8,
 };

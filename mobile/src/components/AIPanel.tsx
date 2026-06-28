@@ -55,9 +55,9 @@ export function AIPanel({ contextText, language = "en", onClose }: Props) {
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={styles.panel}>
       <View style={styles.header}>
-        <Text style={styles.title}>AI Assistant</Text>
+        <Text style={styles.title}>ReadFlow AI</Text>
         <Pressable onPress={onClose} hitSlop={16} style={styles.closeBtn}>
-          <Text style={styles.close}>Close ✕</Text>
+          <Text style={styles.close}>x</Text>
         </Pressable>
       </View>
 
@@ -155,8 +155,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     maxHeight: "72%",
     backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
     borderTopWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing(2),
@@ -164,34 +164,36 @@ const styles = StyleSheet.create({
     elevation: 41,
   },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  title: { color: theme.colors.text, fontSize: 18, fontWeight: "700" },
+  title: { color: theme.colors.text, fontSize: 18, fontFamily: theme.fonts.serifSemiBold },
   closeBtn: {
     backgroundColor: theme.colors.surfaceAlt,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  close: { color: theme.colors.text, fontSize: 14, fontWeight: "700" },
+  close: { color: theme.colors.text, fontSize: 16, fontFamily: theme.fonts.sansBold },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 },
   chip: {
     backgroundColor: theme.colors.surfaceAlt,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
+    borderRadius: 8,
   },
   chipText: { color: theme.colors.text, fontWeight: "600" },
   askRow: { flexDirection: "row", gap: 8, marginTop: 12 },
   input: {
     flex: 1,
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: theme.colors.text,
   },
   askBtn: {
     backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: 16,
     justifyContent: "center",
   },

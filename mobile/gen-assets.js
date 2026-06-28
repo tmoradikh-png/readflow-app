@@ -22,7 +22,7 @@ const OUT = path.join(__dirname, "assets");
 fs.mkdirSync(OUT, { recursive: true });
 
 const INK = "#20180F";
-const ACCENT = "#E5533A";
+const ACCENT = "#D95D39";
 const CREAM = "#EBDFC6";
 const MUTED = "#86806F";
 const PAPER = "#F4ECD6";

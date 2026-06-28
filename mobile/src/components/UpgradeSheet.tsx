@@ -45,7 +45,7 @@ const PLANS: Plan[] = [
     monthly: 4.99,
     annualPerMonth: 3.33,
     annualTotal: 39.99,
-    perks: ["Ad-free reading", "Scanned-PDF OCR — 300 pages / month", "Unlimited library"],
+    perks: ["Ad-free reading", "Scanned-PDF OCR - 300 pages / month", "Unlimited library"],
   },
   {
     key: "ai_pro",
@@ -57,8 +57,8 @@ const PLANS: Plan[] = [
     annualTotal: 79.99,
     perks: [
       "Everything in Reader Plus",
-      "AI summaries, explain & Q&A — 500 / month",
-      "OCR — 1,000 pages / month",
+      "AI summaries, explain & Q&A - 500 / month",
+      "OCR - 1,000 pages / month",
     ],
   },
   {
@@ -71,7 +71,7 @@ const PLANS: Plan[] = [
     perks: [
       "Everything in AI Pro",
       "Export notes & summaries",
-      "Highest limits — 3,000 OCR / 2,000 AI a month",
+      "Highest limits - 3,000 OCR / 2,000 AI a month",
     ],
   },
 ];
@@ -127,10 +127,10 @@ export function UpgradeSheet({
                   r<Text style={styles.markTextItalic}>F</Text>
                 </Text>
               </View>
-              <Text style={styles.eyebrow}>READFLOW PLUS</Text>
+              <Text style={styles.eyebrow}>READFLOW PLANS</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
-              <Text style={styles.close}>✕</Text>
+              <Text style={styles.close}>x</Text>
             </Pressable>
           </View>
 
@@ -160,7 +160,7 @@ export function UpgradeSheet({
                 Annual
               </Text>
               <Text style={[styles.toggleHint, billing === "annual" && styles.toggleHintActive]}>
-                save up to 38%
+                best value
               </Text>
             </Pressable>
           </View>
@@ -197,7 +197,7 @@ export function UpgradeSheet({
                   <View style={styles.perks}>
                     {p.perks.map((perk) => (
                       <View key={perk} style={styles.perkRow}>
-                        <Text style={styles.perkTick}>✓</Text>
+                        <Text style={styles.perkTick}>+</Text>
                         <Text style={styles.perkText}>{perk}</Text>
                       </View>
                     ))}
@@ -219,13 +219,13 @@ export function UpgradeSheet({
           </Pressable>
           {!purchasingAvailable ? (
             <Text style={styles.ctaNote}>
-              In-app subscriptions launch soon — no charge yet.
+              Subscriptions are not live yet. No charge.
             </Text>
           ) : (
             <Text style={styles.ctaNote}>
               {billing === "annual"
-                ? `${money(plan.annualTotal)}/year · auto-renews · manage in Google Play`
-                : `${money(plan.monthly)}/month · auto-renews · manage in Google Play`}
+                ? `${money(plan.annualTotal)}/year / auto-renews / manage in Google Play`
+                : `${money(plan.monthly)}/month / auto-renews / manage in Google Play`}
             </Text>
           )}
 
@@ -234,7 +234,7 @@ export function UpgradeSheet({
             <Pressable onPress={onClose} hitSlop={8}>
               <Text style={styles.maybeLater}>Maybe later</Text>
             </Pressable>
-            <Text style={styles.footerDot}>·</Text>
+            <Text style={styles.footerDot}>/</Text>
             <Pressable onPress={openLearnMore} hitSlop={8}>
               <Text style={styles.learnMore}>Learn more</Text>
             </Pressable>
@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     paddingHorizontal: theme.spacing(2.5),
     paddingTop: theme.spacing(2.5),
     paddingBottom: theme.spacing(3),
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   mark: {
     width: 26,
     height: 26,
-    borderRadius: 7,
+    borderRadius: 8,
     backgroundColor: theme.colors.ink,
     overflow: "hidden",
     flexDirection: "row",
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   toggle: {
     flexDirection: "row",
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 14,
+    borderRadius: 8,
     padding: 4,
     marginTop: theme.spacing(2),
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
-    borderRadius: 11,
+    borderRadius: 6,
   },
   toggleBtnActive: {
     backgroundColor: theme.colors.surface,
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 1.5,
     borderColor: theme.colors.border,
-    borderRadius: 18,
+    borderRadius: 8,
     padding: theme.spacing(2),
     backgroundColor: theme.colors.card,
   },
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
     overflow: "hidden",
   },
   cardTagline: {
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   perkText: { flex: 1, color: theme.colors.body, fontFamily: theme.fonts.sans, fontSize: 13.5 },
   cta: {
     height: 54,
-    borderRadius: 16,
+    borderRadius: 8,
     backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",

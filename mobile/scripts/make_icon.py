@@ -1,9 +1,9 @@
 """Generate ReadFlow app icons: an "rF" lettermark (reMarkable rM style) in brand colors.
 
 Brand colors:
-  accent  = #E5533A (warm red-orange)
-  cream   = #F4ECD6 (paper background)
-  espresso= #20180F (near-black)
+  accent  = #D95D39 (read-orange)
+  cream   = #F7F1E7 (page background)
+  ink     = #17201D (near-black)
 
 Outputs (overwrites): assets/icon.png, assets/adaptive-icon.png, assets/splash.png, assets/favicon.png
 
@@ -26,9 +26,9 @@ FONT = os.path.join(
     HERE, "node_modules", "@expo-google-fonts", "spectral", "700Bold", "Spectral_700Bold.ttf"
 )
 
-ACCENT = (229, 83, 58, 255)
-CREAM = (244, 236, 214, 255)
-ESPRESSO = (32, 24, 15, 255)
+ACCENT = (217, 93, 57, 255)
+CREAM = (247, 241, 231, 255)
+INK = (23, 32, 29, 255)
 
 
 def rounded(size, radius, color):

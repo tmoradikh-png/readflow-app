@@ -39,6 +39,7 @@ interface Props {
 }
 
 const ENFORCE_FREE_LIMIT = false;
+const TTS_PREFETCH_AHEAD = 4;
 
 export function Reader({
   doc,
@@ -345,19 +346,19 @@ export function Reader({
     }
 
     indexRef.current = i;
-    setCurrent(s.id);
-    if (followRef.current) scrollToIndexSafe(i, true);
 
     const offset = pendingOffsetRef.current;
     pendingOffsetRef.current = 0;
     const text = offset > 0 ? s.text.slice(offset) : s.text;
 
-    // Warm the next sentence's audio so the natural voice has no gap.
-    const next = f[i + 1];
-    if (next && next.page <= freeCap()) {
-      ttsRef.current.prefetch?.(next.text, { language, rate: settingsRef.current.speed }).catch(
-        () => {}
-      );
+    // Warm upcoming clips through the provider's in-flight cache so natural
+    // voice can hand off smoothly without charging/fetching duplicates.
+    for (let ahead = 1; ahead <= TTS_PREFETCH_AHEAD; ahead++) {
+      const next = f[i + ahead];
+      if (!next || next.page > freeCap()) break;
+      ttsRef.current
+        .prefetch?.(next.text, { language, rate: settingsRef.current.speed })
+        .catch(() => {});
     }
 
     // Advance from the ANCHORED position (re-resolved against the latest list) so
@@ -369,6 +370,11 @@ export function Reader({
     ttsRef.current.speak(text, {
       language,
       rate: settingsRef.current.speed,
+      onStart: () => {
+        if (myEpoch !== epochRef.current) return;
+        setCurrent(s.id);
+        if (followRef.current) scrollToIndexSafe(i, true);
+      },
       onDone: advance,
       onError: advance,
     });
@@ -595,6 +601,7 @@ export function Reader({
   const controlsShown = soundEnabled || chromeVisible;
   // Float the AI button just above the controls; the bar height varies by state.
   const fabBottom = (controlsOpen ? 268 : controlsShown ? 96 : 24) + insets.bottom;
+  const readerBottomPad = (controlsOpen ? 300 : controlsShown ? 132 : 56) + insets.bottom;
 
   return (
     <View style={styles.container}>
@@ -608,8 +615,8 @@ export function Reader({
         <>
           {/* header */}
           <View style={[styles.header, { paddingTop: topPad }]}>
-            <Pressable onPress={handleBack} hitSlop={10}>
-              <Text style={styles.headerBtn}>←</Text>
+            <Pressable onPress={handleBack} hitSlop={10} style={styles.headerIconBtn}>
+              <Text style={styles.headerBtn}>‹</Text>
             </Pressable>
             <View style={{ flex: 1 }}>
               <Text style={styles.fileName} numberOfLines={1}>
@@ -632,17 +639,17 @@ export function Reader({
               hitSlop={8}
               style={styles.chip}
             >
-              <Text style={styles.chipText}>Full</Text>
+              <Text style={styles.chipText}>Focus</Text>
             </Pressable>
-            <Pressable onPress={() => setShowBookmarks(true)} hitSlop={8}>
-              <Text style={styles.headerIcon}>🔖</Text>
+            <Pressable onPress={() => setShowBookmarks(true)} hitSlop={8} style={styles.headerIconBtn}>
+              <Text style={styles.headerIcon}>BM</Text>
             </Pressable>
           </View>
 
           {/* page nav strip */}
           <View style={styles.pageNav}>
             <Pressable onPress={() => goToPage(currentPage - 1)} hitSlop={8} disabled={currentPage <= 1}>
-              <Text style={[styles.pageNavBtn, currentPage <= 1 && styles.disabled]}>‹ Prev page</Text>
+              <Text style={[styles.pageNavBtn, currentPage <= 1 && styles.disabled]}>Prev</Text>
             </Pressable>
             <Pressable
               onPress={() => goToPage(currentPage + 1)}
@@ -650,7 +657,7 @@ export function Reader({
               disabled={currentPage >= totalPages}
             >
               <Text style={[styles.pageNavBtn, currentPage >= totalPages && styles.disabled]}>
-                Next page ›
+                Next
               </Text>
             </Pressable>
           </View>
@@ -704,7 +711,7 @@ export function Reader({
           />
         )}
         style={styles.reader}
-        contentContainerStyle={styles.readerContent}
+        contentContainerStyle={[styles.readerContent, { paddingBottom: readerBottomPad }]}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         onScrollToIndexFailed={onScrollToIndexFailed}
@@ -718,19 +725,19 @@ export function Reader({
       {/* AI launcher (compact) */}
       {canUseAI ? (
         <Pressable style={[styles.aiFab, { bottom: fabBottom }]} onPress={() => setShowAI(true)}>
-          <Text style={styles.aiFabText}>✨ AI</Text>
+          <Text style={styles.aiFabText}>AI</Text>
         </Pressable>
       ) : (
         <Pressable
           style={[styles.aiFab, styles.aiFabLocked, { bottom: fabBottom }]}
           onPress={() =>
             openFeatureLock(
-              "✨ Unlock AI",
+              "Unlock AI",
               "Summaries, explanations, Q&A, and real AI narration are part of AI Pro. Upgrade to bring your books to life."
             )
           }
         >
-          <Text style={[styles.aiFabText, styles.aiFabTextLocked]}>✨ AI Pro</Text>
+          <Text style={[styles.aiFabText, styles.aiFabTextLocked]}>AI Pro</Text>
         </Pressable>
       )}
 
@@ -851,16 +858,30 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  headerBtn: { color: theme.colors.text, fontSize: 26, paddingHorizontal: 4 },
-  headerIcon: { fontSize: 20, paddingHorizontal: 2 },
+  headerIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  headerBtn: { color: theme.colors.text, fontSize: 26, lineHeight: 28 },
+  headerIcon: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansBold,
+    fontSize: 11,
+    letterSpacing: 0.6,
+  },
   chip: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 999,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
-  chipOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  chipOn: { backgroundColor: theme.colors.teal, borderColor: theme.colors.teal },
   chipText: { color: theme.colors.textDim, fontSize: 12, fontFamily: theme.fonts.sansSemiBold },
   chipTextOn: { color: theme.colors.onAccent },
   disabled: { color: theme.colors.border },
@@ -873,6 +894,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing(1),
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   lockBanner: {
     marginHorizontal: theme.spacing(3),
@@ -881,7 +903,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceAlt,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: theme.spacing(1.2),
     paddingVertical: theme.spacing(0.9),
   },
@@ -900,7 +922,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceAlt,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: theme.spacing(1.2),
     paddingVertical: theme.spacing(0.9),
   },
@@ -916,7 +938,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceAlt,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: theme.spacing(1.2),
     paddingVertical: theme.spacing(0.9),
   },
@@ -958,7 +980,7 @@ const styles = StyleSheet.create({
   },
   pageNavBtn: { color: theme.colors.accent, fontSize: 14, fontFamily: theme.fonts.sansSemiBold },
   reader: { flex: 1 },
-  readerContent: { padding: theme.spacing(3), paddingBottom: theme.spacing(14) },
+  readerContent: { padding: theme.spacing(3) },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
   pageDivider: {
     flexDirection: "row",
@@ -976,6 +998,7 @@ const styles = StyleSheet.create({
   activeSentence: {
     backgroundColor: theme.colors.highlight,
     color: theme.colors.text,
+    borderRadius: 6,
   },
   aiFab: {
     position: "absolute",
@@ -984,9 +1007,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 999,
+    borderRadius: 8,
     shadowColor: "#000",
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.22,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 6,
@@ -1005,7 +1028,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceAlt,
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: theme.radius,
+    borderRadius: 8,
   },
   backText: { color: theme.colors.text, fontWeight: "600" },
   paywall: {
@@ -1021,7 +1044,7 @@ const styles = StyleSheet.create({
   },
   paywallCard: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 20,
+    borderRadius: 8,
     padding: 24,
     gap: 14,
     width: "100%",
@@ -1031,7 +1054,7 @@ const styles = StyleSheet.create({
   paywallBody: { color: theme.colors.textMute, fontSize: 15, lineHeight: 21, fontFamily: theme.fonts.sans },
   paywallBtn: {
     backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingVertical: 14,
     alignItems: "center",
   },

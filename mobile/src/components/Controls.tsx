@@ -51,7 +51,7 @@ export function Controls({
           you can change font/spacing/speed without entering listening mode. */}
       <Pressable style={styles.grabber} onPress={onToggleExpand} hitSlop={10}>
         <View style={styles.grabHandle} />
-        <Text style={styles.grabHint}>{expanded ? "Hide settings ▾" : "Settings ▴"}</Text>
+        <Text style={styles.grabHint}>{expanded ? "Hide settings" : "Settings"}</Text>
       </Pressable>
 
       {expanded && (
@@ -80,7 +80,7 @@ export function Controls({
                     !canUseCloudVoice && styles.segTextLocked,
                   ]}
                 >
-                  {canUseCloudVoice ? "✨ AI Voice" : "✨ AI Voice (Pro)"}
+                  {canUseCloudVoice ? "AI Voice" : "AI Voice Pro"}
                 </Text>
               </Pressable>
               <Pressable
@@ -101,15 +101,15 @@ export function Controls({
             voiceMode === "natural" ? (
               <View style={styles.aiHint}>
                 <Text style={styles.aiHintText}>
-                  ✨ Real AI narration — lifelike, human-sounding voice.
+                  AI narration is active.
                 </Text>
               </View>
             ) : null
           ) : (
             <Pressable style={styles.aiPromo} onPress={onCloudVoiceLocked} hitSlop={6}>
-              <Text style={styles.aiPromoTitle}>✨ Unlock real AI narration</Text>
+              <Text style={styles.aiPromoTitle}>AI narration</Text>
               <Text style={styles.aiPromoBody}>
-                Lifelike human voice instead of the robotic device one. See plans →
+                Human-like cloud voice is included in paid plans.
               </Text>
             </Pressable>
           )}
@@ -153,21 +153,21 @@ export function Controls({
           <>
             {/* 1) Sound toggle — turning it off stops tap-to-read and hides this bar. */}
             <Pressable style={[styles.btn, styles.btnSound]} onPress={onToggleSound}>
-              <Text style={styles.btnSoundText}>🔊  Sound</Text>
+              <Text style={styles.btnSoundText}>Sound</Text>
             </Pressable>
             {/* 2) Play / Pause */}
             <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onPlayPause}>
-              <Text style={styles.btnPrimaryText}>{isPlaying ? "⏸  Pause" : "▶  Play"}</Text>
+              <Text style={styles.btnPrimaryText}>{isPlaying ? "Pause" : "Play"}</Text>
             </Pressable>
             {/* 3) Stop */}
             <Pressable style={[styles.btn, styles.btnGhost]} onPress={onStop}>
-              <Text style={styles.btnGhostText}>⏹  Stop</Text>
+              <Text style={styles.btnGhostText}>Stop</Text>
             </Pressable>
           </>
         ) : (
           // Collapsed: a single, low-footprint button to enter listening mode.
           <Pressable style={[styles.btn, styles.btnListen]} onPress={onToggleSound}>
-            <Text style={styles.btnListenText}>🔈  Tap to listen</Text>
+            <Text style={styles.btnListenText}>Listen</Text>
           </Pressable>
         )}
       </View>
@@ -189,11 +189,11 @@ function Stepper({
   return (
     <View style={styles.stepper}>
       <Pressable style={styles.stepBtn} onPress={onDec}>
-        <Text style={styles.stepBtnText}>−</Text>
+        <Text style={styles.stepBtnText}>-</Text>
       </Pressable>
       <Text style={styles.stepValue}>{fmt(value)}</Text>
       <Pressable style={styles.stepBtn} onPress={onInc}>
-        <Text style={styles.stepBtnText}>＋</Text>
+        <Text style={styles.stepBtnText}>+</Text>
       </Pressable>
     </View>
   );
@@ -231,13 +231,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flex: 1,
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: 999,
+    borderRadius: 8,
     padding: 3,
   },
   segOption: {
     flex: 1,
     paddingVertical: 7,
-    borderRadius: 999,
+    borderRadius: 6,
     alignItems: "center",
   },
   segOptionOn: { backgroundColor: theme.colors.accent },
@@ -251,19 +251,19 @@ const styles = StyleSheet.create({
   segTextLocked: { color: theme.colors.textDim },
   // AI voice spotlight
   aiHint: {
-    backgroundColor: theme.colors.accentSoft,
-    borderRadius: theme.radius,
+    backgroundColor: theme.colors.tealSoft,
+    borderRadius: 8,
     paddingHorizontal: theme.spacing(1.25),
     paddingVertical: theme.spacing(0.75),
   },
   aiHintText: {
-    color: theme.colors.accent,
+    color: theme.colors.teal,
     fontSize: 12.5,
     fontFamily: theme.fonts.sansSemiBold,
   },
   aiPromo: {
-    backgroundColor: theme.colors.accent,
-    borderRadius: theme.radius,
+    backgroundColor: theme.colors.ink,
+    borderRadius: 8,
     paddingHorizontal: theme.spacing(1.5),
     paddingVertical: theme.spacing(1),
     gap: 2,
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: theme.colors.surfaceAlt,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     paddingHorizontal: 4,
   },
   stepBtn: { paddingHorizontal: 12, paddingVertical: 6 },
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: theme.radius,
+    borderRadius: 8,
     alignItems: "center",
   },
   btnPrimary: { backgroundColor: theme.colors.accent },

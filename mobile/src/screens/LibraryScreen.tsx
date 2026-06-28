@@ -137,39 +137,56 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
 
   const recent = items[0];
   const rest = items.slice(1);
+  const isPaid = Boolean(
+    entitlement.features.ai || entitlement.features.ocr || entitlement.features.unlimitedLibrary
+  );
+  const planLabel = isPaid ? entitlement.name : "Free";
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
-      {/* header */}
       <View
         style={[
           styles.header,
           { paddingTop: Math.max(insets.top, Constants.statusBarHeight) + theme.spacing(1) },
         ]}
       >
-        <View>
-          <Text style={styles.kicker}>LIBRARY</Text>
+        <View style={styles.brandBlock}>
+          <View style={styles.brandRow}>
+            <View style={styles.brandMark}>
+              <View style={styles.brandSpine} />
+              <Text style={styles.brandText}>rF</Text>
+            </View>
+            <Text style={styles.kicker}>READFLOW</Text>
+          </View>
           <Text style={styles.title}>Your shelf</Text>
         </View>
-        <Pressable style={styles.addBtn} onPress={importNew} disabled={loading} hitSlop={8}>
-          {loading ? (
-            <ActivityIndicator color={theme.colors.onAccent} />
-          ) : (
-            <Text style={styles.addBtnText}>＋</Text>
-          )}
-        </Pressable>
+        <View style={styles.headerActions}>
+          <View style={[styles.planPill, isPaid && styles.planPillPaid]}>
+            <Text style={[styles.planPillText, isPaid && styles.planPillTextPaid]}>
+              {planLabel}
+            </Text>
+          </View>
+          <Pressable style={styles.addBtn} onPress={importNew} disabled={loading} hitSlop={8}>
+            {loading ? (
+              <ActivityIndicator color={theme.colors.onAccent} />
+            ) : (
+              <Text style={styles.addBtnText}>+</Text>
+            )}
+          </Pressable>
+        </View>
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      {/* Offline tip: books open offline only after you've opened them once online. */}
-      <Text style={styles.offlineTip}>
-        Tip: to read in airplane mode, open a book once while online — it's then
-        saved on your device for offline reading.
-      </Text>
+      <View style={styles.statusStrip}>
+        <View style={styles.statusDot} />
+        <Text style={styles.statusText}>
+          Reflowed reading, device voice, and saved library are ready.
+        </Text>
+      </View>
 
       {items.length === 0 ? (
-        <Empty onAdd={importNew} loading={loading} isPaid={Boolean(entitlement.features.ai)} />
+        <Empty onAdd={importNew} loading={loading} isPaid={isPaid} />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scroll}
@@ -199,7 +216,7 @@ export function LibraryScreen({ onOpen, entitlement }: Props) {
               />
             ))}
             {rest.length === 0 && (
-              <Text style={styles.hint}>Tap ＋ to add another PDF or Word document.</Text>
+              <Text style={styles.hint}>Your next document will appear here.</Text>
             )}
           </View>
         </ScrollView>
@@ -230,14 +247,14 @@ function Empty({
       <Text style={styles.emptyTitle}>Your shelf is empty</Text>
       <Text style={styles.emptyBody}>
         {isPaid
-          ? "Add a PDF or Word file. It reflows to fit your screen, reads aloud with natural cloud voice, and explains anything with AI."
-          : "Add a PDF or Word file. Free mode supports local reading, normal PDF text extraction, and device voice. AI, cloud voice, and scanned-PDF OCR are locked for paid plans."}
+          ? "Add a PDF or Word file and ReadFlow will turn it into a clean phone-first reading view."
+          : "Add a PDF or Word file. Free mode keeps local reading and device voice open; AI, OCR, and cloud voice stay behind paid plans."}
       </Text>
       <Pressable style={styles.cta} onPress={onAdd} disabled={loading}>
         {loading ? (
           <ActivityIndicator color={theme.colors.onAccent} />
         ) : (
-          <Text style={styles.ctaText}>＋  Add a document</Text>
+          <Text style={styles.ctaText}>Add document</Text>
         )}
       </Pressable>
     </View>
@@ -306,10 +323,10 @@ function DocCard({
 function Cover({ item }: { item: LibraryItem }) {
   const v = coverVariant(item.id);
   const palettes = [
-    { bg: theme.colors.card, line: "#E8DBC0", strong: "#D2C4A6", border: theme.colors.borderStrong },
+    { bg: theme.colors.card, line: "#DCD5C7", strong: "#BEB39E", border: theme.colors.borderStrong },
     { bg: theme.colors.accent, line: "rgba(255,255,255,0.4)", strong: "rgba(255,255,255,0.85)", border: "transparent" },
     { bg: theme.colors.ink, line: "#5A5446", strong: "#EBDFC6", border: "transparent" },
-    { bg: theme.colors.gold, line: "rgba(122,106,58,0.4)", strong: "#7A6A3A", border: "transparent" },
+    { bg: theme.colors.teal, line: "rgba(255,255,255,0.35)", strong: "#DDEDE8", border: "transparent" },
   ] as const;
   const p = palettes[v];
   return (
@@ -345,6 +362,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(3),
     paddingBottom: theme.spacing(2),
   },
+  brandBlock: { flex: 1 },
+  brandRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  brandMark: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: theme.colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  brandSpine: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
+    backgroundColor: theme.colors.accent,
+  },
+  brandText: {
+    color: theme.colors.onAccent,
+    fontFamily: theme.fonts.serifSemiBold,
+    fontSize: 15,
+    marginLeft: 4,
+  },
   kicker: {
     fontFamily: theme.fonts.mono,
     fontSize: 11,
@@ -357,15 +399,36 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginTop: 2,
   },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
+  planPill: {
+    height: 32,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planPillPaid: {
+    backgroundColor: theme.colors.tealSoft,
+    borderColor: theme.colors.teal,
+  },
+  planPillText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12,
+  },
+  planPillTextPaid: { color: theme.colors.teal },
   addBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
     backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: theme.colors.accent,
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.28,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
     elevation: 5,
@@ -377,13 +440,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(3),
     paddingBottom: theme.spacing(1),
   },
-  offlineTip: {
-    color: theme.colors.textDim,
-    fontFamily: theme.fonts.sans,
+  statusStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: theme.spacing(3),
+    marginBottom: theme.spacing(1.5),
+    paddingHorizontal: theme.spacing(1.25),
+    paddingVertical: theme.spacing(0.9),
+    borderRadius: 8,
+    backgroundColor: theme.colors.tealSoft,
+    borderWidth: 1,
+    borderColor: "#C7DED8",
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: theme.colors.teal,
+  },
+  statusText: {
+    flex: 1,
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansMedium,
     fontSize: 12,
-    lineHeight: 17,
-    paddingHorizontal: theme.spacing(3),
-    paddingBottom: theme.spacing(1.5),
+    lineHeight: 16,
   },
   scroll: { paddingHorizontal: theme.spacing(3), paddingBottom: theme.spacing(6) },
 
@@ -394,12 +475,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.card,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 18,
+    borderRadius: 8,
     padding: 16,
     marginBottom: theme.spacing(3),
     shadowColor: "#281E0F",
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
+    shadowOpacity: 0.09,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
@@ -452,12 +533,12 @@ const styles = StyleSheet.create({
   /* covers */
   cover: {
     aspectRatio: 3 / 4,
-    borderRadius: 8,
+    borderRadius: 7,
     borderWidth: 1,
     padding: 11,
     gap: 4,
     shadowColor: "#281E0F",
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
@@ -468,7 +549,7 @@ const styles = StyleSheet.create({
   miniCover: {
     width: 64,
     height: 86,
-    borderRadius: 8,
+    borderRadius: 7,
     backgroundColor: theme.colors.ink,
     paddingVertical: 12,
     paddingHorizontal: 11,
@@ -487,7 +568,7 @@ const styles = StyleSheet.create({
   emptyCover: {
     width: 96,
     height: 124,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: theme.colors.ink,
     paddingVertical: 18,
     paddingHorizontal: 18,
@@ -515,7 +596,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 8,
     shadowColor: theme.colors.accent,
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.28,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 5,
