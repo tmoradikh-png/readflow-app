@@ -61,6 +61,48 @@ Not allowed in free:
 The only expected free-tier business cost should be shared Render hosting and
 small bandwidth/CPU overhead.
 
+## Reader Plus Cost When Users Read A Lot
+
+Reader Plus can be generous as long as it stays non-AI and non-cloud-voice.
+
+The important distinction:
+
+- Reading an already-imported book costs us nothing per hour. The text, reading
+  position, highlighting, typography, and device TTS playback run on the phone.
+- Device voice costs us nothing per hour. It uses the user's phone TTS engine.
+- Render is used when the user imports/extracts a PDF or DOCX, and when paid OCR
+  is needed for scanned/image pages.
+- OCR has no OpenAI/API cost in the current backend, but it consumes Render CPU
+  and memory. This is why Reader Plus still needs OCR page caps and concurrency
+  limits.
+
+Current Reader Plus config:
+
+- Price: $4.99/month or $39.99/year.
+- OCR: 300 pages/month.
+- Server document extractions: 100/month.
+- Max file size: 50 MB.
+- Max processed pages per document: 500.
+- AI: off.
+- Cloud voice: off.
+
+Rough margin:
+
+- $4.99/month nets about $4.19 after a conservative 15% Play fee plus 1%
+  RevenueCat.
+- $39.99/year nets about $2.80/month on the same conservative basis.
+- Render Standard web service compute is currently listed at $25/month. If using
+  a Pro workspace plus Standard compute, budget closer to $50/month before
+  bandwidth/Redis/database additions.
+- That means roughly 6 monthly Reader Plus users cover a $25/month server, or
+  roughly 12 monthly users cover a $50/month setup. Annual users need roughly
+  9 users for $25/month or 18 users for $50/month.
+
+Conclusion: heavy Reader Plus reading is safe if it means many listening hours
+with device voice. The risky part is not reading time; it is many large imports
+and scanned/OCR-heavy books. Keep OCR capped, queue or throttle concurrent OCR,
+and move long-term caching/storage carefully.
+
 ## Device Voice Quality, No Extra Cost
 
 Device voice quality can be improved without paying OpenAI by improving the
