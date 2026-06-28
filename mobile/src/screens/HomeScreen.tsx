@@ -8,6 +8,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { PDFParser, ParsedPdf } from "../services/PDFParser";
+import { ImportProgress, ImportPhase } from "../components/ImportProgress";
 import { theme } from "../theme";
 
 interface Props {
@@ -17,22 +18,54 @@ interface Props {
 export function HomeScreen({ onParsed }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imp, setImp] = useState<{
+    phase: ImportPhase;
+    percent: number;
+    loaded: number;
+    total: number;
+    fileName?: string;
+  } | null>(null);
 
   async function pick() {
     setError(null);
     setLoading(true);
     try {
-      const doc = await PDFParser.pickAndParse();
-      if (doc) onParsed(doc);
+      const doc = await PDFParser.pickAndParse({
+        onProgress: (loaded, total) => {
+          setImp({
+            phase: "uploading",
+            percent: total ? Math.round((loaded / total) * 100) : 0,
+            loaded,
+            total,
+          });
+        },
+        onUploaded: () => {
+          setImp((p) => (p ? { ...p, phase: "processing", percent: 100 } : p));
+        },
+      });
+      if (doc) {
+        setImp((p) => (p ? { ...p, phase: "done", percent: 100 } : p));
+        onParsed(doc);
+      }
     } catch (e: any) {
       setError(e?.message || "Could not read that PDF.");
     } finally {
       setLoading(false);
+      setImp(null);
     }
   }
 
   return (
     <SafeAreaView style={styles.safe}>
+      {imp ? (
+        <ImportProgress
+          percent={imp.percent}
+          phase={imp.phase}
+          loadedBytes={imp.loaded}
+          totalBytes={imp.total}
+          fileName={imp.fileName}
+        />
+      ) : null}
       <View style={styles.container}>
         <Text style={styles.logo}>ReadFlow</Text>
         <Text style={styles.tagline}>

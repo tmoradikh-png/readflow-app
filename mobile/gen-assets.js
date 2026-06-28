@@ -3,6 +3,17 @@
 // Renders the brand "spine" mark to PNGs with sharp.
 //   node gen-assets.js
 // sharp is resolved from the backend's node_modules.
+//
+// DISABLED: OLD generator. Shipped icons come from the provided package via
+// backend/render-icons-master.js. Running this would clobber the correct assets.
+// Set ICON_FORCE=1 to override (NOT recommended).
+if (process.env.ICON_FORCE !== "1") {
+  console.error(
+    "gen-assets.js is DISABLED (it overwrites the shipped icons). " +
+      "Use backend/render-icons-master.js. Set ICON_FORCE=1 to override."
+  );
+  process.exit(1);
+}
 const path = require("path");
 const fs = require("fs");
 const sharp = require(path.join(__dirname, "..", "backend", "node_modules", "sharp"));

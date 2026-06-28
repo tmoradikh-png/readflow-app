@@ -21,6 +21,7 @@ import { createTTSProvider } from "../services/tts";
 import { Controls, ReadingSettings } from "./Controls";
 import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
+import { UpgradeSheet } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
 import { theme } from "../theme";
 
@@ -76,6 +77,14 @@ export function Reader({
     "This feature is available on paid plans. Free users can continue with local reading and device voice."
   );
   const [controlsOpen, setControlsOpen] = useState(false);
+  // Sound master switch. OFF (default) = pure reading: tapping text won't start
+  // the voice, and the control bar collapses/hides with the rest of the chrome
+  // to maximise the reading area. ON = the Sound/Play/Stop bar stays pinned.
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const soundEnabledRef = useRef(false);
+  soundEnabledRef.current = soundEnabled;
+  // Header + page-nav + (when sound off) the control bar. Tap the page to toggle.
+  const [chromeVisible, setChromeVisible] = useState(true);
 
   const canUseAI = Boolean(entitlement.features.ai);
   const canUseOcr = Boolean(entitlement.features.ocr);
@@ -415,6 +424,12 @@ export function Reader({
 
   // ----- tap-to-read -----
   function onTapWord(globalId: number, charOffset: number) {
+    // Sound off = reading mode: a tap toggles the menus instead of reading,
+    // so the page can fill the whole screen.
+    if (!soundEnabledRef.current) {
+      setChromeVisible((v) => !v);
+      return;
+    }
     epochRef.current++; // invalidate the sentence we're interrupting (prevents double-read)
     ttsRef.current.stop();
     indexRef.current = globalId;
@@ -424,6 +439,24 @@ export function Reader({
     speakAt(globalId);
   }
   onTapWordRef.current = onTapWord;
+
+  function toggleSound() {
+    setSoundEnabled((on) => {
+      const next = !on;
+      if (!next) {
+        // Leaving listening mode: hard-stop the voice.
+        epochRef.current++;
+        playingRef.current = false;
+        setIsPlaying(false);
+        ttsRef.current.stop();
+        setControlsOpen(false);
+      } else {
+        // Entering listening mode: make sure the chrome is visible.
+        setChromeVisible(true);
+      }
+      return next;
+    });
+  }
 
   // ----- navigation -----
   function goToPage(page: number) {
@@ -558,8 +591,10 @@ export function Reader({
   // status bar is hidden (immersive) the inset collapses to 0, which is correct.
   const topInset = immersive ? 0 : Math.max(insets.top, Constants.statusBarHeight);
   const topPad = topInset + theme.spacing(immersive ? 0.5 : 1);
-  // Float the AI button just above the controls; the bar is shorter when collapsed.
-  const fabBottom = (controlsOpen ? 268 : 96) + insets.bottom;
+  // The control bar shows when listening (pinned) or when the chrome is revealed.
+  const controlsShown = soundEnabled || chromeVisible;
+  // Float the AI button just above the controls; the bar height varies by state.
+  const fabBottom = (controlsOpen ? 268 : controlsShown ? 96 : 24) + insets.bottom;
 
   return (
     <View style={styles.container}>
@@ -567,8 +602,8 @@ export function Reader({
 
       {/* In fullscreen we hide the top bar entirely (the Exit button used to sit
           under the camera cutout). Use the Android back button to leave fullscreen. */}
-      {immersive ? (
-        <View style={{ height: insets.top }} />
+      {immersive || !chromeVisible ? (
+        <View style={{ height: immersive ? insets.top : topInset }} />
       ) : (
         <>
           {/* header */}
@@ -683,42 +718,46 @@ export function Reader({
       {/* AI launcher (compact) */}
       {canUseAI ? (
         <Pressable style={[styles.aiFab, { bottom: fabBottom }]} onPress={() => setShowAI(true)}>
-          <Text style={styles.aiFabText}>AI</Text>
+          <Text style={styles.aiFabText}>✨ AI</Text>
         </Pressable>
       ) : (
         <Pressable
           style={[styles.aiFab, styles.aiFabLocked, { bottom: fabBottom }]}
           onPress={() =>
             openFeatureLock(
-              "AI is paid",
-              "Summaries, explanations, and Q&A are available on AI Pro and higher."
+              "✨ Unlock AI",
+              "Summaries, explanations, Q&A, and real AI narration are part of AI Pro. Upgrade to bring your books to life."
             )
           }
         >
-          <Text style={[styles.aiFabText, styles.aiFabTextLocked]}>AI Pro</Text>
+          <Text style={[styles.aiFabText, styles.aiFabTextLocked]}>✨ AI Pro</Text>
         </Pressable>
       )}
 
-      {/* controls */}
-      <Controls
-        settings={settings}
-        onChange={setSettings}
-        isPlaying={isPlaying}
-        onPlayPause={onPlayPause}
-        onStop={stop}
-        voiceMode={voiceMode}
-        onToggleVoice={toggleVoice}
-        canUseCloudVoice={canUseCloudVoice}
-        onCloudVoiceLocked={() =>
-          openFeatureLock(
-            "Cloud voice is paid",
-            "Natural cloud voice requires a paid plan. Free users can continue with device voice."
-          )
-        }
-        expanded={controlsOpen}
-        onToggleExpand={() => setControlsOpen((v) => !v)}
-        bottomInset={insets.bottom}
-      />
+      {/* controls — pinned while listening; otherwise reveal/hide with the chrome */}
+      {controlsShown && (
+        <Controls
+          settings={settings}
+          onChange={setSettings}
+          isPlaying={isPlaying}
+          onPlayPause={onPlayPause}
+          onStop={stop}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
+          voiceMode={voiceMode}
+          onToggleVoice={toggleVoice}
+          canUseCloudVoice={canUseCloudVoice}
+          onCloudVoiceLocked={() =>
+            openFeatureLock(
+              "Cloud voice is paid",
+              "Natural cloud voice requires a paid plan. Free users can continue with device voice."
+            )
+          }
+          expanded={controlsOpen}
+          onToggleExpand={() => setControlsOpen((v) => !v)}
+          bottomInset={insets.bottom}
+        />
+      )}
 
       {/* AI panel */}
       {showAI && (
@@ -745,24 +784,13 @@ export function Reader({
         />
       )}
 
-      {/* paywall */}
-      {showPaywall && (
-        <View style={styles.paywall}>
-          <View style={styles.paywallCard}>
-            <Text style={styles.paywallTitle}>{paywallTitle}</Text>
-            <Text style={styles.paywallBody}>{paywallBody}</Text>
-            <Pressable
-              style={styles.paywallBtn}
-              onPress={() => setShowPaywall(false)}
-            >
-              <Text style={styles.paywallBtnText}>OK</Text>
-            </Pressable>
-            <Pressable onPress={() => setShowPaywall(false)}>
-              <Text style={styles.paywallDismiss}>Not now</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
+      {/* upgrade notice / paywall */}
+      <UpgradeSheet
+        visible={showPaywall}
+        reasonTitle={paywallTitle}
+        reasonBody={paywallBody}
+        onClose={() => setShowPaywall(false)}
+      />
     </View>
   );
 }

@@ -1,7 +1,110 @@
-# ReadFlow — Android v1 Release Guide (Free app, Internal Testing)
+# ReadFlow — Android Release Guide (Free app, Internal Testing)
 
-App: **ReadFlow** · Package: **com.urmiaworks.readflow** · Version **1.0.0** (code **1**)
+App: **ReadFlow** · Package: **com.urmiaworks.readflow**
 Org: Urmia Works · Free app (in‑app purchases added later)
+
+EAS account: **tohid123** · Project: **tohid123/readflow**
+(projectId `097b0b5a-db90-46b4-b434-60836687b429`)
+
+> **Sections 0–5 below are the original first‑time setup guide.**
+> **If you just want to ship a new version, read [TL;DR — Cut a NEW build](#tldr--cut-a-new-build-do-this-every-release) first.**
+
+---
+
+## TL;DR — Cut a NEW build (do this EVERY release)
+
+This is the recurring routine. Follow it in order. **Each EAS build costs paid
+quota, so do not skip the version‑bump and check steps.**
+
+All commands run from `ReadFlow/mobile` on Windows PowerShell:
+
+```powershell
+cd c:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
+```
+
+### Step 1 — Find the next free versionCode (CRITICAL — money saver)
+
+> 🛑 **The #1 mistake: reusing a versionCode.** A `versionCode` is consumed the
+> moment a build is **made** (not just when uploaded to Play). If you build with a
+> code that already has a build, that build is wasted and the bundle is rejected by
+> Play ("Version code N has already been used"). **Always pick a code strictly
+> higher than the highest EXISTING EAS build.**
+
+Check the highest existing build code:
+
+```powershell
+npx --yes eas-cli build:list --platform android --limit 5 --json --non-interactive `
+  | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{JSON.parse(s).forEach(b=>console.log(b.appVersion+'/'+b.appBuildVersion+' '+b.status+' '+b.id.slice(0,8)))})"
+```
+
+The first line is the most recent build. **Next free code = highest `appBuildVersion` + 1.**
+(Also see the [Build ledger](#build-ledger) at the bottom of this file.)
+
+### Step 2 — Bump the version in two files
+
+Set `versionCode` to the next free code and bump the version name. Both must agree.
+
+1. `mobile/app.json`:
+   - `expo.version` → e.g. `"1.0.14"`
+   - `expo.ios.buildNumber` → `"14"`
+   - `expo.android.versionCode` → `14`
+2. `mobile/scripts/check-release-config.mjs` — update the three expected values to
+   match (it hard‑checks `versionCode` and `version` so a stale bump fails loudly):
+   - `android.versionCode === 14`
+   - `version === "1.0.14"`
+   - and their two `fail(...)` message strings.
+
+### Step 3 — (If the icon changed) regenerate icons from the CLEAN source
+
+> 🛑 **Do NOT re‑render the icon from SVG by hand** — that has repeatedly produced
+> broken/"terrible" icons. Always start from the designer's clean PNG.
+
+```powershell
+# back up the current icons first (timestamped)
+$ts = Get-Date -Format 'yyyyMMdd-HHmmss'
+New-Item -ItemType Directory -Force "assets\_backup_icons\build_$ts" | Out-Null
+Copy-Item assets\icon.png,assets\adaptive-icon.png,assets\favicon.png,assets\splash.png "assets\_backup_icons\build_$ts\"
+
+# regenerate icon.png + adaptive-icon.png + favicon.png from the clean source
+node gen-clean-icons.js
+```
+
+- Source PNG: `C:\Users\Greencom\Downloads\Icon cleanup request\uploads\PDF Reader App Design (1)\app-icon-rF-clean.png`
+- `gen-clean-icons.js` produces:
+  - `icon.png` — full‑bleed, red book‑spine flush to the **left edge** (for iOS/Play; no mask is applied there).
+  - `adaptive-icon.png` — the **whole mark scaled to 0.82 and centered on cream** so the
+    red spine stays **inside the Android adaptive safe zone** and survives the launcher
+    mask. (Earlier builds put the spine at the literal edge → Android cropped it off →
+    the launcher showed only "rF". The 0.82 inset fixes that.)
+- **Verify before building** (Android launchers mask the icon to a circle or squircle):
+  preview both masks and eyeball that the red spine survives. A quick check is to open
+  `assets/adaptive-icon.png` and confirm the spine sits well inside the left margin, not at
+  the pixel edge.
+- `adaptiveIcon.backgroundColor` in `app.json` must stay cream `#F4ECD6` (matches the fill).
+
+### Step 4 — Validate, then build (one paid build)
+
+```powershell
+npm run check:release    # must print "Release config check passed"
+npx --yes eas-cli build -p android --profile internal --non-interactive --no-wait
+```
+
+`--no-wait` returns immediately with a build URL. Watch progress at
+https://expo.dev/accounts/tohid123/projects/readflow/builds
+
+### Step 5 — Record it & upload
+
+1. Add a row to the [Build ledger](#build-ledger) (build id, version/code, what changed).
+2. When the build finishes, **download the `.aab`** from the EAS build page.
+3. Play Console → ReadFlow → **Testing → Internal testing → Create new release** →
+   upload the `.aab` → Save → Review → **Roll out**.
+4. Wait until the release shows **Available** to testers.
+
+### Step 6 — Test on the phone (icon/version cache)
+
+> The Android launcher caches the old icon and Play caches the old version. To see a
+> new icon or version: **uninstall** the old ReadFlow from the phone, then **reinstall**
+> from the Play internal‑testing link. A plain in‑place update may keep the old icon.
 
 ---
 
@@ -169,14 +272,17 @@ billing/rate‑limiting is proven in production.
 ## 5) Quick command reference
 
 ```powershell
-# regenerate the rF icon if colors change
-cd ReadFlow/mobile; python scripts/make_icon.py
+# regenerate the rF icon from the clean source PNG (NOT from SVG)
+cd ReadFlow/mobile; node gen-clean-icons.js
 
-# validate public release config before building
+# show the highest existing Android build code (next free code = that + 1)
+npx --yes eas-cli build:list --platform android --limit 5 --json --non-interactive
+
+# validate public release config before building (checks versionCode/version/apiUrl/appKey)
 npm run check:release
 
-# build the release .aab for internal testing
-eas build -p android --profile internal
+# build the release .aab for internal testing (one paid build)
+npx --yes eas-cli build -p android --profile internal --non-interactive --no-wait
 
 # (optional) submit straight to the Play internal track
 eas submit -p android --profile internal
@@ -189,3 +295,35 @@ $env:APP_KEY = "your-secret"
 npm run dev
 # then call /api/health and verify protected routes need x-app-key
 ```
+
+---
+
+## Build ledger
+
+Append a row **every** time you start a build. `versionCode` must always increase and
+must never be reused (a code is consumed the moment a build is made — see Step 1).
+
+| versionCode | versionName | EAS build id | Status | What changed |
+| ----------- | ----------- | ------------ | ------ | ------------ |
+| 9  | 1.0.9  | c5842302 | finished (code rejected by Play, already used) | bold icon |
+| 10 | 1.0.10 | a24eb33c | finished (code rejected by Play, already used) | bold icon |
+| 11 | 1.0.11 | c1e1f64e | finished | bold icon |
+| 12 | 1.0.12 | 47e0e2d5 | finished | designer's exact `app-icon-rF.png` |
+| 13 | 1.0.13 | 8f8723ce | finished | controls redesign + import progress |
+| 13 | 1.0.13 | f2511def | ⚠ **wasted** — code 13 reused | settings ▴ always visible + AI voice spotlight/promo |
+| 14 | 1.0.14 | 929c203d | building | clean‑source icon fix (spine survives mask) + the above UX |
+
+**Next free versionCode: 15.**
+
+### Lessons baked into this guide (do not relearn the hard way)
+- **Never reuse a versionCode.** Build `f2511def` reused code 13 → a paid build was
+  wasted and the bundle was unusable. Always run the `build:list` check (Step 1) and pick
+  highest + 1.
+- **Bump in BOTH `app.json` and `check-release-config.mjs`**, then run `npm run check:release`
+  before building — it fails loudly if they disagree.
+- **Icons come from the clean source PNG via `gen-clean-icons.js`**, never hand‑rendered from
+  SVG. The Android adaptive icon must keep the red spine inside the safe zone (0.82 inset),
+  or the launcher mask crops it off and you see only "rF".
+- **To see a new icon/version on the phone, uninstall then reinstall** — the launcher and Play
+  both cache aggressively.
+

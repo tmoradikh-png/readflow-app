@@ -2,7 +2,7 @@
   "expo": {
     "name": "ReadFlow",
     "slug": "readflow",
-    "version": "1.0.4",
+    "version": "1.0.14",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
@@ -20,14 +20,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urmiaworks.readflow",
-      "buildNumber": "5",
+      "buildNumber": "14",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 5,
+      "versionCode": 14,
       "permissions": [
         "INTERNET",
         "android.permission.RECORD_AUDIO",
@@ -38,7 +38,7 @@
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#E5533A"
+        "backgroundColor": "#F4ECD6"
       },
       "edgeToEdgeEnabled": true
     },

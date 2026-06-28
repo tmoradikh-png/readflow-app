@@ -15,6 +15,9 @@ interface Props {
   isPlaying: boolean;
   onPlayPause: () => void;
   onStop: () => void;
+  /** Master switch: when off, tapping text won't read and this bar collapses. */
+  soundEnabled: boolean;
+  onToggleSound: () => void;
   voiceMode: "natural" | "device";
   onToggleVoice: () => void;
   canUseCloudVoice: boolean;
@@ -32,6 +35,8 @@ export function Controls({
   isPlaying,
   onPlayPause,
   onStop,
+  soundEnabled,
+  onToggleSound,
   voiceMode,
   onToggleVoice,
   canUseCloudVoice,
@@ -42,7 +47,8 @@ export function Controls({
 }: Props) {
   return (
     <View style={[styles.wrap, { paddingBottom: theme.spacing(1) + bottomInset }]}>
-      {/* Pull handle — tap to show/hide the reading settings. */}
+      {/* Pull handle — tap to show/hide the reading settings. Always available so
+          you can change font/spacing/speed without entering listening mode. */}
       <Pressable style={styles.grabber} onPress={onToggleExpand} hitSlop={10}>
         <View style={styles.grabHandle} />
         <Text style={styles.grabHint}>{expanded ? "Hide settings ▾" : "Settings ▴"}</Text>
@@ -74,7 +80,7 @@ export function Controls({
                     !canUseCloudVoice && styles.segTextLocked,
                   ]}
                 >
-                  {canUseCloudVoice ? "Natural" : "Natural (Pro)"}
+                  {canUseCloudVoice ? "✨ AI Voice" : "✨ AI Voice (Pro)"}
                 </Text>
               </Pressable>
               <Pressable
@@ -89,6 +95,24 @@ export function Controls({
               </Pressable>
             </View>
           </View>
+
+          {/* AI voice spotlight — make the premium feature obvious. */}
+          {canUseCloudVoice ? (
+            voiceMode === "natural" ? (
+              <View style={styles.aiHint}>
+                <Text style={styles.aiHintText}>
+                  ✨ Real AI narration — lifelike, human-sounding voice.
+                </Text>
+              </View>
+            ) : null
+          ) : (
+            <Pressable style={styles.aiPromo} onPress={onCloudVoiceLocked} hitSlop={6}>
+              <Text style={styles.aiPromoTitle}>✨ Unlock real AI narration</Text>
+              <Text style={styles.aiPromoBody}>
+                Lifelike human voice instead of the robotic device one. See plans →
+              </Text>
+            </Pressable>
+          )}
 
           <View style={styles.row}>
             <Text style={styles.label}>Font {Math.round(settings.fontSize)}</Text>
@@ -125,12 +149,27 @@ export function Controls({
       )}
 
       <View style={styles.playRow}>
-        <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onPlayPause}>
-          <Text style={styles.btnPrimaryText}>{isPlaying ? "⏸  Pause" : "▶  Play"}</Text>
-        </Pressable>
-        <Pressable style={[styles.btn, styles.btnGhost]} onPress={onStop}>
-          <Text style={styles.btnGhostText}>⏹  Stop</Text>
-        </Pressable>
+        {soundEnabled ? (
+          <>
+            {/* 1) Sound toggle — turning it off stops tap-to-read and hides this bar. */}
+            <Pressable style={[styles.btn, styles.btnSound]} onPress={onToggleSound}>
+              <Text style={styles.btnSoundText}>🔊  Sound</Text>
+            </Pressable>
+            {/* 2) Play / Pause */}
+            <Pressable style={[styles.btn, styles.btnPrimary]} onPress={onPlayPause}>
+              <Text style={styles.btnPrimaryText}>{isPlaying ? "⏸  Pause" : "▶  Play"}</Text>
+            </Pressable>
+            {/* 3) Stop */}
+            <Pressable style={[styles.btn, styles.btnGhost]} onPress={onStop}>
+              <Text style={styles.btnGhostText}>⏹  Stop</Text>
+            </Pressable>
+          </>
+        ) : (
+          // Collapsed: a single, low-footprint button to enter listening mode.
+          <Pressable style={[styles.btn, styles.btnListen]} onPress={onToggleSound}>
+            <Text style={styles.btnListenText}>🔈  Tap to listen</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -210,6 +249,36 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   segTextLocked: { color: theme.colors.textDim },
+  // AI voice spotlight
+  aiHint: {
+    backgroundColor: theme.colors.accentSoft,
+    borderRadius: theme.radius,
+    paddingHorizontal: theme.spacing(1.25),
+    paddingVertical: theme.spacing(0.75),
+  },
+  aiHintText: {
+    color: theme.colors.accent,
+    fontSize: 12.5,
+    fontFamily: theme.fonts.sansSemiBold,
+  },
+  aiPromo: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radius,
+    paddingHorizontal: theme.spacing(1.5),
+    paddingVertical: theme.spacing(1),
+    gap: 2,
+  },
+  aiPromoTitle: {
+    color: theme.colors.onAccent,
+    fontSize: 14,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontWeight: "700",
+  },
+  aiPromoBody: {
+    color: theme.colors.onAccent,
+    fontSize: 12,
+    opacity: 0.92,
+  },
   stepper: {
     flexDirection: "row",
     alignItems: "center",
@@ -231,4 +300,18 @@ const styles = StyleSheet.create({
   btnPrimaryText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   btnGhost: { backgroundColor: theme.colors.surfaceAlt },
   btnGhostText: { color: theme.colors.text, fontWeight: "600", fontSize: 15 },
+  // Sound toggle (listening on) — quieter than Play, clearly "active".
+  btnSound: {
+    backgroundColor: theme.colors.accentSoft,
+    borderWidth: 1,
+    borderColor: theme.colors.accentMid,
+  },
+  btnSoundText: { color: theme.colors.accent, fontWeight: "700", fontSize: 15 },
+  // Collapsed "Tap to listen" pill (listening off).
+  btnListen: {
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  btnListenText: { color: theme.colors.textMute, fontWeight: "700", fontSize: 15 },
 });

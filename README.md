@@ -49,6 +49,15 @@ so your phone and computer must be on the **same Wi‑Fi**.
 > Reading aloud uses the **free on-device voice** (works offline, no cost).
 > The AI buttons require the backend + an OpenAI key.
 
+## Shipping a new Android build
+See **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** → the **"TL;DR — Cut a NEW build"** section
+at the top is the step‑by‑step routine (bump `versionCode`, regenerate the icon, run
+`npm run check:release`, build the `.aab`, upload to Play **Internal testing**). A
+**Build ledger** at the bottom tracks every build and the next free `versionCode`.
+
+> 🛑 Never reuse a `versionCode` — a code is consumed the moment a build is made, and
+> reusing one wastes a paid EAS build. Always pick the next free code (see the guide).
+
 ## Switching to premium cloud voice later
 Implement `mobile/src/services/tts/CloudTTSProvider.ts`, add a `POST /api/tts`
 route on the backend, then change `ACTIVE_TTS` in

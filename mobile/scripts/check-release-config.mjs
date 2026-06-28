@@ -34,17 +34,17 @@ if (android.package === "com.urmiaworks.readflow") {
 }
 
 // 2) versionCode
-if (android.versionCode === 5) {
-  pass("versionCode is 5");
+if (android.versionCode === 14) {
+  pass("versionCode is 14");
 } else {
-  fail(`versionCode expected 5 but got ${String(android.versionCode)}`);
+  fail(`versionCode expected 14 but got ${String(android.versionCode)}`);
 }
 
 // 3) versionName
-if (expo.version === "1.0.4") {
-  pass("versionName is 1.0.4");
+if (expo.version === "1.0.14") {
+  pass("versionName is 1.0.14");
 } else {
-  fail(`versionName expected 1.0.4 but got ${expo.version || "(missing)"}`);
+  fail(`versionName expected 1.0.14 but got ${expo.version || "(missing)"}`);
 }
 
 // 4) apiUrl points to Render HTTPS URL

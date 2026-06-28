@@ -39,8 +39,17 @@ const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingm
  * per-page text extraction. (Reflow/sentence-splitting is done on-device by
  * TextReflow so layout adapts to the chosen font size and screen width.)
  */
+/** Reports upload progress (real bytes) and the upload→processing handoff. */
+export interface ImportProgressHooks {
+  onProgress?: (loaded: number, total: number) => void;
+  /** Fired once the file bytes are fully uploaded and the server starts work. */
+  onUploaded?: () => void;
+}
+
 export const PDFParser = {
-  async pickAndParse(opts?: { ocrLang?: string }): Promise<ParsedPdf | null> {
+  async pickAndParse(
+    opts?: { ocrLang?: string } & ImportProgressHooks
+  ): Promise<ParsedPdf | null> {
     const picked = await DocumentPicker.getDocumentAsync({
       type: ["application/pdf", DOCX_TYPE],
       copyToCacheDirectory: true,
@@ -54,6 +63,8 @@ export const PDFParser = {
       fileName: asset.name || "document",
       mimeType: asset.mimeType || "application/octet-stream",
       ocrLang: opts?.ocrLang,
+      onProgress: opts?.onProgress,
+      onUploaded: opts?.onUploaded,
     });
   },
 
@@ -63,7 +74,7 @@ export const PDFParser = {
     fileName: string;
     mimeType?: string;
     ocrLang?: string;
-  }): Promise<ParsedPdf> {
+  } & ImportProgressHooks): Promise<ParsedPdf> {
     const form = new FormData();
     // React Native FormData file shape:
     form.append("file", {
@@ -74,18 +85,14 @@ export const PDFParser = {
     // Optional OCR language hint (backend validates against its allow-list).
     if (args.ocrLang) form.append("ocrLang", args.ocrLang);
 
-    const res = await fetch(`${API_BASE}/api/pdf/extract`, {
-      method: "POST",
-      headers: apiHeaders(),
-      body: form,
-    });
-
-    if (!res.ok) {
-      const msg = await safeError(res);
-      throw new Error(msg);
-    }
-
-    const data = await res.json();
+    // Use XHR (not fetch) so we get real upload-byte progress for the UI.
+    const data = await uploadForm(
+      `${API_BASE}/api/pdf/extract`,
+      form,
+      apiHeaders(),
+      args.onProgress,
+      args.onUploaded
+    );
     const fileName = args.fileName || "document";
     return {
       pageCount: data.pageCount,
@@ -119,6 +126,52 @@ export const PDFParser = {
     return Array.isArray(data.pages) ? data.pages : [];
   },
 };
+
+/**
+ * POST a multipart form with real upload progress. `fetch` can't report upload
+ * bytes in React Native, but XMLHttpRequest exposes `upload.onprogress`.
+ * Do NOT set Content-Type — the engine adds the multipart boundary itself.
+ */
+function uploadForm(
+  url: string,
+  form: FormData,
+  headers: Record<string, string>,
+  onProgress?: (loaded: number, total: number) => void,
+  onUploaded?: () => void
+): Promise<any> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url);
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+    if (xhr.upload) {
+      xhr.upload.onprogress = (e: any) => {
+        if (e && e.lengthComputable) onProgress?.(e.loaded, e.total);
+      };
+      xhr.upload.onload = () => onUploaded?.();
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch {
+          reject(new Error("The server returned an unexpected response."));
+        }
+      } else {
+        let msg = `Upload failed (${xhr.status}).`;
+        try {
+          const j = JSON.parse(xhr.responseText);
+          if (j?.error) msg = String(j.error);
+        } catch {
+          /* keep default */
+        }
+        reject(new Error(msg));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Network error. Check your connection and try again."));
+    xhr.ontimeout = () => reject(new Error("The upload timed out. Please try again."));
+    xhr.send(form as any);
+  });
+}
 
 async function safeError(res: Response): Promise<string> {
   try {

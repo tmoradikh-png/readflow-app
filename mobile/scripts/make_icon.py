@@ -6,7 +6,17 @@ Brand colors:
   espresso= #20180F (near-black)
 
 Outputs (overwrites): assets/icon.png, assets/adaptive-icon.png, assets/splash.png, assets/favicon.png
+
+DISABLED: This is the OLD generator. The shipped icons are rendered from the
+provided package via backend/render-icons-master.js. Running this would clobber
+the correct assets. Set ICON_FORCE=1 to override (NOT recommended).
 """
+import os
+if os.environ.get("ICON_FORCE") != "1":
+    raise SystemExit(
+        "make_icon.py is DISABLED (it overwrites the shipped icons). "
+        "Use backend/render-icons-master.js. Set ICON_FORCE=1 to override."
+    )
 import os
 from PIL import Image, ImageDraw, ImageFont
 
