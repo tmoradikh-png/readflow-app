@@ -313,8 +313,9 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 13 | 1.0.13 | f2511def | ⚠ **wasted** — code 13 reused | settings ▴ always visible + AI voice spotlight/promo |
 | 14 | 1.0.14 | 929c203d | finished | clean‑source icon fix (spine survives mask) + the above UX |
 | 15 | 1.0.15 | 34cd381c | finished | finished reader design + AI voice sync/tail fix + exact clean icon |
+| 16 | 1.0.16 | 7b4d5904 | finished | Android adaptive icon safe-zone fix (0.66 foreground scale) |
 
-**Next free versionCode: 16.**
+**Next free versionCode: 17.**
 
 ### Lessons baked into this guide (do not relearn the hard way)
 - **Never reuse a versionCode.** Build `f2511def` reused code 13 → a paid build was
