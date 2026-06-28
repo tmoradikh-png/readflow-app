@@ -282,6 +282,10 @@ Leaving the app/reader:
   book/page metadata and native play/pause controls. Expo Audio does not expose
   a separate stop button in the current lock-screen API; pause is the supported
   lock-screen control.
+- Large scanned books can continue OCR across multiple months: the app keeps the
+  original file in local library storage, caches OCR'd pages, saves pending OCR
+  pages, pauses with an explanation when monthly OCR quota is reached, and can
+  re-upload the local file later to mint a fresh OCR token after quota reset.
 - React Native cannot always distinguish phone lock from Home/app switch in JS.
   If exact "paid lock continues, Home/app switch stops" behavior becomes
   mandatory for natural voice too, add a small native Android signal/module

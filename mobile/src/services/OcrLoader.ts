@@ -1,5 +1,11 @@
 import { AppState, AppStateStatus } from "react-native";
-import { PdfPage, PDFParser, isNetworkError } from "./PDFParser";
+import {
+  PdfPage,
+  PDFParser,
+  isExpiredDocError,
+  isNetworkError,
+  isQuotaError,
+} from "./PDFParser";
 import { DocCache } from "./DocCache";
 
 /**
@@ -22,6 +28,8 @@ export interface OcrProgress {
   pending: number; // pages still to do
   percent: number; // 0..100
   offline: boolean; // paused because the network dropped
+  pausedReason?: "offline" | "quota" | "expired" | "error";
+  message?: string;
   complete: boolean; // nothing left to OCR
 }
 
@@ -37,6 +45,8 @@ interface Job {
   priority: number | null;
   running: boolean;
   offline: boolean;
+  pausedReason?: OcrProgress["pausedReason"];
+  message?: string;
   retryTimer: ReturnType<typeof setTimeout> | null;
   listeners: Set<Listener>;
 }
@@ -72,6 +82,8 @@ function progressOf(job: Job): OcrProgress {
     pending: job.pending.size,
     percent: job.total > 0 ? Math.round((done / job.total) * 100) : 100,
     offline: job.offline,
+    pausedReason: job.pausedReason,
+    message: job.message,
     complete: job.pending.size === 0,
   };
 }
@@ -85,6 +97,11 @@ function notify(job: Job) {
       /* a bad listener must not kill the loop */
     }
   }
+}
+
+function totalOcrWork(pages: PdfPage[], pending: number[]): number {
+  const done = pages.filter((p) => p.source === "ocr" && p.text.trim().length > 0).length;
+  return Math.max(pending.length + done, pending.length);
 }
 
 function mergePages(
@@ -126,9 +143,35 @@ async function runLoop(job: Job) {
       try {
         results = await PDFParser.ocrPages(job.token, want, job.ocrLang);
       } catch (e) {
-        // Network drop → pause and retry; other errors (expired token, quota) →
-        // pause too and wait for the next open/foreground to refresh the token.
-        job.offline = isNetworkError(e);
+        // Network drops retry automatically. Quota/token pauses wait for the
+        // user to reopen later, after monthly reset, or after a fresh token.
+        if (isNetworkError(e)) {
+          job.pausedReason = "offline";
+          job.message = "Paused - you're offline. Pages will finish loading when you reconnect.";
+          job.offline = true;
+          notify(job);
+          scheduleRetry(job);
+          break;
+        }
+        if (isQuotaError(e)) {
+          job.pausedReason = "quota";
+          job.message =
+            "Monthly OCR limit reached. The remaining scanned pages are saved and can continue after your limit resets, or you can upgrade for a higher OCR limit.";
+          job.offline = false;
+          notify(job);
+          break;
+        }
+        if (isExpiredDocError(e)) {
+          job.pausedReason = "expired";
+          job.message =
+            "OCR paused. Reopen this book from your library to refresh the file token and continue.";
+          job.offline = false;
+          notify(job);
+          break;
+        }
+        job.pausedReason = "error";
+        job.message = "OCR paused after a server error. ReadFlow will try again shortly.";
+        job.offline = false;
         notify(job);
         scheduleRetry(job);
         break;
@@ -139,6 +182,8 @@ async function runLoop(job: Job) {
       if (improved.length > 0) mergePages(job, improved);
       if (job.priority != null && !job.pending.has(job.priority)) job.priority = null;
       job.offline = false;
+      job.pausedReason = undefined;
+      job.message = undefined;
       DocCache.update(job.docId, job.pages, [...job.pending]).catch(() => {});
       notify(job);
       await new Promise((r) => setTimeout(r, GAP_MS));
@@ -166,10 +211,12 @@ export const OcrLoader = {
         ocrLang: opts.ocrLang,
         pages: [...opts.pages],
         pending: new Set(opts.pending),
-        total: opts.pending.length,
+        total: totalOcrWork(opts.pages, opts.pending),
         priority: null,
         running: false,
         offline: false,
+        pausedReason: undefined,
+        message: undefined,
         retryTimer: null,
         listeners: new Set(),
       };
@@ -178,11 +225,16 @@ export const OcrLoader = {
       // Reopening mints a fresh server token; keep accumulated pages/progress.
       job.token = opts.token;
       if (opts.ocrLang) job.ocrLang = opts.ocrLang;
+      job.pages = [...opts.pages];
+      job.pending = new Set(opts.pending);
+      job.total = Math.max(job.total, totalOcrWork(opts.pages, opts.pending));
       if (job.retryTimer) {
         clearTimeout(job.retryTimer);
         job.retryTimer = null;
       }
       job.offline = false;
+      job.pausedReason = undefined;
+      job.message = undefined;
     }
     if (job.pending.size > 0) void runLoop(job);
     return progressOf(job);

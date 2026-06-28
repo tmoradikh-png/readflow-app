@@ -121,7 +121,7 @@ export const PDFParser = {
       headers: apiHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ docToken, pages, ocrLang }),
     });
-    if (!res.ok) throw new Error(await safeError(res));
+    if (!res.ok) throw await responseError(res);
     const data = await res.json();
     return Array.isArray(data.pages) ? data.pages : [];
   },
@@ -182,6 +182,22 @@ async function safeError(res: Response): Promise<string> {
   }
 }
 
+async function responseError(res: Response): Promise<Error> {
+  let body: any = null;
+  try {
+    body = await res.json();
+  } catch {
+    /* keep null */
+  }
+  const code = String(body?.error || `http_${res.status}`);
+  const message = String(body?.message || body?.error || `Request failed (${res.status}).`);
+  return Object.assign(new Error(message), {
+    code,
+    status: res.status,
+    feature: typeof body?.feature === "string" ? body.feature : undefined,
+  });
+}
+
 /**
  * True when an error looks like a lost/absent network connection (airplane
  * mode, no Wi-Fi) rather than a server response. `fetch` throws a TypeError
@@ -194,4 +210,16 @@ export function isNetworkError(e: unknown): boolean {
     e instanceof TypeError ||
     /network request failed|network error|failed to fetch|timeout|timed out/i.test(msg)
   );
+}
+
+export function apiErrorCode(e: unknown): string {
+  return String((e as any)?.code || (e as any)?.message || "");
+}
+
+export function isQuotaError(e: unknown): boolean {
+  return /quota_exceeded/i.test(apiErrorCode(e));
+}
+
+export function isExpiredDocError(e: unknown): boolean {
+  return /doc_expired/i.test(apiErrorCode(e));
 }

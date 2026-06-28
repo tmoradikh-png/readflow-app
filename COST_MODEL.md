@@ -145,6 +145,33 @@ Recommendation: allow unlimited normal reading/device listening in Reader Plus,
 but keep OCR capped, measured, and queue-limited. Start with 300 OCR pages/month,
 then adjust after real telemetry.
 
+## Multi-Month OCR for Large Scanned Books
+
+Reader Plus should allow a user to finish one large scanned book over multiple
+months instead of forcing an upgrade.
+
+Current intended flow:
+
+- The original PDF/DOCX is copied into the app's private library storage.
+- Parsed text and OCR'd pages are cached locally in `DocCache`.
+- Pending scanned pages stay in the cached document.
+- When the monthly OCR quota is reached, OCR pauses and the reader explains that
+  remaining scanned pages are saved for later.
+- After the user's quota resets, reopening the book re-uploads the local source
+  file, mints a fresh backend `docToken`, merges already-cached OCR text, and
+  continues the remaining pending pages.
+- The upgrade offer is convenience, not a hard wall: AI Pro gives 1,000 OCR
+  pages/month, and Power gives 3,000 OCR pages/month.
+
+Implementation notes:
+
+- `Library` keeps the local source file.
+- `DocCache` keeps OCR progress and pending pages.
+- `OcrLoader` pauses distinctly for offline, quota, expired token, and generic
+  server errors.
+- Quota pauses do not retry every few seconds; the user can continue after the
+  monthly reset or by upgrading.
+
 ## Device Voice Quality, No Extra Cost
 
 Device voice quality can be improved without paying OpenAI by improving the

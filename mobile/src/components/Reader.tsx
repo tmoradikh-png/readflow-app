@@ -192,6 +192,25 @@ export function Reader({
     setShowPaywall(true);
   }
 
+  function ocrProgressLabel(): string {
+    if (!ocrProgress) return "";
+    if (ocrProgress.message) return ocrProgress.message;
+    if (ocrProgress.offline) {
+      return "Paused - you're offline. Pages will finish loading when you reconnect.";
+    }
+    return `Loading pages... ${ocrProgress.percent}%  (${ocrProgress.done}/${ocrProgress.total})`;
+  }
+
+  function openOcrLimitOffer() {
+    const body =
+      entitlement.tier === "reader_plus"
+        ? "Reader Plus includes 300 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. AI Pro raises OCR to 1,000 pages/month, and Power raises it to 3,000 pages/month."
+        : entitlement.tier === "ai_pro"
+          ? "AI Pro includes 1,000 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. Power raises OCR to 3,000 pages/month."
+          : "Scanned pages use OCR. Reader Plus includes 300 OCR pages/month, AI Pro includes 1,000, and Power includes 3,000.";
+    openFeatureLock("More OCR pages", body);
+  }
+
   useEffect(() => {
     return () => {
       // Hard-stop on unmount so the voice never keeps reading after you leave.
@@ -762,20 +781,27 @@ export function Reader({
             </View>
           ) : ocrProgress && !ocrProgress.complete ? (
             <View style={styles.progressWrap}>
-              <Text style={styles.progressLabel}>
-                {ocrProgress.offline
-                  ? "Paused — you're offline. Pages will finish loading when you reconnect."
-                  : `Loading pages… ${ocrProgress.percent}%  (${ocrProgress.done}/${ocrProgress.total})`}
-              </Text>
+              <Text style={styles.progressLabel}>{ocrProgressLabel()}</Text>
               <View style={styles.progressTrack}>
                 <View
                   style={[
                     styles.progressFill,
                     { width: `${Math.max(2, ocrProgress.percent)}%` },
-                    ocrProgress.offline && styles.progressFillOffline,
+                    (ocrProgress.offline || ocrProgress.pausedReason) && styles.progressFillOffline,
                   ]}
                 />
               </View>
+              {ocrProgress.pausedReason === "quota" ? (
+                <View style={styles.progressActions}>
+                  <Text style={styles.progressHint}>
+                    {ocrProgress.pending} scanned pages remain. Continue after reset, or upgrade for a
+                    higher monthly OCR limit.
+                  </Text>
+                  <Pressable style={styles.progressButton} onPress={openOcrLimitOffer}>
+                    <Text style={styles.progressButtonText}>See options</Text>
+                  </Pressable>
+                </View>
+              ) : null}
             </View>
           ) : null}
         </>
@@ -1137,6 +1163,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textDim,
     fontSize: 12,
     fontFamily: theme.fonts.sansMedium,
+  },
+  progressActions: {
+    gap: 8,
+  },
+  progressHint: {
+    color: theme.colors.textDim,
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: theme.fonts.sans,
+  },
+  progressButton: {
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  progressButtonText: {
+    color: theme.colors.onAccent,
+    fontSize: 12,
+    fontFamily: theme.fonts.sansSemiBold,
   },
   progressTrack: {
     height: 6,
