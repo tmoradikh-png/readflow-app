@@ -52,9 +52,18 @@ Current cloud voice implementation:
   sets `TTS_MODEL=tts-1-hd`. This is the more expensive legacy TTS model, so the
   current allowances are deliberately small.
 - Source `1.0.18` adds a real local AI voice path with `react-native-sherpa-onnx`
-  and an on-demand Piper VITS model. It has no OpenAI per-character bill, but it
-  requires a new native/EAS build and consumes the user's phone CPU, storage, and
-  battery.
+  and an on-demand Supertonic Reader model. It has no OpenAI per-character bill,
+  but it requires a new native/EAS build and consumes the user's phone CPU,
+  storage, and battery.
+- The app now presents voice choices as Phone voice, Pocket AI, and Studio AI.
+  Pocket AI is the local Sherpa/Supertonic path and should be marketed as
+  no-cloud, battery/CPU-based reading. Studio AI is the cloud/OpenAI path and
+  must remain paid/capped by `cloudVoiceChars`.
+- Pocket AI currently downloads `sherpa-onnx-supertonic-tts-int8-2026-03-06` on
+  demand (about 81 MB) instead of bundling it in the app, so APK/AAB size does
+  not grow by the model size until the user chooses to download it. This replaced
+  the first 20 MB Piper test voice because the smaller model sounded too robotic
+  and paused too noticeably for book reading.
 - Free-tier limits are not aligned with the latest product decision. The user
   wants roughly 1 free book and around 100 pages. Current backend config is
   `pdfsPerMonth: 30` and `perDocPageCap: 30`; the mobile reader also has
@@ -199,7 +208,9 @@ Device voice quality can be improved without paying OpenAI by improving the
 phone-side experience:
 
 - Add a voice picker using installed Android/iOS system voices.
-- Prefer high-quality Google/Samsung/Apple voices when available.
+- Prefer high-quality Google/Samsung/Apple voices when available. The current
+  app groups English voices by friendly accent labels instead of exposing raw
+  Android voice ids.
 - Add an in-app tip to install or update "Speech Services by Google" and
   download higher-quality voices in Android settings.
 - Add per-language default voice selection.
@@ -210,6 +221,8 @@ phone-side experience:
   reading page numbers.
 - Add a short paragraph-pause slider for device voice.
 - Tune rate/pitch presets: natural, focused, fast.
+- Keep playback foreground-friendly: the current reader prevents auto-lock while
+  a book is reading, which costs nothing but improves long reading sessions.
 
 These changes cost engineering time only. They do not create a per-user vendor
 bill. Truly natural AI voices, however, require cloud TTS or a native/local
@@ -298,10 +311,10 @@ nets well above the $3 OpenAI cost on `tts-1-hd`.
 
 ## Local Neural Voice Plan
 
-First implementation choice: `react-native-sherpa-onnx` with Piper/VITS,
-specifically `vits-piper-en_US-lessac-medium-int8` (Piper Lessac Medium, int8).
-The model is downloaded on demand from the Sherpa model registry instead of
-being bundled in every app install.
+Current implementation choice: `react-native-sherpa-onnx` with Supertonic TTS,
+specifically `sherpa-onnx-supertonic-tts-int8-2026-03-06` (Supertonic
+Reader/Pocket AI). The model is downloaded on demand from the Sherpa model
+registry instead of being bundled in every app install.
 
 Why it is useful:
 
@@ -314,7 +327,7 @@ Tradeoffs:
 
 - Requires native modules (`react-native-sherpa-onnx` and
   `@dr.pogodin/react-native-fs`), so it must be tested in a fresh native build.
-- Compressed model download is about 20 MB for the first voice. It is not part
+- Compressed model download is about 81 MB for the first voice. It is not part
   of the base app package.
 - Generated WAV clips use app cache; repeated paragraphs can replay without
   regenerating.
@@ -332,13 +345,14 @@ Implementation status:
   line-highlighting path as cloud voice.
 - DONE in source: if local AI is not ready, the reader falls back to the selected
   device voice and explains the issue once.
-- Still required: build and test on the connected Android phone. Expo Go and old
-  installed builds cannot test this native module.
+- DONE: clean local debug APK builds on Windows from a short temp path without
+  spending EAS quota. Supertonic still needs on-device listening QA after the
+  model downloads.
 
 Kokoro through `react-native-executorch` remains a possible higher-quality
 future path, but it is much heavier for a first shipping attempt. The first
-version should prove demand and device behavior with the smaller Piper/VITS
-model before adding hundreds of MB of model/runtime weight.
+version should prove demand and device behavior with the lighter
+Sherpa/Supertonic path before adding hundreds of MB of model/runtime weight.
 
 ## AI Voice Cost Per Page
 
@@ -455,8 +469,9 @@ are also weak and can punish shared networks. For public release, send a stable
    generic `ai`.
 4. DONE: backend `/api/tts` is gated by `cloudVoice` and monthly character
    usage.
-5. DONE in source: first local AI voice uses Sherpa-ONNX plus on-demand Piper
-   VITS, outside cloud voice quota. Needs native phone QA before product claims.
+5. DONE in source: first local AI voice uses Sherpa-ONNX plus on-demand
+   Supertonic Reader, outside cloud voice quota. Needs native phone QA before
+   product claims.
 6. Decide whether local AI voice is Free, Reader Plus+, or AI Pro+. It has no
    vendor bill, but it is still a premium-feeling AI feature.
 7. Decide free tier: 1 book and about 100 pages, then update backend and mobile

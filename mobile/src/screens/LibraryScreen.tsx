@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { PDFParser, ParsedPdf, isNetworkError } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
+import { Bookmarks } from "../services/Bookmarks";
 import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
 import {
   downloadLocalNeuralVoice,
@@ -60,9 +61,7 @@ export function LibraryScreen({
   const [error, setError] = useState<string | null>(null);
   const [showVoice, setShowVoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [deviceVoices, setDeviceVoices] = useState<
-    { id: string; name: string; language: string }[]
-  >([]);
+  const [deviceVoices, setDeviceVoices] = useState<DeviceVoiceOption[]>([]);
   const [localStatus, setLocalStatus] = useState<LocalNeuralVoiceStatus>(
     getLocalNeuralVoiceStatus()
   );
@@ -102,16 +101,7 @@ export function LibraryScreen({
   useEffect(() => {
     Speech.getAvailableVoicesAsync()
       .then((voices) => {
-        setDeviceVoices(
-          voices
-            .filter((v) => /^en([-_]|$)/i.test(v.language || ""))
-            .slice(0, 24)
-            .map((v) => ({
-              id: v.identifier,
-              name: v.name || v.identifier,
-              language: v.language || "Unknown",
-            }))
-        );
+        setDeviceVoices(formatDeviceVoices(voices));
       })
       .catch(() => setDeviceVoices([]));
   }, []);
@@ -196,17 +186,28 @@ export function LibraryScreen({
     }
   }
 
+  async function removeItem(item: LibraryItem) {
+    setItems((current) => current.filter((candidate) => candidate.id !== item.id));
+    setBusyId(item.id);
+    try {
+      await Library.remove(item.id);
+      await DocCache.remove(item.id);
+      await Bookmarks.removeAll(item.id);
+    } catch (e: any) {
+      Alert.alert("Remove document", e?.message || "Could not remove that document.");
+    } finally {
+      await refresh();
+      setBusyId(null);
+    }
+  }
+
   function confirmRemove(item: LibraryItem) {
     Alert.alert("Remove from library?", `“${item.title}” will be removed from this device.`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
         style: "destructive",
-        onPress: async () => {
-          await Library.remove(item.id);
-          await DocCache.remove(item.id);
-          await refresh();
-        },
+        onPress: () => removeItem(item).catch(() => {}),
       },
     ]);
   }
@@ -323,6 +324,7 @@ export function LibraryScreen({
               item={recent}
               busy={busyId === recent.id}
               onPress={() => openItem(recent)}
+              onRemove={() => confirmRemove(recent)}
             />
           )}
 
@@ -338,7 +340,7 @@ export function LibraryScreen({
                 item={item}
                 busy={busyId === item.id}
                 onPress={() => openItem(item)}
-                onLongPress={() => confirmRemove(item)}
+                onRemove={() => confirmRemove(item)}
               />
             ))}
             {rest.length === 0 && (
@@ -391,6 +393,85 @@ function estimatePages(chars: number): number {
   return Math.max(0, Math.floor(chars / 1650));
 }
 
+interface DeviceVoiceOption {
+  id: string;
+  name: string;
+  language: string;
+  regionKey: string;
+  regionLabel: string;
+  displayName: string;
+  detail: string;
+  rank: number;
+}
+
+function formatDeviceVoices(voices: Speech.Voice[]): DeviceVoiceOption[] {
+  const seen = new Set<string>();
+  return voices
+    .filter((voice) => /^en([-_]|$)/i.test(voice.language || ""))
+    .map((voice, index) => toDeviceVoiceOption(voice, index))
+    .filter((voice) => {
+      const key = `${voice.id}:${voice.language}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => a.rank - b.rank || a.displayName.localeCompare(b.displayName))
+    .slice(0, 24);
+}
+
+function toDeviceVoiceOption(voice: Speech.Voice, index: number): DeviceVoiceOption {
+  const language = normalizeLanguage(voice.language || "en-US");
+  const rawName = String(voice.name || voice.identifier || "");
+  const lower = `${rawName} ${voice.identifier || ""}`.toLowerCase();
+  const regionKey = regionKeyFromLanguage(language);
+  const regionLabel = regionLabelFromKey(regionKey);
+  const quality = lower.includes("network")
+    ? "Network voice"
+    : lower.includes("local") || lower.includes("offline") || lower.includes("google")
+      ? "Offline voice"
+      : "Phone voice";
+  const number = index + 1;
+  return {
+    id: voice.identifier,
+    name: rawName || `${regionLabel} voice ${number}`,
+    language,
+    regionKey,
+    regionLabel,
+    displayName: `${regionLabel} ${quality.toLowerCase()}`,
+    detail: quality === "Network voice" ? "May need Android voice data" : `${language} - ${quality}`,
+    rank: regionRank(regionKey) * 10 + (quality === "Offline voice" ? 0 : quality === "Phone voice" ? 1 : 2),
+  };
+}
+
+function normalizeLanguage(language: string): string {
+  return language.replace("_", "-") || "en-US";
+}
+
+function regionKeyFromLanguage(language: string): string {
+  const parts = normalizeLanguage(language).split("-");
+  return (parts[1] || "US").toUpperCase();
+}
+
+function regionLabelFromKey(regionKey: string): string {
+  const labels: Record<string, string> = {
+    US: "American English",
+    GB: "British English",
+    UK: "British English",
+    AU: "Australian English",
+    CA: "Canadian English",
+    IN: "Indian English",
+    IE: "Irish English",
+    ZA: "South African English",
+    NZ: "New Zealand English",
+  };
+  return labels[regionKey] || `${regionKey} English`;
+}
+
+function regionRank(regionKey: string): number {
+  const ranks: Record<string, number> = { US: 0, GB: 1, UK: 1, AU: 2, CA: 3, IN: 4 };
+  return ranks[regionKey] ?? 9;
+}
+
 function VoiceOverview({
   preferences,
   cloudVoiceRemaining,
@@ -419,9 +500,9 @@ function VoiceOverview({
             : "AI cloud voice needs AI Pro or Power. Device voice remains unlimited."
           : isLocal
             ? localStatus.engineInstalled
-              ? "Local AI voice: ready on this phone. It uses battery and CPU, with no cloud cost."
+              ? "Pocket AI: ready on this phone. It uses battery and CPU, with no cloud cost."
               : `${localStatus.title}. ${localStatus.detail}`
-            : "Device voice: unlimited, offline after import, and no ReadFlow AI voice cost."}
+            : "Phone voice: unlimited, offline after import, and no ReadFlow AI voice cost."}
       </Text>
     </Pressable>
   );
@@ -444,7 +525,7 @@ function VoiceSettingsSheet({
   entitlement: EntitlementSnapshot;
   usage: UsageSnapshot | null;
   preferences: ReadingPreferences;
-  deviceVoices: { id: string; name: string; language: string }[];
+  deviceVoices: DeviceVoiceOption[];
   localStatus: LocalNeuralVoiceStatus;
   localDownloading: boolean;
   localDownloadProgress: LocalNeuralDownloadProgress | null;
@@ -456,6 +537,19 @@ function VoiceSettingsSheet({
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
   const canUseCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
   const currentDeviceVoice = deviceVoices.find((v) => v.id === preferences.deviceVoiceId);
+  const [voiceRegion, setVoiceRegion] = useState("recommended");
+  const regionOptions = useMemo(() => {
+    const unique = Array.from(
+      new Map(deviceVoices.map((voice) => [voice.regionKey, voice.regionLabel])).entries()
+    );
+    return [{ key: "recommended", label: "Recommended" }].concat(
+      unique.map(([key, label]) => ({ key, label }))
+    );
+  }, [deviceVoices]);
+  const visibleDeviceVoices = useMemo(() => {
+    if (voiceRegion === "recommended") return deviceVoices.slice(0, 6);
+    return deviceVoices.filter((voice) => voice.regionKey === voiceRegion).slice(0, 8);
+  }, [deviceVoices, voiceRegion]);
 
   function selectEngine(engine: VoiceEngine) {
     if (engine === "cloud" && !canUseCloud) {
@@ -499,20 +593,20 @@ function VoiceSettingsSheet({
 
           <ScrollView contentContainerStyle={styles.modalContent}>
             <VoiceChoice
-              title="Device voice"
+              title="Phone voice"
               detail={
                 currentDeviceVoice
-                  ? `Using ${currentDeviceVoice.name}. Unlimited and no ReadFlow voice cost.`
-                  : "Unlimited, offline after import, and no ReadFlow voice cost."
+                  ? `Using ${currentDeviceVoice.displayName}. Unlimited and no ReadFlow voice cost.`
+                  : "Uses Android's current voice. Unlimited, offline after import, and no ReadFlow voice cost."
               }
               active={preferences.voiceEngine === "device"}
               onPress={() => selectEngine("device")}
             />
             <VoiceChoice
-              title="AI cloud voice"
+              title="Studio AI"
               detail={
                 canUseCloud
-                  ? `${formatChars(cloudRemaining)} left this month, about ${estimatePages(cloudRemaining)} pages. Uses ReadFlow AI voice allowance.`
+                  ? `${formatChars(cloudRemaining)} left this month, about ${estimatePages(cloudRemaining)} pages. Best quality, but capped to protect pricing.`
                   : "Included in AI Pro and Power only. Best quality, capped to protect pricing."
               }
               active={preferences.voiceEngine === "cloud"}
@@ -520,8 +614,12 @@ function VoiceSettingsSheet({
               onPress={() => selectEngine("cloud")}
             />
             <VoiceChoice
-              title="Local AI voice"
-              detail={localStatus.detail}
+              title="Pocket AI"
+              detail={
+                localStatus.engineInstalled
+                  ? "Runs on this phone with no OpenAI cost. Uses battery and CPU."
+                  : localStatus.detail
+              }
               active={preferences.voiceEngine === "local_ai"}
               locked={!localStatus.engineInstalled}
               stateLabel={
@@ -535,7 +633,7 @@ function VoiceSettingsSheet({
             />
 
             <View style={styles.voiceBlock}>
-              <Text style={styles.voiceBlockTitle}>Local AI model</Text>
+              <Text style={styles.voiceBlockTitle}>Pocket AI model</Text>
               <Text style={styles.voiceBlockHint}>
                 {localStatus.engineInstalled
                   ? `${localStatus.modelName} is ready. It reads on-device, uses battery and CPU, and does not use OpenAI.`
@@ -566,23 +664,71 @@ function VoiceSettingsSheet({
                 </View>
               ) : localStatus.nativeAvailable && !localStatus.modelDownloaded ? (
                 <Pressable style={styles.voicePackBtn} onPress={onDownloadLocalVoice}>
-                  <Text style={styles.voicePackText}>Download local voice</Text>
+                  <Text style={styles.voicePackText}>Download Pocket AI</Text>
                 </Pressable>
               ) : localStatus.engineInstalled ? (
-                <Text style={styles.localReadyText}>Ready for local AI reading.</Text>
+                <Text style={styles.localReadyText}>Ready for Pocket AI reading.</Text>
               ) : null}
             </View>
 
             <View style={styles.voiceBlock}>
-              <Text style={styles.voiceBlockTitle}>Phone voices</Text>
+              <Text style={styles.voiceBlockTitle}>Phone voice accent</Text>
               <Text style={styles.voiceBlockHint}>
-                Better voices depend on what the phone has installed. Choose the clearest one here.
+                Choose the English accent you prefer. ReadFlow hides the technical Android voice names.
               </Text>
+              <View style={styles.voiceRegionRow}>
+                {regionOptions.map((region) => {
+                  const active = voiceRegion === region.key;
+                  return (
+                    <Pressable
+                      key={region.key}
+                      style={[styles.voiceRegionChip, active && styles.voiceRegionChipOn]}
+                      onPress={() => setVoiceRegion(region.key)}
+                    >
+                      <Text
+                        style={[
+                          styles.voiceRegionChipText,
+                          active && styles.voiceRegionChipTextOn,
+                        ]}
+                      >
+                        {region.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               <View style={styles.voiceList}>
+                <Pressable
+                  style={[styles.voiceChip, !preferences.deviceVoiceId && styles.voiceChipOn]}
+                  onPress={() =>
+                    onChange({
+                      ...preferences,
+                      voiceEngine: "device",
+                      deviceVoiceId: undefined,
+                    })
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.voiceChipText,
+                      !preferences.deviceVoiceId && styles.voiceChipTextOn,
+                    ]}
+                  >
+                    Phone default
+                  </Text>
+                  <Text
+                    style={[
+                      styles.voiceChipSub,
+                      !preferences.deviceVoiceId && styles.voiceChipTextOn,
+                    ]}
+                  >
+                    Uses Android setting
+                  </Text>
+                </Pressable>
                 {deviceVoices.length === 0 ? (
                   <Text style={styles.voiceEmpty}>No downloadable phone voices were reported.</Text>
                 ) : (
-                  deviceVoices.map((voice) => {
+                  visibleDeviceVoices.map((voice) => {
                     const active = preferences.deviceVoiceId === voice.id;
                     return (
                       <Pressable
@@ -597,10 +743,10 @@ function VoiceSettingsSheet({
                         }
                       >
                         <Text style={[styles.voiceChipText, active && styles.voiceChipTextOn]}>
-                          {voice.name}
+                          {voice.displayName}
                         </Text>
                         <Text style={[styles.voiceChipSub, active && styles.voiceChipTextOn]}>
-                          {voice.language}
+                          {voice.detail}
                         </Text>
                       </Pressable>
                     );
@@ -787,10 +933,12 @@ function ContinueCard({
   item,
   busy,
   onPress,
+  onRemove,
 }: {
   item: LibraryItem;
   busy: boolean;
   onPress: () => void;
+  onRemove: () => void;
 }) {
   const pct = Math.round((item.progress || 0) * 100);
   return (
@@ -808,6 +956,16 @@ function ContinueCard({
           <View style={[styles.progressFill, { width: `${Math.max(4, pct)}%` }]} />
         </View>
       </View>
+      <Pressable
+        style={styles.cardRemoveBtn}
+        onPress={(event) => {
+          event.stopPropagation();
+          onRemove();
+        }}
+        hitSlop={8}
+      >
+        <Text style={styles.cardRemoveText}>Remove</Text>
+      </Pressable>
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
     </Pressable>
   );
@@ -817,18 +975,18 @@ function DocCard({
   item,
   busy,
   onPress,
-  onLongPress,
+  onRemove,
 }: {
   item: LibraryItem;
   busy: boolean;
   onPress: () => void;
-  onLongPress: () => void;
+  onRemove: () => void;
 }) {
   return (
     <Pressable
       style={styles.docCard}
       onPress={onPress}
-      onLongPress={onLongPress}
+      onLongPress={onRemove}
       delayLongPress={350}
       disabled={busy}
     >
@@ -836,6 +994,16 @@ function DocCard({
       <Text style={styles.docTitle} numberOfLines={2}>
         {item.title}
       </Text>
+      <Pressable
+        style={styles.docRemoveBtn}
+        onPress={(event) => {
+          event.stopPropagation();
+          onRemove();
+        }}
+        hitSlop={8}
+      >
+        <Text style={styles.docRemoveText}>Remove</Text>
+      </Pressable>
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
     </Pressable>
   );
@@ -1091,6 +1259,22 @@ const styles = StyleSheet.create({
     marginTop: 11,
   },
   progressFill: { height: "100%", backgroundColor: theme.colors.accent, borderRadius: 3 },
+  cardRemoveBtn: {
+    position: "absolute",
+    right: 12,
+    top: 12,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  cardRemoveText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 11,
+  },
 
   /* section */
   sectionRow: {
@@ -1111,6 +1295,21 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginTop: 7,
     lineHeight: 15,
+  },
+  docRemoveBtn: {
+    alignSelf: "flex-start",
+    marginTop: 6,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  docRemoveText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 10.5,
   },
   hint: { fontFamily: theme.fonts.sans, color: theme.colors.textDim, fontSize: 13, paddingVertical: 8 },
 
@@ -1289,6 +1488,25 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
   },
   voiceList: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  voiceRegionRow: { flexDirection: "row", flexWrap: "wrap", gap: 7 },
+  voiceRegionChip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    backgroundColor: theme.colors.surface,
+  },
+  voiceRegionChipOn: {
+    backgroundColor: theme.colors.ink,
+    borderColor: theme.colors.ink,
+  },
+  voiceRegionChipText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12,
+  },
+  voiceRegionChipTextOn: { color: theme.colors.onAccent },
   voiceEmpty: { color: theme.colors.textDim, fontFamily: theme.fonts.sans, fontSize: 13 },
   voiceChip: {
     maxWidth: "100%",

@@ -6,6 +6,8 @@ import {
   getLocalNeuralModelPath,
   LOCAL_NEURAL_MODEL_ID,
   LOCAL_NEURAL_MODEL_NAME,
+  LOCAL_NEURAL_MODEL_TYPE,
+  LOCAL_NEURAL_SPEAKER_ID,
   LOCAL_NEURAL_VOICE_ID,
 } from "../LocalNeuralVoice";
 import type { TtsEngine } from "react-native-sherpa-onnx/tts";
@@ -59,18 +61,11 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     const { createTTS } = await import("react-native-sherpa-onnx/tts");
     return createTTS({
       modelPath: { type: "file", path: modelPath },
-      modelType: "vits",
+      modelType: LOCAL_NEURAL_MODEL_TYPE,
       provider: "cpu",
-      numThreads: 2,
-      maxNumSentences: 1,
-      silenceScale: 0.16,
-      modelOptions: {
-        vits: {
-          noiseScale: 0.667,
-          noiseScaleW: 0.8,
-          lengthScale: 1,
-        },
-      },
+      numThreads: 3,
+      maxNumSentences: 2,
+      silenceScale: 0.1,
     });
   }
 
@@ -115,9 +110,9 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     }
 
     const audio = await engine.generateSpeech(text, {
-      sid: 0,
+      sid: LOCAL_NEURAL_SPEAKER_ID,
       speed,
-      silenceScale: 0.12,
+      silenceScale: 0.08,
     });
     const saved = await saveAudioToFile(audio, toNativePath(uri));
     const fileUri = toFileUri(saved || uri);
@@ -132,7 +127,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     const timer = setTimeout(() => {
       this.prefetchTimers = this.prefetchTimers.filter((item) => item !== timer);
       this.fetchAudio(t, clampSpeed(opts.rate)).catch(() => {});
-    }, 650);
+    }, 120);
     this.prefetchTimers.push(timer);
   }
 
@@ -310,7 +305,7 @@ function clampSpeed(rate?: number): number {
 }
 
 function tailGuardMs(speed: number): number {
-  return Math.round(Math.max(160, Math.min(380, 300 / speed)));
+  return Math.round(Math.max(80, Math.min(180, 140 / speed)));
 }
 
 function toNativePath(uri: string): string {

@@ -44,4 +44,8 @@ export const Bookmarks = {
     const filtered = existing.filter((x) => x.tag.trim().toLowerCase() !== tagKey);
     await AsyncStorage.setItem(KEY_PREFIX + docId, JSON.stringify(filtered));
   },
+
+  async removeAll(docId: string): Promise<void> {
+    await AsyncStorage.removeItem(KEY_PREFIX + docId);
+  },
 };

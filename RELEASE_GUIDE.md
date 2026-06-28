@@ -110,16 +110,32 @@ https://expo.dev/accounts/tohid123/projects/readflow/builds
 > from the Play internal‑testing link. A plain in‑place update may keep the old icon.
 
 If the build includes local AI voice, test it only in the fresh native build:
-open Voice, download the local Piper voice, select it, and verify local
-reading/highlighting. Expo Go and older installed builds cannot test the Sherpa
-native module.
+open Voice, download the Supertonic Reader/Pocket AI voice, select it, and
+verify local reading/highlighting. Expo Go and older installed builds cannot
+test the Sherpa native module.
+
+Current ReadFlow QA checklist for any build that changes reading/voice:
+- Fresh-install the app and verify the launcher icon shows the full clean book
+  mark, including the red spine.
+- Open Voice and confirm the choices read as Phone voice, Pocket AI, and Studio
+  AI; Android raw voice ids should not dominate the UI.
+- Download/select Pocket AI, play several paragraphs, and check for natural
+  enough voice quality, short paragraph gaps, and line highlight following the
+  spoken text.
+- Rotate the phone while reading; the current line should re-anchor instead of
+  scrolling through the book forever.
+- Let playback run long enough that Android would normally dim/lock; the screen
+  should stay awake while playback is active.
+- Remove the current/continue book and a normal library book; both should
+  disappear and remain gone after restart.
 
 Local AI build note: `mobile/plugins/withSherpaCodegenGradleFix.js` is required.
 It patches generated `android/app/build.gradle` during Expo prebuild so the app
 CMake task waits for `react-native-sherpa-onnx` codegen. Without that plugin, a
 clean native build can fail because
 `react-native-sherpa-onnx/android/build/generated/source/codegen/jni` does not
-exist yet.
+exist yet. It also adds a Windows-only normalizer for generated `.so` outputs so
+Gradle can package local debug builds from a short temp path.
 
 To test a native build locally before spending EAS quota, use a short physical
 path on Windows:
@@ -130,12 +146,23 @@ robocopy C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile C:\rf-mobil
 cd C:\rf-mobile-test
 npm ci
 npx expo prebuild --platform android --clean
-.\android\gradlew.bat :app:assembleDebug -x lint -x test
+
+# Standalone phone QA: bundles JavaScript into the APK, so the app opens without Metro.
+$env:NODE_ENV='production'
+.\android\gradlew.bat -p android :app:assembleRelease -x lint -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+adb install -r .\android\app\build\outputs\apk\release\app-release.apk
+
+# Debug/dev QA: starts Metro. Do not install a raw assembleDebug APK unless Metro
+# is running and adb reverse tcp:8081 tcp:8081 is configured.
 npx expo run:android
 ```
 
 The OneDrive workspace path can exceed Windows/CMake path limits. A `subst` drive
 mapped too deep also caused mixed-root errors, so prefer a real short temp copy.
+If Gradle fails on Windows with `Cannot snapshot ... .so: not a regular file`,
+normalize reparse-point `.so` files under the named Gradle cache/build path and
+rerun the same command. This is a local Windows/OneDrive/Gradle issue, not an app
+runtime issue.
 
 ### Icon troubleshooting note — if a fresh install still shows cropped `rF`
 
@@ -382,4 +409,4 @@ must never be reused (a code is consumed the moment a build is made — see Step
   both cache aggressively.
 - **Local AI needs the Sherpa codegen plugin.** Keep
   `plugins/withSherpaCodegenGradleFix.js` in `app.json`; it was verified by
-  deleting Sherpa's generated codegen output and running a clean debug assemble.
+  running a clean debug assemble with the Windows native-output normalizer.

@@ -142,6 +142,7 @@ export const Library = {
   async remove(id: string): Promise<void> {
     const all = await readAll();
     const item = all.find((x) => x.id === id);
+    await writeAll(all.filter((x) => x.id !== id));
     if (item?.storedUri) {
       try {
         await FileSystem.deleteAsync(item.storedUri, { idempotent: true });
@@ -149,6 +150,5 @@ export const Library = {
         /* ignore */
       }
     }
-    await writeAll(all.filter((x) => x.id !== id));
   },
 };

@@ -58,21 +58,47 @@ Changes after the latest finished build and included in source `1.0.18`:
   local AI voice options.
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
-- Local AI voice now uses `react-native-sherpa-onnx` plus an on-demand Piper
-  VITS voice model (`vits-piper-en_US-lessac-medium-int8`). The model is not
-  bundled into the app; the user downloads it from the Voice sheet.
+- Local AI voice now uses `react-native-sherpa-onnx` plus an on-demand
+  Supertonic local TTS model
+  (`sherpa-onnx-supertonic-tts-int8-2026-03-06`). The model is not bundled into
+  the app; the user downloads it from the Voice sheet. It is larger than the old
+  Piper test voice (about 81 MB instead of 20 MB) because the 20 MB voice sounded
+  too machine-like for book reading.
 - Important: local AI voice is a native dependency. It needs a new EAS/native
   build to run on the phone; Expo Go or an older installed build will fall back
   to device voice.
 - Connected-phone dev test on 2026-06-29: a debug native build was installed on
-  Samsung `SM_G975F` (`R58M168KTSZ`) from a short temp path. The Piper Lessac
-  local model was present on-device, Sherpa resolved it, ReadFlow played local AI
-  audio, and Android reported an active ReadFlow media session with
-  "Page 18 - Local AI voice". No EAS quota was consumed for this test.
+  Samsung `SM_G975F` (`R58M168KTSZ`) from a short temp path. The first Piper
+  experiment proved Sherpa playback worked; current source uses the larger
+  Supertonic Reader/Pocket AI model for better quality. No EAS quota was
+  consumed for this test.
+- Follow-up on 2026-06-29: installing the raw `assembleDebug` APK left the app
+  stuck on the splash screen because it expected Metro and had no packaged JS
+  bundle (`Unable to load script`). For standalone phone QA, build/install
+  `assembleRelease` from the short temp path; debug installs must be launched
+  through `npx expo run:android` or with Metro plus ADB port reverse on `8081`.
 - Source now includes `mobile/plugins/withSherpaCodegenGradleFix.js`. Keep it:
   it makes clean native builds run Sherpa's React Native codegen before the app
   CMake/autolinking step. Without it, clean Gradle builds can fail with missing
-  `react-native-sherpa-onnx/android/build/generated/source/codegen/jni`.
+  `react-native-sherpa-onnx/android/build/generated/source/codegen/jni`. It also
+  normalizes Windows reparse-point `.so` outputs before native packaging because
+  Gradle 8.14 can fail to snapshot those generated NDK files.
+- Source after the 2026-06-29 phone/local-AI test also includes reader stability
+  fixes that still need a fresh native build/on-device QA:
+  - Reading keeps the phone screen awake while playback is active.
+  - Reopening a book initializes at the saved sentence instead of visibly
+    scrolling from the top.
+  - Rotation clears stale line measurements, re-anchors by page/sentence
+    position, and caps `FlatList` scroll retries so the highlight does not chase
+    through the book forever.
+  - Local/Pocket AI uses the optional Supertonic Reader model, reads short
+    same-page chunks, prefetches sooner, and uses a shorter audio tail guard to
+    reduce paragraph gaps.
+  - Voice settings now use customer-facing names: Phone voice, Pocket AI
+    (on-device), and Studio AI (cloud allowance).
+  - Library remove is visible on document cards and the Continue card, removes
+    cached parsed text/bookmarks, and updates metadata before deleting the
+    physical file so deletion does not feel stuck.
 
 ## Account Map
 
@@ -172,11 +198,13 @@ Mobile:
 - `mobile/eas.json`: EAS build profiles. Internal Android builds create `.aab`.
 - `mobile/src/components/Reader.tsx`: main reader, highlighting, controls,
   navigation, playback sequencing, OCR progress, AI entry point.
+  It also controls screen keep-awake during playback, rotation re-anchoring,
+  line-level highlight measurement, and TTS chunk/prefetch sequencing.
 - `mobile/src/components/Controls.tsx`: sound, play/pause, stop, reading
   settings. Voice selection now lives on the shelf screen, not inside a book.
 - `mobile/src/services/Preferences.ts`: persists reading voice preferences
   across app launches.
-- `mobile/src/services/LocalNeuralVoice.ts`: Sherpa/Piper local voice status,
+- `mobile/src/services/LocalNeuralVoice.ts`: Sherpa/Supertonic local voice status,
   model download, and local model path lookup.
 - `mobile/plugins/withSherpaCodegenGradleFix.js`: Expo config plugin that patches
   generated `android/app/build.gradle` so Sherpa codegen runs before app CMake.
@@ -374,16 +402,17 @@ Highlighting:
 Local neural voice:
 - Current implementation uses `react-native-sherpa-onnx` and
   `@dr.pogodin/react-native-fs`.
-- First model: `vits-piper-en_US-lessac-medium-int8` (Piper Lessac Medium,
-  int8), downloaded on demand from the Sherpa model release. Compressed download
-  is about 20 MB; the model is not bundled in the app package.
+- Current model: `sherpa-onnx-supertonic-tts-int8-2026-03-06` (Supertonic
+  Reader/Pocket AI), downloaded on demand from the Sherpa model release.
+  Compressed download is about 81 MB; the model is not bundled in the app
+  package.
 - Playback uses `LocalNeuralTTSProvider`, which generates WAV clips on-device,
   caches them in app cache, and reports progress through the same line-highlighter
   path as cloud voice.
 - The dev-only warning
   `SherpaOnnxModelList: Unsupported model espeak-ng-data` is from Sherpa's model
-  catalog seeing the support-data folder in the Piper model. It is not a playback
-  failure. The app suppresses that warning in LogBox and avoids refreshing the
+  catalog seeing a support-data folder in the downloaded local model. It is not a
+  playback failure. The app suppresses that warning in LogBox and avoids refreshing the
   full model catalog during ordinary status checks.
 - If native support/model download is missing, the provider falls back to the
   selected device voice and shows a one-time "Local AI voice not ready" message.

@@ -1,9 +1,11 @@
 import { Platform } from "react-native";
 
-export const LOCAL_NEURAL_MODEL_ID = "vits-piper-en_US-lessac-medium-int8";
-export const LOCAL_NEURAL_VOICE_ID = "piper-lessac-medium-int8";
-export const LOCAL_NEURAL_MODEL_NAME = "Piper Lessac Medium";
-export const LOCAL_NEURAL_MODEL_SIZE_BYTES = 20 * 1024 * 1024;
+export const LOCAL_NEURAL_MODEL_ID = "sherpa-onnx-supertonic-tts-int8-2026-03-06";
+export const LOCAL_NEURAL_VOICE_ID = "supertonic-reader-int8";
+export const LOCAL_NEURAL_MODEL_NAME = "Supertonic Reader";
+export const LOCAL_NEURAL_MODEL_TYPE = "supertonic";
+export const LOCAL_NEURAL_SPEAKER_ID = 0;
+export const LOCAL_NEURAL_MODEL_SIZE_BYTES = Math.round(80.8 * 1024 * 1024);
 
 export interface LocalNeuralVoiceStatus {
   supportedDevice: boolean;

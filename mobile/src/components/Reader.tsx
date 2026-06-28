@@ -11,8 +11,10 @@ import {
   ActivityIndicator,
   AppState,
   AppStateStatus,
+  useWindowDimensions,
 } from "react-native";
 import Constants from "expo-constants";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { ParsedPdf, PdfPage } from "../services/PDFParser";
@@ -56,8 +58,26 @@ interface LineSegment extends LineRange {
   text: string;
 }
 
+interface SpeechChunkSpan {
+  sentence: Sentence;
+  start: number;
+  end: number;
+  sourceStart: number;
+}
+
+interface SpeechChunk {
+  text: string;
+  spans: SpeechChunkSpan[];
+  nextIndex: number;
+  lastPage: number;
+  lastWithin: number;
+}
+
 const ENFORCE_FREE_LIMIT = false;
 const TTS_PREFETCH_AHEAD = 8;
+const LOCAL_AI_MAX_CHARS = 420;
+const LOCAL_AI_MAX_SENTENCES = 2;
+const KEEP_AWAKE_TAG = "readflow-reading";
 
 type RuntimeVoiceMode = "natural" | "device" | "local";
 
@@ -112,12 +132,17 @@ export function Reader({
   }, [doc]);
   const flat = useMemo<Sentence[]>(() => TextReflow.buildSentences(pages), [pages]);
   const totalPages = doc.pageCount || (flat.length ? flat[flat.length - 1].page : 1);
+  const initialSentenceIndex = useMemo(() => {
+    if (!flat.length) return 0;
+    return Math.max(0, Math.min(startSentenceId, flat.length - 1));
+  }, [flat.length, startSentenceId]);
 
   const [settings, setSettings] = useState<ReadingSettings>({
     fontSize: 22,
     lineSpacing: 1.5,
     speed: 1.0,
   });
+  const lineHeight = Math.round(settings.fontSize * settings.lineSpacing);
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [activeLine, setActiveLine] = useState<ActiveLine>({ sentenceId: null, lineIndex: 0 });
   const [currentPage, setCurrentPage] = useState(1);
@@ -152,6 +177,7 @@ export function Reader({
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement);
 
   const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const ttsRef = useRef(createTTSProvider(providerKindFor(voiceMode)));
   const playingRef = useRef(false);
   const indexRef = useRef(0); // global sentence index being read
@@ -168,6 +194,11 @@ export function Reader({
   const saveLastReadRef = useRef<() => void>(() => {});
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
+  const initialJumpRef = useRef(false);
+  const layoutSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollFailureCountRef = useRef(0);
+  const layoutScrollQuietRef = useRef(false);
   const settingsRef = useRef(settings);
   // Stable tap handler so memoized rows never re-render on scroll/highlight.
   const onTapWordRef = useRef<(id: number, offset: number) => void>(() => {});
@@ -206,6 +237,19 @@ export function Reader({
     backgroundAudioAllowedRef.current =
       entitlement.tier !== "free" && (voiceMode === "natural" || voiceMode === "local");
   }, [entitlement.tier, voiceMode]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
+      return;
+    }
+
+    activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
+    return () => {
+      deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
+    };
+  }, [isPlaying]);
+
   useEffect(() => {
     if (voiceMode === desiredVoiceMode) return;
     epochRef.current++;
@@ -270,6 +314,9 @@ export function Reader({
       // Hard-stop on unmount so the voice never keeps reading after you leave.
       epochRef.current++;
       playingRef.current = false;
+      if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
+      if (scrollRetryTimerRef.current) clearTimeout(scrollRetryTimerRef.current);
+      deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
       ttsRef.current.stop();
     };
   }, []);
@@ -302,14 +349,14 @@ export function Reader({
 
   // Resume at the saved position from the Library.
   useEffect(() => {
-    const start = Math.max(0, Math.min(startSentenceId, flat.length - 1));
+    const f = flatRef.current;
+    const start = Math.max(0, Math.min(startSentenceId, Math.max(0, f.length - 1)));
+    initialJumpRef.current = start > 0;
     if (start <= 0) return;
     indexRef.current = start;
-    setCurrent(flat[start]?.id ?? null);
-    const t = setTimeout(() => scrollToIndexSafe(start, false), 250);
-    return () => clearTimeout(t);
+    setCurrent(f[start]?.id ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc]);
+  }, [doc.docId, startSentenceId]);
 
   // ----- helpers -----
   // Keep a live, render-independent copy of the sentence list. TTS onDone/onError
@@ -379,6 +426,91 @@ export function Reader({
     return Math.min(totalPages, freePageLimit);
   }
 
+  function pageWithinIndex(sentence: Sentence, list = flatRef.current): number {
+    let within = 0;
+    for (const item of list) {
+      if (item.id === sentence.id) return within;
+      if (item.page === sentence.page) within++;
+    }
+    return 0;
+  }
+
+  function resolvePageWithinIndex(page: number, within: number): number {
+    const onPage = flatRef.current.filter((s) => s.page === page);
+    if (onPage.length === 0) return indexRef.current;
+    return onPage[Math.min(Math.max(0, within), onPage.length - 1)]?.id ?? indexRef.current;
+  }
+
+  function buildSpeechChunk(
+    startIndex: number,
+    list: Sentence[],
+    mode: RuntimeVoiceMode,
+    firstOffset = 0
+  ): SpeechChunk | null {
+    const first = list[startIndex];
+    if (!first) return null;
+
+    const maxSentences = mode === "local" ? LOCAL_AI_MAX_SENTENCES : 1;
+    const maxChars = mode === "local" ? LOCAL_AI_MAX_CHARS : Number.POSITIVE_INFINITY;
+    const spans: SpeechChunkSpan[] = [];
+    const parts: string[] = [];
+    let charCursor = 0;
+    let index = startIndex;
+
+    while (index < list.length && spans.length < maxSentences) {
+      const sentence = list[index];
+      if (!sentence || sentence.page > freeCap()) break;
+      if (sentence.page !== first.page) break;
+
+      const sourceStart =
+        index === startIndex
+          ? Math.min(Math.max(0, firstOffset), sentence.text.length)
+          : 0;
+      const sourceText = sentence.text.slice(sourceStart);
+      if (!sourceText.trim()) {
+        index++;
+        continue;
+      }
+
+      const separator = parts.length > 0 ? " " : "";
+      const projectedLength = charCursor + separator.length + sourceText.length;
+      if (parts.length > 0 && projectedLength > maxChars) break;
+
+      if (separator) charCursor += separator.length;
+      spans.push({
+        sentence,
+        start: charCursor,
+        end: charCursor + sourceText.length,
+        sourceStart,
+      });
+      parts.push(sourceText);
+      charCursor += sourceText.length;
+      index++;
+    }
+
+    if (!spans.length) return null;
+    const last = spans[spans.length - 1].sentence;
+    return {
+      text: parts.join(" "),
+      spans,
+      nextIndex: index,
+      lastPage: last.page,
+      lastWithin: pageWithinIndex(last, list),
+    };
+  }
+
+  function locateChunkPosition(chunk: SpeechChunk, charOffset: number) {
+    const bounded = Math.max(0, Math.min(Math.max(0, chunk.text.length - 1), charOffset));
+    const span =
+      chunk.spans.find((candidate) => bounded <= candidate.end) ||
+      chunk.spans[chunk.spans.length - 1];
+    if (!span) return null;
+    return {
+      sentence: span.sentence,
+      charOffset: Math.max(0, span.sourceStart + bounded - span.start),
+    };
+  }
+
   // Subscribe to the GLOBAL background OCR engine. Starting it here registers the
   // job once; it then keeps loading even if we leave for another book or the
   // Library, and resumes automatically when the app returns to the foreground.
@@ -418,6 +550,34 @@ export function Reader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flat]);
 
+  useEffect(() => {
+    lineRangesRef.current.clear();
+    const activeChar = activeCharRef.current;
+    if (activeChar) setActiveLineIndex(activeChar.sentenceId, 0);
+    if (currentIdRef.current == null) return;
+
+    const target = resolveAnchorIndex();
+    indexRef.current = target;
+    currentIdRef.current = target;
+    setCurrentId(target);
+    layoutScrollQuietRef.current = true;
+
+    if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
+    layoutSettleTimerRef.current = setTimeout(() => {
+      layoutSettleTimerRef.current = null;
+      if (followRef.current) scrollToIndexSafe(resolveAnchorIndex(), false);
+      layoutScrollQuietRef.current = false;
+    }, 180);
+
+    return () => {
+      if (layoutSettleTimerRef.current) {
+        clearTimeout(layoutSettleTimerRef.current);
+        layoutSettleTimerRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [windowWidth, windowHeight, lineHeight]);
+
   // Perform a queued "go to page" once that page's text has finished loading.
   useEffect(() => {
     const target = pendingJumpRef.current;
@@ -433,8 +593,9 @@ export function Reader({
 
 
   // ----- scrolling / follow (FlatList) -----
-  function scrollToIndexSafe(index: number, animated: boolean) {
+  function scrollToIndexSafe(index: number, animated: boolean, resetFailures = true) {
     if (index < 0 || index >= flatRef.current.length) return;
+    if (resetFailures) scrollFailureCountRef.current = 0;
     try {
       listRef.current?.scrollToIndex({ index, viewPosition: 0.25, animated });
     } catch {
@@ -464,11 +625,26 @@ export function Reader({
   }).current;
 
   function onScrollToIndexFailed(info: { index: number; averageItemLength: number }) {
+    const index = Math.max(0, Math.min(info.index, Math.max(0, flatRef.current.length - 1)));
+    const quiet = initialJumpRef.current || layoutScrollQuietRef.current;
+    const attempts = scrollFailureCountRef.current;
     listRef.current?.scrollToOffset({
-      offset: info.averageItemLength * info.index,
+      offset: Math.max(0, info.averageItemLength * index),
       animated: false,
     });
-    setTimeout(() => scrollToIndexSafe(info.index, true), 60);
+    if (attempts >= 2) {
+      initialJumpRef.current = false;
+      layoutScrollQuietRef.current = false;
+      scrollFailureCountRef.current = 0;
+      return;
+    }
+    scrollFailureCountRef.current = attempts + 1;
+    if (scrollRetryTimerRef.current) clearTimeout(scrollRetryTimerRef.current);
+    scrollRetryTimerRef.current = setTimeout(() => {
+      scrollRetryTimerRef.current = null;
+      scrollToIndexSafe(index, !quiet, false);
+      initialJumpRef.current = false;
+    }, quiet ? 160 : 80);
   }
 
   // ----- playback -----
@@ -492,33 +668,43 @@ export function Reader({
       return;
     }
 
-    indexRef.current = i;
-
     const offset = pendingOffsetRef.current;
     pendingOffsetRef.current = 0;
     const baseOffset = Math.max(0, offset);
-    const text = baseOffset > 0 ? s.text.slice(baseOffset) : s.text;
+    const chunk = buildSpeechChunk(i, f, voiceMode, baseOffset);
+    if (!chunk) {
+      reachedEnd();
+      return;
+    }
+    const firstPosition = locateChunkPosition(chunk, 0);
+    const text = chunk.text;
     const spokenLength = Math.max(1, text.length);
+
+    indexRef.current = i;
 
     // Warm upcoming clips through the provider's in-flight cache so natural
     // voice can hand off smoothly without charging/fetching duplicates.
-    for (let ahead = 1; ahead <= TTS_PREFETCH_AHEAD; ahead++) {
-      const next = f[i + ahead];
-      if (!next || next.page > freeCap()) break;
+    let nextIndex = chunk.nextIndex;
+    const prefetchAhead = voiceMode === "local" ? 4 : TTS_PREFETCH_AHEAD;
+    for (let ahead = 1; ahead <= prefetchAhead; ahead++) {
+      const nextChunk = buildSpeechChunk(nextIndex, f, voiceMode);
+      if (!nextChunk) break;
       ttsRef.current
-        .prefetch?.(next.text, {
+        .prefetch?.(nextChunk.text, {
           language,
           rate: settingsRef.current.speed,
           voiceId: voiceIdFor(voiceMode, preferences),
           fallbackVoiceId: preferences.deviceVoiceId,
         })
         .catch(() => {});
+      nextIndex = nextChunk.nextIndex;
     }
 
     // Advance from the ANCHORED position (re-resolved against the latest list) so
     // an OCR-driven index shift can never desync the voice from the highlight.
     const advance = () => {
-      if (playingRef.current && myEpoch === epochRef.current) speakAt(resolveAnchorIndex() + 1);
+      if (!playingRef.current || myEpoch !== epochRef.current) return;
+      speakAt(resolvePageWithinIndex(chunk.lastPage, chunk.lastWithin) + 1);
     };
 
     ttsRef.current.speak(text, {
@@ -548,14 +734,22 @@ export function Reader({
       },
       onStart: () => {
         if (myEpoch !== epochRef.current) return;
-        setCurrent(s.id);
-        setActiveLineByChar(s.id, baseOffset);
-        if (followRef.current) scrollToIndexSafe(i, true);
+        const start = firstPosition?.sentence ?? s;
+        setCurrent(start.id);
+        setActiveLineByChar(start.id, firstPosition?.charOffset ?? baseOffset);
+        if (followRef.current) scrollToIndexSafe(start.id, true);
       },
       onProgress: ({ currentTime, duration }) => {
         if (myEpoch !== epochRef.current || duration <= 0) return;
         const ratio = Math.max(0, Math.min(0.999, currentTime / duration));
-        setActiveLineByChar(s.id, baseOffset + Math.floor(spokenLength * ratio));
+        const position = locateChunkPosition(chunk, Math.floor(spokenLength * ratio));
+        if (!position) return;
+        indexRef.current = position.sentence.id;
+        if (currentIdRef.current !== position.sentence.id) {
+          setCurrent(position.sentence.id);
+          if (followRef.current) scrollToIndexSafe(position.sentence.id, true);
+        }
+        setActiveLineByChar(position.sentence.id, position.charOffset);
       },
       onDone: advance,
       onError: advance,
@@ -752,7 +946,6 @@ export function Reader({
     );
   }
 
-  const lineHeight = Math.round(settings.fontSize * settings.lineSpacing);
   const cs = currentSentence();
   const currentPos = {
     page: cs?.page ?? currentPage,
@@ -870,6 +1063,7 @@ export function Reader({
 
       {/* reading surface — virtualized for smooth, uninterrupted scrolling */}
       <FlatList
+        key={doc.docId}
         ref={listRef}
         data={flat}
         keyExtractor={(s) => String(s.id)}
@@ -881,6 +1075,7 @@ export function Reader({
             activeLineIndex={item.id === activeLine.sentenceId ? activeLine.lineIndex : null}
             fontSize={settings.fontSize}
             lineHeight={lineHeight}
+            layoutKey={`${Math.round(windowWidth)}:${Math.round(windowHeight)}:${lineHeight}`}
             onTapWord={tapHandler}
             onLineRanges={handleLineRanges}
             showPageDivider={index === 0 || flat[index - 1].page !== item.page}
@@ -891,6 +1086,7 @@ export function Reader({
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         onScrollToIndexFailed={onScrollToIndexFailed}
+        initialScrollIndex={initialSentenceIndex > 0 ? initialSentenceIndex : undefined}
         initialNumToRender={14}
         maxToRenderPerBatch={12}
         windowSize={11}
@@ -980,6 +1176,7 @@ interface SentenceRowProps {
   activeLineIndex: number | null;
   fontSize: number;
   lineHeight: number;
+  layoutKey: string;
   onTapWord: (globalId: number, charOffset: number) => void;
   onLineRanges: (sentenceId: number, ranges: LineRange[]) => void;
   showPageDivider?: boolean;
@@ -990,6 +1187,7 @@ const SentenceRow = React.memo(function SentenceRow({
   activeLineIndex,
   fontSize,
   lineHeight,
+  layoutKey,
   onTapWord,
   onLineRanges,
   showPageDivider,
@@ -999,7 +1197,7 @@ const SentenceRow = React.memo(function SentenceRow({
 
   useEffect(() => {
     setLines(null);
-  }, [sentence.text, fontSize, lineHeight]);
+  }, [sentence.text, fontSize, lineHeight, layoutKey]);
 
   function handleTextLayout(e: any) {
     if (!active) return;
