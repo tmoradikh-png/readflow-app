@@ -2,17 +2,17 @@
   "expo": {
     "name": "ReadFlow",
     "slug": "readflow",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
     "primaryColor": "#D95D39",
-    "backgroundColor": "#F7F1E7",
+    "backgroundColor": "#F4ECD6",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F7F1E7"
+      "backgroundColor": "#F4ECD6"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -20,14 +20,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urmiaworks.readflow",
-      "buildNumber": "14",
+      "buildNumber": "15",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 14,
+      "versionCode": 15,
       "permissions": [
         "INTERNET",
         "android.permission.RECORD_AUDIO",
@@ -38,7 +38,7 @@
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#F7F1E7"
+        "backgroundColor": "#F4ECD6"
       },
       "edgeToEdgeEnabled": true
     },
@@ -53,7 +53,7 @@
         {
           "image": "./assets/splash.png",
           "imageWidth": 220,
-          "backgroundColor": "#F7F1E7",
+          "backgroundColor": "#F4ECD6",
           "resizeMode": "contain"
         }
       ],
