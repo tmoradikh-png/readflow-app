@@ -43,7 +43,7 @@ export function ThemedNotice({
                 r<Text style={styles.markTextItalic}>F</Text>
               </Text>
             </View>
-            <Text style={styles.eyebrow}>READFLOW</Text>
+            <Text style={styles.eyebrow}>readFlow</Text>
           </View>
 
           <Text style={styles.title}>{title}</Text>

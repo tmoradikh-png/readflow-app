@@ -40,7 +40,7 @@ export function getLocalNeuralVoiceStatus(): LocalNeuralVoiceStatus {
     title: supportedDevice ? "Checking Edge AI" : "Phone may be too old",
     detail: supportedDevice
       ? "Checking whether the native Edge AI engine and voice model are ready on this phone."
-      : "Edge AI needs a newer phone. Device voice still works without any ReadFlow cost.",
+      : "Edge AI needs a newer phone. Device voice still works without any readFlow cost.",
   };
 }
 
@@ -146,7 +146,7 @@ function buildStatus({
   if (!supportedDevice) {
     title = "Phone may be too old";
     detail =
-      "Edge AI needs Android 7 or newer, or iOS 13 or newer. Device voice still works without any ReadFlow cost.";
+      "Edge AI needs Android 7 or newer, or iOS 13 or newer. Device voice still works without any readFlow cost.";
   } else if (!nativeAvailable) {
     title = "Needs the new app build";
     detail =

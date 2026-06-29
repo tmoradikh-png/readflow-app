@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 
 /**
- * ReadFlow reading theme.
+ * readFlow reading theme.
  * Warm page surfaces with cool ink and teal support tones, so the app feels
  * book-like without becoming a single beige/orange palette.
  */

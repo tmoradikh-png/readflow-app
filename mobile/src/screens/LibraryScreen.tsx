@@ -289,7 +289,7 @@ export function LibraryScreen({
               <View style={styles.brandSpine} />
               <Text style={styles.brandText}>rF</Text>
             </View>
-            <Text style={styles.kicker}>READFLOW</Text>
+            <Text style={styles.kicker}>readFlow</Text>
           </View>
           <Text style={styles.title}>Your shelf</Text>
         </View>
@@ -339,7 +339,7 @@ export function LibraryScreen({
                 : localStatus.nativeAvailable
                   ? "Edge AI selected - download the voice model before reading."
                   : "Edge AI selected - install the new native build first."
-              : "Device voice selected - unlimited reading with no ReadFlow voice cost."}
+              : "Device voice selected - unlimited reading with no readFlow voice cost."}
         </Text>
       </View>
 
@@ -451,27 +451,27 @@ function estimatePages(chars: number): number {
 
 function importConnectionMessage(): string {
   if (isLocalBackendTarget()) {
-    return "This test build can't reach the ReadFlow backend on this computer. Keep the USB cable connected and make sure the local backend is running, then try again.";
+    return "This test build can't reach the readFlow backend on this computer. Keep the USB cable connected and make sure the local backend is running, then try again.";
   }
-  return "ReadFlow couldn't reach the document extraction server. Your internet may be fine; please try again in a moment.";
+  return "readFlow couldn't reach the document extraction server. Your internet may be fine; please try again in a moment.";
 }
 
 function reopenConnectionMessage(hasCachedCopy: boolean, languageLabel: string): string {
   if (isLocalBackendTarget()) {
     return hasCachedCopy
       ? `This test build can't reach the local backend to reopen this book with ${languageLabel} extraction. Keep USB connected and make sure the backend is running, then try again.`
-      : "This test build can't reach the ReadFlow backend on this computer. Keep USB connected and make sure the backend is running, then try again.";
+      : "This test build can't reach the readFlow backend on this computer. Keep USB connected and make sure the backend is running, then try again.";
   }
   return hasCachedCopy
-    ? `ReadFlow couldn't reach the extraction server to reopen this book with ${languageLabel} extraction. Please try again in a moment.`
-    : "ReadFlow couldn't reach the extraction server and this book is not saved for offline reading yet. Open it once after the server is reachable, then it will work offline.";
+    ? `readFlow couldn't reach the extraction server to reopen this book with ${languageLabel} extraction. Please try again in a moment.`
+    : "readFlow couldn't reach the extraction server and this book is not saved for offline reading yet. Open it once after the server is reachable, then it will work offline.";
 }
 
 function savedCopyConnectionMessage(): string {
   if (isLocalBackendTarget()) {
     return "Opened the saved copy. Scanned pages will finish after the local backend is reachable again.";
   }
-  return "Opened the saved copy. Scanned pages will finish after ReadFlow can reach the extraction server again.";
+  return "Opened the saved copy. Scanned pages will finish after readFlow can reach the extraction server again.";
 }
 
 interface DeviceVoiceOption {
@@ -589,7 +589,7 @@ function VoiceOverview({
             ? localStatus.engineInstalled
               ? "Edge AI: ready on this phone. It uses battery and CPU, with no cloud cost."
               : `${localStatus.title}. ${localStatus.detail}`
-            : "Phone voice: unlimited, offline after import, and no ReadFlow AI voice cost."}
+            : "Phone voice: unlimited, offline after import, and no readFlow AI voice cost."}
       </Text>
     </Pressable>
   );
@@ -637,7 +637,7 @@ function LanguageSettingsSheet({
             <View style={styles.voiceGuide}>
               <Text style={styles.voiceGuideTitle}>Improve scanned text and reading voice</Text>
               <Text style={styles.voiceGuideText}>
-                ReadFlow uses this for OCR, phone voices, Cloud AI, and AI answers.
+                readFlow uses this for OCR, phone voices, Cloud AI, and AI answers.
                 Edge AI is English-only until more language packs are added.
               </Text>
             </View>
@@ -843,7 +843,7 @@ function VoiceSettingsSheet({
                 </Text>
                 <Text style={styles.voiceBlockHint}>
                   {localStatus.engineInstalled
-                    ? `${localStatus.modelName} reads on this phone with no OpenAI cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. Reading stops when you leave ReadFlow.`
+                    ? `${localStatus.modelName} reads on this phone with no OpenAI cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. Reading stops when you leave readFlow.`
                     : localStatus.nativeAvailable
                       ? `${localStatus.modelName} downloads once, about ${formatLocalModelSize(localStatus.modelSizeBytes)}.`
                       : localStatus.detail}
@@ -1001,7 +1001,7 @@ function VoiceSettingsSheet({
                 <View style={styles.voiceBlock}>
                   <Text style={styles.voiceBlockTitle}>Need more Cloud AI?</Text>
                   <Text style={styles.voiceBlockHint}>
-                    When the monthly allowance is used, ReadFlow should offer a paid top-up.
+                    When the monthly allowance is used, readFlow should offer a paid top-up.
                   </Text>
                   <Pressable style={styles.voicePackBtn} onPress={buyMoreVoice}>
                     <Text style={styles.voicePackText}>AI voice packs</Text>
@@ -1056,7 +1056,7 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
   const website = expo?.extra?.website || "https://urmiaworks.com";
 
   function contact() {
-    Linking.openURL(`mailto:${supportEmail}?subject=ReadFlow support`).catch(() => {});
+    Linking.openURL(`mailto:${supportEmail}?subject=readFlow support`).catch(() => {});
   }
 
   function openWebsite() {
@@ -1075,11 +1075,11 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
           </View>
           <ScrollView contentContainerStyle={styles.modalContent}>
             <Text style={styles.aboutVersion}>
-              ReadFlow {version}
+              readFlow {version}
               {code ? ` (${code})` : ""}
             </Text>
             <Text style={styles.aboutBody}>
-              ReadFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped Cloud AI, or downloaded Edge AI.
+              readFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped Cloud AI, or downloaded Edge AI.
             </Text>
             <View style={styles.helpRows}>
               <HelpRow label="+" text="Add a PDF or Word document." />
@@ -1135,7 +1135,7 @@ function Empty({
       <Text style={styles.emptyTitle}>Your shelf is empty</Text>
       <Text style={styles.emptyBody}>
         {isPaid
-          ? "Add a PDF or Word file and ReadFlow will turn it into a clean phone-first reading view."
+          ? "Add a PDF or Word file and readFlow will turn it into a clean phone-first reading view."
           : "Add a PDF or Word file. Free mode keeps local reading and device voice open; AI, OCR, and cloud voice stay behind paid plans."}
       </Text>
       <Pressable style={styles.cta} onPress={onAdd} disabled={loading}>

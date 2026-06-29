@@ -170,7 +170,7 @@ async function runLoop(job: Job) {
           break;
         }
         job.pausedReason = "error";
-        job.message = "OCR paused after a server error. ReadFlow will try again shortly.";
+        job.message = "OCR paused after a server error. readFlow will try again shortly.";
         job.offline = false;
         notify(job);
         scheduleRetry(job);

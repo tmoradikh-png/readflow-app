@@ -129,14 +129,14 @@ export function UpgradeSheet({
                   r<Text style={styles.markTextItalic}>F</Text>
                 </Text>
               </View>
-              <Text style={styles.eyebrow}>READFLOW PLANS</Text>
+              <Text style={styles.eyebrow}>readFlow plans</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={10}>
               <Text style={styles.close}>x</Text>
             </Pressable>
           </View>
 
-          <Text style={styles.title}>{reasonTitle || "Unlock more of ReadFlow"}</Text>
+          <Text style={styles.title}>{reasonTitle || "Unlock more of readFlow"}</Text>
           <Text style={styles.body}>
             {reasonBody ||
               "Upgrade to read without native-text limits, OCR scanned PDFs, ask AI about anything you’re reading, and use capped Cloud AI voice."}

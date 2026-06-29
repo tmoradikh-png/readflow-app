@@ -67,7 +67,7 @@ export function HomeScreen({ onParsed }: Props) {
         />
       ) : null}
       <View style={styles.container}>
-        <Text style={styles.logo}>ReadFlow</Text>
+        <Text style={styles.logo}>readFlow</Text>
         <Text style={styles.tagline}>
           Upload a PDF. It reflows to your screen, reads aloud with phone voice or capped AI voice,
           and explains anything with AI.

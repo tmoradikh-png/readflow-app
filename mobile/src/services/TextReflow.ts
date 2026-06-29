@@ -26,7 +26,7 @@ export const TextReflow = {
 
   /** Normalize whitespace and join hard-wrapped lines into flowing paragraphs. */
   cleanPageText(raw: string, pageNumber?: number, skipLines?: Set<string>): string {
-    return stripNonReadingLines(raw, pageNumber, skipLines)
+    return cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
       .replace(/\r/g, "")
       // de-hyphenate words split across line breaks: "exam-\nple" -> "example"
       .replace(/(\w)-\n(\w)/g, "$1$2")
@@ -44,7 +44,7 @@ export const TextReflow = {
    * step together).
    */
   cleanOcrText(raw: string, pageNumber?: number, skipLines?: Set<string>): string {
-    return stripNonReadingLines(raw, pageNumber, skipLines)
+    return cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
       .replace(/\r/g, "")
       // de-hyphenate words split across line breaks: "exam-\nple" -> "example"
       .replace(/(\w)-\n(\w)/g, "$1$2")
@@ -251,4 +251,40 @@ function normalizeDigits(value: string): string {
     const arIndex = ar.indexOf(ch);
     return arIndex >= 0 ? String(arIndex) : ch;
   });
+}
+
+const NON_LATIN_SCRIPT_RANGES =
+  "\\u0400-\\u04FF" + // Cyrillic
+  "\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF" + // Arabic/Persian
+  "\\u0900-\\u097F" + // Devanagari
+  "\\u0E00-\\u0E7F" + // Thai
+  "\\u3040-\\u30FF\\u3400-\\u9FFF" + // Japanese/Chinese
+  "\\uAC00-\\uD7AF\\u1100-\\u11FF"; // Korean
+const NON_LATIN_SCRIPT_RE = new RegExp(`[${NON_LATIN_SCRIPT_RANGES}]`);
+const ARTIFACT_CLASS = "AÂÃÄÅÆØÙÚÛÜÝÞÐÑ�";
+const ARTIFACT_BETWEEN_SCRIPT_RE = new RegExp(
+  `([${NON_LATIN_SCRIPT_RANGES}])[${ARTIFACT_CLASS}]{1,4}(?=[${NON_LATIN_SCRIPT_RANGES}])`,
+  "g"
+);
+const ARTIFACT_AFTER_SCRIPT_RE = new RegExp(
+  `([${NON_LATIN_SCRIPT_RANGES}])[${ARTIFACT_CLASS}]{1,4}(?=\\s|$|[،؛؟,.!?\\-])`,
+  "g"
+);
+const ARTIFACT_BEFORE_SCRIPT_RE = new RegExp(
+  `(^|\\s|[،؛؟,.!?\\-])[${ARTIFACT_CLASS}]{1,4}(?=[${NON_LATIN_SCRIPT_RANGES}])`,
+  "g"
+);
+
+function cleanCorruptScriptArtifacts(raw: string): string {
+  return (raw || "")
+    .split("\n")
+    .map((line) => {
+      if (!NON_LATIN_SCRIPT_RE.test(line)) return line;
+      return line
+        .replace(/[*＊¥￥]{2,}/g, " ")
+        .replace(ARTIFACT_BETWEEN_SCRIPT_RE, "$1")
+        .replace(ARTIFACT_AFTER_SCRIPT_RE, "$1")
+        .replace(ARTIFACT_BEFORE_SCRIPT_RE, "$1");
+    })
+    .join("\n");
 }

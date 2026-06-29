@@ -98,6 +98,7 @@ function looksCorrupted(text: string, lang: string): boolean {
   ).length;
   const nonLatin = /[^\u0000-\u024F\s\d.,;:!?'"()[\]{}\-–—/\\]/.test(text);
   const repeatedA = nonLatin ? (text.match(/A{2,}/g) || []).length : 0;
+  const symbolArtifacts = nonLatin ? (text.match(/[*＊¥￥]{2,}/g) || []).length : 0;
   const profile = scriptProfile(lang);
   const scriptRange = scriptRangeForLang(lang);
   const scriptChars =
@@ -106,6 +107,7 @@ function looksCorrupted(text: string, lang: string): boolean {
   const latinStuckToScript = scriptRange ? countLatinStuckToScript(text, scriptRange) : 0;
   if (profile && scriptChars > 0) {
     if (repeatedA > 0) return true;
+    if (symbolArtifacts > 0) return true;
     if (shouldTreatEmbeddedLatinAsCorrupt(lang) && latinStuckToScript >= 2) return true;
     if (
       (lang === "ara" || lang === "fas") &&
@@ -119,7 +121,7 @@ function looksCorrupted(text: string, lang: string): boolean {
       return true;
     }
   }
-  const bad = replacement + mojibake + mojibakePairs * 2 + repeatedA * 2;
+  const bad = replacement + mojibake + mojibakePairs * 2 + repeatedA * 2 + symbolArtifacts * 2;
   return bad / Math.max(1, text.length) > 0.018;
 }
 

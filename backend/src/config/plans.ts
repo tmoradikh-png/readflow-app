@@ -1,5 +1,5 @@
 /**
- * Canonical plan / entitlement definitions for ReadFlow.
+ * Canonical plan / entitlement definitions for readFlow.
  *
  * This file is the SINGLE SOURCE OF TRUTH for tiers, prices, limits and
  * feature flags. The backend enforces these; the mobile app fetches a public

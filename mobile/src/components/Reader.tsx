@@ -770,9 +770,9 @@ export function Reader({
       rate: settingsRef.current.speed,
       voiceId: voiceIdFor(voiceMode, preferences),
       fallbackVoiceId: preferences.deviceVoiceId,
-      lockScreenTitle: docRef.current.fileName || "ReadFlow",
+      lockScreenTitle: docRef.current.fileName || "readFlow",
       lockScreenSubtitle: `Page ${s.page} - ${voiceLabelFor(voiceMode)}`,
-      lockScreenAlbum: "ReadFlow",
+      lockScreenAlbum: "readFlow",
       onFallback: (info) => {
         if (info.reason === "quota" && !cloudVoiceLimitWarnedRef.current) {
           cloudVoiceLimitWarnedRef.current = true;

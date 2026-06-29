@@ -59,5 +59,5 @@ app.use("/api/ai", requireAppKey, aiLimiter, aiRouter);
 app.use("/api/tts", requireAppKey, ttsLimiter, ttsRouter);
 
 app.listen(PORT, () => {
-  console.log(`ReadFlow backend listening on http://localhost:${PORT}`);
+  console.log(`readFlow backend listening on http://localhost:${PORT}`);
 });

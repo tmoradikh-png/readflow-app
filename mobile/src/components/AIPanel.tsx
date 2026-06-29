@@ -55,7 +55,7 @@ export function AIPanel({ contextText, language = "en", onClose }: Props) {
       <Pressable style={styles.backdrop} onPress={onClose} />
       <View style={styles.panel}>
       <View style={styles.header}>
-        <Text style={styles.title}>ReadFlow AI</Text>
+        <Text style={styles.title}>readFlow AI</Text>
         <Pressable onPress={onClose} hitSlop={16} style={styles.closeBtn}>
           <Text style={styles.close}>x</Text>
         </Pressable>

@@ -1,6 +1,6 @@
-# ReadFlow — Android Release Guide (Free app, Internal Testing)
+# readFlow Android Release Guide (Free app, Internal Testing)
 
-App: **ReadFlow** · Package: **com.urmiaworks.readflow**
+App: **readFlow** · Package: **com.urmiaworks.readflow**
 Org: Urmia Works · Free app (in‑app purchases added later)
 
 EAS account: **tohid123** · Project: **tohid123/readflow**
@@ -99,14 +99,14 @@ https://expo.dev/accounts/tohid123/projects/readflow/builds
 
 1. Add a row to the [Build ledger](#build-ledger) (build id, version/code, what changed).
 2. When the build finishes, **download the `.aab`** from the EAS build page.
-3. Play Console → ReadFlow → **Testing → Internal testing → Create new release** →
+3. Play Console → readFlow → **Testing → Internal testing → Create new release** →
    upload the `.aab` → Save → Review → **Roll out**.
 4. Wait until the release shows **Available** to testers.
 
 ### Step 6 — Test on the phone (icon/version cache)
 
 > The Android launcher caches the old icon and Play caches the old version. To see a
-> new icon or version: **uninstall** the old ReadFlow from the phone, then **reinstall**
+> new icon or version: **uninstall** the old readFlow from the phone, then **reinstall**
 > from the Play internal‑testing link. A plain in‑place update may keep the old icon.
 
 If the build includes Edge AI voice, test it only in the fresh native build:
@@ -114,13 +114,13 @@ open Voice, download the Supertonic Reader/Edge AI voice, select it, and
 verify local reading/highlighting. Expo Go and older installed builds cannot
 test the Sherpa native module.
 
-Current ReadFlow QA checklist for any build that changes reading/voice:
+Current readFlow QA checklist for any build that changes reading/voice:
 - Fresh-install the app and verify the launcher icon shows the full clean book
   mark, including the red spine.
 - Open Voice and confirm the choices read as Device voice, Edge AI, and Cloud
   AI; Android raw voice ids should not dominate the UI.
 - Tap locked/limited Voice options and invalid navigation inputs; warnings
-  should use the ReadFlow themed notice, not a dark native Android alert.
+  should use the readFlow themed notice, not a dark native Android alert.
 - For Cloud AI phone QA, verify the backend first: internal testing should
   return `tier: ai_pro`, `features.cloudVoice: true`, non-zero
   `cloudVoiceCharsPerMonth`, and `/api/health` should report
@@ -329,7 +329,7 @@ service‑account key in Play Console → Setup → API access.)
 ## 3) Fill out the required Play Console sections
 
 ### Store listing  (Main store listing)
-- **App name:** ReadFlow
+- **App name:** readFlow
 - **Short description (≤80 chars):** "Turn any PDF into a natural‑voice audiobook. Read along, hands‑free."
 - **Full description:** Describe: import PDFs, read‑aloud with natural or device voice,
   OCR for scanned PDFs, follows along and remembers your place, adjustable font/spacing/speed.

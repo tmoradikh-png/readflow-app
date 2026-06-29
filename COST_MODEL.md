@@ -1,8 +1,8 @@
-# ReadFlow Pricing and Cost Model
+# readFlow Pricing and Cost Model
 
 Updated: 2026-06-28
 
-This file records the business model assumptions for ReadFlow so another
+This file records the business model assumptions for readFlow so another
 developer can continue without guessing. Re-check vendor prices before launch
 or whenever plans change; OpenAI, Google Play, Render, and RevenueCat pricing
 can change.
@@ -244,7 +244,7 @@ Current architecture:
 
 Production recommendation:
 
-- Create a dedicated OpenAI project for ReadFlow.
+- Create a dedicated OpenAI project for readFlow.
 - Create a service key for the backend only.
 - Put that key in Render as `OPENAI_API_KEY`.
 - Set project spend limits/alerts.
@@ -253,7 +253,7 @@ Production recommendation:
 - Do not use a personal all-purpose key for public production.
 - Rotate the current key before public release if it was ever shared broadly.
 
-Important: a ChatGPT/Codex Pro subscription does not pay for ReadFlow API calls.
+Important: a ChatGPT/Codex Pro subscription does not pay for readFlow API calls.
 The app's AI/TTS calls are billed separately through the OpenAI API account.
 
 ## Unit Cost Assumptions
@@ -336,7 +336,7 @@ Tradeoffs:
   regenerating.
 - Quality should be better than many default device voices, but not as polished
   as high-quality cloud TTS.
-- Uses phone CPU/battery. Long listening has no ReadFlow vendor bill but may
+- Uses phone CPU/battery. Long listening has no readFlow vendor bill but may
   warm/drain weaker phones.
 
 Implementation status:
@@ -387,6 +387,11 @@ paths.
 ## AI Text Cost
 
 AI text is much cheaper than cloud TTS if context size is controlled.
+Every Ask, Summary, Explain, Simplify, or Key points action goes through the
+backend AI route and can spend OpenAI text-model tokens unless the exact result
+is served from cache. These actions are included in `aiActionsPerMonth`: AI Pro
+currently has 500/month and Power has 2,000/month. Free and Reader Plus should
+not be able to call this route.
 
 Example costs using current OpenAI text prices checked on 2026-06-28:
 
@@ -481,7 +486,7 @@ are also weak and can punish shared networks. For public release, send a stable
    to match.
 8. Wire RevenueCat production SDK/user id so limits follow a user/install, not
    only a local device state.
-9. Move OpenAI production billing to a dedicated ReadFlow project/key with spend
+9. Move OpenAI production billing to a dedicated readFlow project/key with spend
    alerts.
 10. Re-check OpenAI model pricing and choose the AI text model/TTS model
    intentionally.

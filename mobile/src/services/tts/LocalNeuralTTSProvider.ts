@@ -205,9 +205,9 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
       try {
         const metadata = {
-          title: opts.lockScreenTitle || "ReadFlow",
+          title: opts.lockScreenTitle || "readFlow",
           artist: opts.lockScreenSubtitle || "Edge AI",
-          albumTitle: opts.lockScreenAlbum || "ReadFlow",
+          albumTitle: opts.lockScreenAlbum || "readFlow",
         };
         player.setActiveForLockScreen(
           true,

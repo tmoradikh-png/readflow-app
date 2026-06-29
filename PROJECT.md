@@ -1,17 +1,18 @@
-# ReadFlow Developer Handoff
+# readFlow Developer Handoff
 
 Updated: 2026-06-29
 
 Read this file first when taking over the project. It is the high-level map of
 accounts, services, release status, and operational habits. Then use
-`README.md` for local setup, `RELEASE_GUIDE.md` for Android builds, and
-`BACKEND_FEATURE_ENFORCEMENT.md` for paid-feature enforcement. Use
-`COST_MODEL.md` for pricing, OpenAI cost, free-tier limits, and cloud voice
+`README.md` for local setup, `RELEASE_GUIDE.md` for Android builds,
+`BACKEND_FEATURE_ENFORCEMENT.md` for paid-feature enforcement, and
+`MARKETING_PLAY_STORE.md` for website/Play Store messaging. Use `COST_MODEL.md`
+for pricing, OpenAI cost, free-tier limits, AI action limits, and cloud voice
 allowance decisions.
 
 ## Product
 
-ReadFlow is a phone-first PDF/Word reader. It extracts document text, removes
+readFlow is a phone-first PDF/Word reader. It extracts document text, removes
 fixed PDF layout, reflows the content into a clean reading view, reads aloud,
 and supports AI features such as summary, explain, Q&A, OCR, and natural cloud
 voice.
@@ -25,7 +26,7 @@ Current shape:
 
 ## Current State
 
-- Git branch: `main`
+- Active work branch: `codex/local-ai-voice-polish`
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
@@ -69,7 +70,7 @@ Changes after the latest finished build and included in source `1.0.18`:
   packs are added.
 - App warnings and confirmations use `ThemedNotice` / `UpgradeSheet`, not native
   Android alerts, so upgrade, quota, delete, download, and validation messages
-  stay in the ReadFlow visual style.
+  stay in the readFlow visual style.
 - OCR language options currently exposed from mobile:
   English, Spanish, French, German, Italian, Portuguese, Dutch, Swedish,
   Norwegian, Danish, Finnish, Turkish, Indonesian, Vietnamese, Japanese,
@@ -95,7 +96,7 @@ Changes after the latest finished build and included in source `1.0.18`:
   do not survive app updates.
 - OCR detection was also relaxed for mixed-language non-Latin books. If a page
   already has meaningful native Chinese/Japanese/Russian/Persian/etc. characters,
-  or clearly readable bilingual Latin text, ReadFlow keeps the native text
+  or clearly readable bilingual Latin text, readFlow keeps the native text
   instead of wasting OCR quota and risking worse OCR output.
 - 2026-06-29 follow-up: native PDF extraction now rebuilds text from positioned
   PDF text items by rendered line. Lines with Persian/Arabic script are sorted
@@ -119,7 +120,7 @@ Changes after the latest finished build and included in source `1.0.18`:
   build to run on the phone; Expo Go or an older installed build will fall back
   to device voice.
 - Playback policy is currently foreground-only for every voice engine. While a
-  book is reading, ReadFlow keeps the screen awake; if the user locks the phone,
+  book is reading, readFlow keeps the screen awake; if the user locks the phone,
   presses Home, or app-switches away, audio stops instead of finishing the
   paragraph/chunk. A future lock-screen audiobook mode would need explicit
   native media-session controls and product approval.
@@ -212,7 +213,7 @@ manager.
 
 | Area | Account / owner | What it is used for | Notes |
 | --- | --- | --- | --- |
-| GitHub | `tmoradikh-png` | Source repository | Always use this account/repo owner for ReadFlow. Remote is `readflow-app`. User email given for account work: `t.moradi.kh@gmail.com`. |
+| GitHub | `tmoradikh-png` | Source repository | Always use this account/repo owner for readFlow. Remote is `readflow-app`. User email given for account work: `t.moradi.kh@gmail.com`. |
 | Expo / EAS | `tohid123` | Android builds and project ownership | Project is `tohid123/readflow`, projectId `097b0b5a-db90-46b4-b434-60836687b429`. User email given: `t.moradi.kh@gmail.com`. |
 | Google Play Console | Urmia Works developer account | Internal testing and later production release | Android package is permanent: `com.urmiaworks.readflow`. Verify exact login email before release. |
 | Render | `support@urmiaworks.com` | Hosted backend | Internal backend service currently targeted by the app: `readflow-backend-internal`. |
@@ -276,7 +277,7 @@ Temporary connected-phone Cloud AI test used on 2026-06-29:
 - Build/install a temporary APK with `EXPO_PUBLIC_API_URL=http://127.0.0.1:4000`.
   This APK is for USB-connected QA only; public/internal Render builds should use
   HTTPS Render URLs and should not enable cleartext traffic.
-- If this temporary APK says it cannot reach the ReadFlow backend while the phone
+- If this temporary APK says it cannot reach the readFlow backend while the phone
   has internet, check the PC first: `GET http://127.0.0.1:4000/api/health` must
   return `ok: true`, and `adb reverse --list` must include `tcp:4000 tcp:4000`.
   In this setup, "server unreachable" usually means the local backend process
@@ -422,7 +423,7 @@ Useful commands:
 ```powershell
 git -c safe.directory=C:/Users/Greencom/OneDrive/Documents/aiChat/ReadFlow status --short --branch
 git -c safe.directory=C:/Users/Greencom/OneDrive/Documents/aiChat/ReadFlow log --oneline -8
-git -c safe.directory=C:/Users/Greencom/OneDrive/Documents/aiChat/ReadFlow push origin main
+git -c safe.directory=C:/Users/Greencom/OneDrive/Documents/aiChat/ReadFlow push origin codex/local-ai-voice-polish
 ```
 
 On this Windows machine, `git push` has occasionally hung inside Git Credential
@@ -493,6 +494,12 @@ Cloud AI voice is capped by plan:
 See `COST_MODEL.md` before changing cloud voice allowances; unlimited cloud
 voice is not economically safe at the current paid prices.
 
+AI text actions:
+- `POST /api/ai` handles Summary, Explain, Simplify, Key points, and Ask.
+- Each non-cached AI action can spend OpenAI text-model tokens.
+- AI Pro includes 500 AI actions/month; Power includes 2,000/month.
+- Free and Reader Plus must not call the AI route.
+
 ## Audio and Highlighting Notes
 
 Cloud voice:
@@ -552,7 +559,7 @@ Edge AI voice:
   full model catalog during ordinary status checks.
 - If native support/model download is missing, the provider falls back to the
   selected device voice and shows a one-time "Edge AI not ready" message.
-- Treat Edge AI as unlimited from ReadFlow's billing perspective because it uses
+- Treat Edge AI as unlimited from readFlow's billing perspective because it uses
   phone CPU/battery instead of OpenAI. Product can still decide to make it a paid
   perk, but it has no per-character vendor bill.
 - Kokoro/ExecuTorch remains a possible higher-quality future option, but it is
@@ -643,7 +650,7 @@ Later multilingual backlog:
 Use this compact format for Play internal testing:
 
 ```text
-ReadFlow X.Y.Z
+readFlow X.Y.Z
 - Main user-visible fix or improvement.
 - Voice/highlight/import/OCR changes.
 - Icon/build/backend note if relevant.

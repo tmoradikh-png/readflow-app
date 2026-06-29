@@ -238,9 +238,9 @@ export class CloudTTSProvider implements TTSProvider {
       this.removeListener = () => sub.remove();
       try {
         const metadata = {
-          title: opts.lockScreenTitle || "ReadFlow",
+          title: opts.lockScreenTitle || "readFlow",
           artist: opts.lockScreenSubtitle || "Natural voice",
-          albumTitle: opts.lockScreenAlbum || "ReadFlow",
+          albumTitle: opts.lockScreenAlbum || "readFlow",
         };
         player.setActiveForLockScreen(true, {
           ...metadata,
