@@ -272,6 +272,12 @@ Changes after the latest finished build and included in source `1.0.18`:
   old bad OCR pages are not reused. Local API test returned improved OCR for
   eager page 2 and on-demand page 5, but quality is still limited by the source
   scan; this is an AI Pro/Power OCR book, not a Reader Plus native-text book.
+- 2026-06-29 multilingual generated-PDF QA is documented in
+  `LANGUAGE_PDF_QA_2026-06-29.md`. The local folder `test-pdfs/` contains 21
+  languages with clean/good/medium/poor/very-bad PDFs. Baseline clean and good
+  scans passed for all 21 languages after correcting the scorer for CJK and
+  normalizing RTL native text. Harder medium/poor scans are correctly routed to
+  OCR but are not reliable enough to market as guaranteed recovery.
 
 ## Account Map
 

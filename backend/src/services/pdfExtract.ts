@@ -157,7 +157,9 @@ function cleanExtractedLine(line: string, rtl: boolean): string {
     .trim();
 
   if (rtl) {
-    out = out.replace(new RegExp(`([${RTL_WORD_RUN}]{3,})\\1`, "g"), "$1");
+    out = out
+      .replace(/\u06BE/g, "ه")
+      .replace(new RegExp(`([${RTL_WORD_RUN}]{3,})\\1`, "g"), "$1");
   }
   return out;
 }
