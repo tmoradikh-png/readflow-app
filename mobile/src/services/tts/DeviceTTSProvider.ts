@@ -2,8 +2,8 @@ import * as Speech from "expo-speech";
 import { SpeakOptions, TTSProvider } from "./TTSProvider";
 
 /**
- * Free, on-device voice using the OS speech engine.
- * Works offline, no API cost — perfect for MVP and the free tier.
+ * On-device voice using the OS speech engine.
+ * Works offline with no cloud AI cost for read-aloud plans.
  * Quality varies by device/language; cloud TTS is the upgrade path.
  */
 export class DeviceTTSProvider implements TTSProvider {

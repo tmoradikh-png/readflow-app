@@ -1,4 +1,5 @@
 import { API_BASE, apiHeaders } from "../config";
+import { loadAppUserId } from "./AppIdentity";
 
 export interface PlanFeatures {
   ads: boolean;
@@ -83,6 +84,7 @@ export interface UsageSnapshot {
 
 export async function fetchEntitlement(): Promise<EntitlementSnapshot> {
   try {
+    await loadAppUserId();
     const res = await fetch(`${API_BASE}/api/entitlements`, {
       headers: apiHeaders(),
     });
@@ -105,6 +107,7 @@ export async function fetchEntitlement(): Promise<EntitlementSnapshot> {
 
 export async function fetchUsage(): Promise<UsageSnapshot | null> {
   try {
+    await loadAppUserId();
     const res = await fetch(`${API_BASE}/api/usage`, {
       headers: apiHeaders(),
     });

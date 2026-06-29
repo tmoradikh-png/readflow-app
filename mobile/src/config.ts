@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import { getAppUserId } from "./services/AppIdentity";
 
 /**
  * Backend base URL.
@@ -56,5 +57,7 @@ export const APP_KEY: string =
 export function apiHeaders(extra?: Record<string, string>): Record<string, string> {
   const h: Record<string, string> = { ...(extra || {}) };
   if (APP_KEY) h["x-app-key"] = APP_KEY;
+  const appUserId = getAppUserId();
+  if (appUserId) h["x-app-user-id"] = appUserId;
   return h;
 }

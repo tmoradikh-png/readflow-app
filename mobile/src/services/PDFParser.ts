@@ -1,5 +1,6 @@
 import * as DocumentPicker from "expo-document-picker";
 import { API_BASE, apiHeaders } from "../config";
+import { loadAppUserId } from "./AppIdentity";
 
 export interface PdfPage {
   page: number;
@@ -85,6 +86,7 @@ export const PDFParser = {
     ocrLang?: string;
     forceOcr?: boolean;
   } & ImportProgressHooks): Promise<ParsedPdf> {
+    await loadAppUserId();
     const form = new FormData();
     // React Native FormData file shape:
     form.append("file", {
@@ -136,6 +138,7 @@ export const PDFParser = {
     pages: number[],
     ocrLang?: string
   ): Promise<{ page: number; text: string; confidence?: number }[]> {
+    await loadAppUserId();
     const res = await fetch(`${API_BASE}/api/pdf/ocr`, {
       method: "POST",
       headers: apiHeaders({ "Content-Type": "application/json" }),

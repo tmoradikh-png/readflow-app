@@ -391,10 +391,10 @@ export function LibraryScreen({
       onPreferencesChange({ ...preferences, voiceEngine: "local_ai" });
     } catch (e: any) {
       setNotice({
-        title: "Edge AI voice",
+        title: "rF AI voice",
         body:
           e?.message ||
-          "Could not download Edge AI. Check your connection and try again.",
+          "Could not download rF AI. Check your connection and try again.",
       });
       refreshLocalVoiceStatus().catch(() => {});
     } finally {
@@ -823,7 +823,7 @@ function LanguageSettingsSheet({
               <Text style={styles.voiceGuideTitle}>Improve scanned text and reading voice</Text>
               <Text style={styles.voiceGuideText}>
                 readFlow uses this for OCR, phone voices, Cloud AI, and AI answers.
-                Edge AI is English-only until more language packs are added.
+                rF AI is English-only until more language packs are added.
               </Text>
             </View>
 
@@ -841,7 +841,7 @@ function LanguageSettingsSheet({
                     </Text>
                     <Text style={[styles.languageChoiceMeta, active && styles.languageChoiceMetaOn]}>
                       OCR {language.ocrLang}
-                      {language.edgeAi ? " · Edge AI" : ""}
+                      {language.edgeAi ? " · rF AI" : ""}
                     </Text>
                   </Pressable>
                 );
@@ -889,6 +889,12 @@ function VoiceSettingsSheet({
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
   const planHasCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
   const canUseCloud = Boolean(planHasCloud && readingLanguage.cloudAiVoice);
+  const canUseReadAloud =
+    entitlement.tier !== "free" &&
+    (entitlement.features.unlimitedLibrary ||
+      entitlement.features.ai ||
+      entitlement.features.ocr ||
+      entitlement.features.cloudVoice);
   const currentDeviceVoice = deviceVoices.find((v) => v.id === preferences.deviceVoiceId);
   const [voiceRegion, setVoiceRegion] = useState("recommended");
   const regionOptions = useMemo(() => {
@@ -905,6 +911,14 @@ function VoiceSettingsSheet({
   }, [deviceVoices, voiceRegion]);
 
   function selectEngine(engine: VoiceEngine) {
+    if (engine === "device" && !canUseReadAloud) {
+      onUpgrade({
+        title: "Unlock read-aloud",
+        body:
+          "Listen mode starts with Reader Plus. Free keeps the reading preview manual, while Reader Plus unlocks device voice for full native-text books.",
+      });
+      return;
+    }
     if (engine === "cloud" && !readingLanguage.cloudAiVoice) {
       onNotice({
         title: "Cloud AI voice QA",
@@ -916,29 +930,29 @@ function VoiceSettingsSheet({
       onUpgrade({
         title: "Unlock Cloud AI voice",
         body:
-          "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Upgrade to use our highest-quality AI voice. Device voice stays unlimited.",
+          "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Reader Plus and higher include Phone voice without cloud AI cost.",
       });
       return;
     }
     if (engine === "local_ai" && !entitlement.features.ai) {
       onUpgrade({
-        title: "Unlock Edge AI voice",
+        title: "Unlock rF AI voice",
         body:
-          "Edge AI voice is included in AI Pro and Power. Upgrade to use on-device AI voice; Device voice stays available without AI cost.",
+          "rF AI voice is included in AI Pro and Power. Reader Plus and higher include Phone voice without cloud AI cost.",
       });
       return;
     }
     if (engine === "local_ai" && !readingLanguage.edgeAi) {
       onNotice({
-        title: "Edge AI language pack",
-        body: `Edge AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`,
+        title: "rF AI language pack",
+        body: `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`,
       });
       return;
     }
     if (engine === "local_ai" && !localStatus.engineInstalled) {
       if (localStatus.nativeAvailable && !localStatus.modelDownloaded) {
         onNotice({
-          title: "Download Edge AI voice",
+          title: "Download rF AI voice",
           body: localStatus.detail,
           secondary: { label: "Not now", tone: "secondary" },
           primary: { label: "Download", onPress: onDownloadLocalVoice },
@@ -946,7 +960,7 @@ function VoiceSettingsSheet({
         return;
       }
       onNotice({
-        title: "Edge AI voice",
+        title: "rF AI voice",
         body: localStatus.detail,
       });
       return;
@@ -984,12 +998,12 @@ function VoiceSettingsSheet({
 
             <View style={styles.voiceChoiceGroup}>
               <VoiceChoice
-                title="Edge AI"
+                title="rF AI"
                 detail={
                   localStatus.engineInstalled
                     ? readingLanguage.edgeAi
                       ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
-                      : "English voice pack only for now. More Edge AI languages can be added later."
+                      : "English voice pack only for now. More rF AI languages can be added later."
                     : localStatus.detail
                 }
                 active={preferences.voiceEngine === "local_ai"}
@@ -1013,6 +1027,8 @@ function VoiceSettingsSheet({
                     : `Uses the phone's built-in ${readingLanguage.label} voice when available.`
                 }
                 active={preferences.voiceEngine === "device"}
+                locked={!canUseReadAloud}
+                stateLabel={canUseReadAloud ? undefined : "Reader+"}
                 onPress={() => selectEngine("device")}
               />
               <VoiceChoice
@@ -1034,7 +1050,7 @@ function VoiceSettingsSheet({
             {preferences.voiceEngine === "local_ai" ? (
               <View style={styles.voiceBlock}>
                 <Text style={styles.voiceBlockTitle}>
-                  {localStatus.engineInstalled ? "Edge AI is ready" : "Download Edge AI"}
+                  {localStatus.engineInstalled ? "rF AI is ready" : "Download rF AI"}
                 </Text>
                 <Text style={styles.voiceBlockHint}>
                   {localStatus.engineInstalled
@@ -1066,10 +1082,10 @@ function VoiceSettingsSheet({
                   </View>
                 ) : localStatus.nativeAvailable && !localStatus.modelDownloaded ? (
                   <Pressable style={styles.voicePackBtn} onPress={onDownloadLocalVoice}>
-                    <Text style={styles.voicePackText}>Download Edge AI</Text>
+                    <Text style={styles.voicePackText}>Download rF AI</Text>
                   </Pressable>
                 ) : localStatus.engineInstalled ? (
-                  <Text style={styles.localReadyText}>Ready for Edge AI reading.</Text>
+                  <Text style={styles.localReadyText}>Ready for rF AI reading.</Text>
                 ) : null}
               </View>
             ) : null}
@@ -1274,12 +1290,12 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
               {code ? ` (${code})` : ""}
             </Text>
             <Text style={styles.aboutBody}>
-              readFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped Cloud AI, or downloaded Edge AI.
+              readFlow turns PDF and Word documents into phone-sized reading text, then reads with Phone voice, capped Cloud AI, or downloaded rF AI on eligible plans.
             </Text>
             <View style={styles.helpRows}>
               <HelpRow label="+" text="Add a PDF or Word document." />
               <HelpRow label="Lang" text="Sets OCR, phone voices, Cloud AI, and AI answer language." />
-              <HelpRow label="Voice" text="Choose unlimited device voice, capped Cloud AI, or downloaded Edge AI." />
+              <HelpRow label="Voice" text="Choose Reader Plus Phone voice, capped Cloud AI, or downloaded rF AI." />
               <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
               <HelpRow label="Fix text" text="Rebuilds a bad PDF import with paid OCR." />
               <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />
@@ -1332,7 +1348,7 @@ function Empty({
       <Text style={styles.emptyBody}>
         {isPaid
           ? "Add a PDF or Word file and readFlow will turn it into a clean phone-first reading view."
-          : "Add a PDF or Word file. Free mode keeps local reading and device voice open; AI, OCR, and cloud voice stay behind paid plans."}
+          : "Add a PDF or Word file. Free mode gives a limited reading preview; Listen, AI, OCR, and Cloud AI stay behind paid plans."}
       </Text>
       <Pressable style={styles.cta} onPress={onAdd} disabled={loading}>
         {loading ? (

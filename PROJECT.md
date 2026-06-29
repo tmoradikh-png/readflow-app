@@ -30,43 +30,67 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.20`
-- Current source Android `versionCode`: `20`
+- Current source version: `1.0.23`
+- Current source Android `versionCode`: `23`
 - Latest finished EAS build: `1.0.17` / code `17`
 - Latest finished EAS build id: `2900d21c-48f4-42aa-9434-f3bd2dcb06a4`
 - Latest finished AAB:
   `https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab`
-- Next Android build should use code `20` unless another EAS build has already
-  consumed a higher code. Source is prepared for code `20`; latest finished
-  build is still code `17`.
+- Next Android build should use code `23` unless another EAS build has already
+  consumed a higher code. Run the EAS `build:list` command in `RELEASE_GUIDE.md`
+  immediately before spending build quota.
 
-Changes included in the latest finished build:
-- Paid/cloud audio background-mode support was added for lock-screen listening.
+Changes included in the latest finished EAS build:
+- Active line highlighting and the foreground-only reading policy were added.
 - Cloud voice paragraph handoff was improved with wider prefetch, player reuse,
   and a shorter tail guard.
-- Highlighting now targets the active rendered line while keeping the same TTS
-  audio chunk size for natural voice.
+- Highlighting targets the active rendered line while keeping the same TTS audio
+  chunk size for natural voice.
 
 Important: code `17` has been built, but test phones still need that AAB
 uploaded/installed before the source changes can be verified on-device.
+
+Current Play release prep in source `1.0.23`:
+- `mobile/app.json` now points at the public backend host
+  `https://readflow-backend.onrender.com`, not the internal dev-override backend.
+  As of the release-prep check on 2026-06-29, that public service returned 503,
+  so it must be deployed/fixed before uploading a public Play build.
+- Android permissions are reduced to `INTERNET`; `expo-audio` is configured with
+  `recordAudioAndroid: false` and `microphonePermission: false`.
+- iOS background audio mode and Expo foreground/background playback flags are
+  disabled for the current foreground-only product behavior.
+- Mobile now creates a stable local `rf_...` install id and sends it as
+  `x-app-user-id` so public free users do not all share the backend
+  `"anonymous"` usage/quota bucket. This is an install-level id only; RevenueCat
+  identity is still required before selling subscriptions.
+- Free is enforced as a limited manual-reading preview: page cap from
+  `perDocPageCap`, no Listen/read-aloud, no OCR, no rF AI, no Cloud AI, and no
+  AI questions. Reader Plus and higher unlock device read-aloud.
+- `npm run check:release` now fails if the build points to an internal backend,
+  asks for microphone permission, declares background audio, omits app-user-id
+  support, or has public Render blueprints with `ENTITLEMENTS_DEV_OVERRIDE=true`.
+- Paid subscriptions are not ready to sell until Play Billing/RevenueCat is
+  wired in the mobile app and the production Render backend has `RC_SECRET_KEY`
+  set. Until then, a public build is a free-preview release with locked paid
+  features and plan UI marked as not purchasable.
 
 Changes after the latest finished build and included in source `1.0.18`:
 - Cloud AI voice is gated by `features.cloudVoice`, not generic AI.
 - AI Pro includes 60k cloud voice characters/month; Power includes 180k.
 - Backend `/api/tts` checks monthly `cloudVoiceChars` before generating fresh
   OpenAI audio.
-- Voice selection uses the public labels `Device voice`, `Edge AI`, and
+- Voice selection uses the public labels `Device voice`, `rF AI`, and
   `Cloud AI`. The shelf Voice sheet only shows the detailed settings for the
   currently selected mode so readers do not see raw Android voice clutter.
-- The reader settings menu also includes a quick `Device` / `Edge AI` /
+- The reader settings menu also includes a quick `Device` / `rF AI` /
   `Cloud AI` selector. Cloud AI acts as an upgrade prompt when the plan does
   not include `features.cloudVoice`; locked labels must say `AI Pro`/`Locked`,
   not `Soon`, because Cloud AI is a live paid feature once the backend grants a
   voice allowance.
 - The shelf now has a `Book language` selector. The selected language is saved
   in preferences and drives import OCR (`ocrLang`), on-demand OCR, phone voice
-  filtering, reader TTS locale, Cloud AI/AI answer language, and Edge AI
-  eligibility messaging. Edge AI remains English-only until more local voice
+  filtering, reader TTS locale, Cloud AI/AI answer language, and rF AI
+  eligibility messaging. rF AI remains English-only until more local voice
   packs are added.
 - App warnings and confirmations use `ThemedNotice` / `UpgradeSheet`, not native
   Android alerts, so upgrade, quota, delete, download, and validation messages
@@ -110,13 +134,13 @@ Changes after the latest finished build and included in source `1.0.18`:
   on a scanned Persian sample (`ocrPages: 3`, no pending pages).
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
-- Edge AI voice now uses `react-native-sherpa-onnx` plus an on-demand
+- rF AI voice now uses `react-native-sherpa-onnx` plus an on-demand
   Supertonic local TTS model
   (`sherpa-onnx-supertonic-tts-int8-2026-03-06`). The model is not bundled into
   the app; the user downloads it from the Voice sheet. It is larger than the old
   Piper test voice (about 81 MB instead of 20 MB) because the 20 MB voice sounded
   too machine-like for book reading.
-- Important: Edge AI voice is a native dependency. It needs a new EAS/native
+- Important: rF AI voice is a native dependency. It needs a new EAS/native
   build to run on the phone; Expo Go or an older installed build will fall back
   to device voice.
 - Playback policy is currently foreground-only for every voice engine. While a
@@ -130,7 +154,7 @@ Changes after the latest finished build and included in source `1.0.18`:
 - Connected-phone dev test on 2026-06-29: a debug native build was installed on
   Samsung `SM_G975F` (`R58M168KTSZ`) from a short temp path. The first Piper
   experiment proved Sherpa playback worked; current source uses the larger
-  Supertonic Reader/Edge AI model for better quality. No EAS quota was
+  Supertonic Reader/rF AI model for better quality. No EAS quota was
   consumed for this test.
 - Follow-up on 2026-06-29: installing the raw `assembleDebug` APK left the app
   stuck on the splash screen because it expected Metro and had no packaged JS
@@ -151,16 +175,16 @@ Changes after the latest finished build and included in source `1.0.18`:
   - Rotation clears stale line measurements, re-anchors by page/sentence
     position, and caps `FlatList` scroll retries so the highlight does not chase
     through the book forever.
-  - Edge AI uses the optional Supertonic Reader model, reads short
+  - rF AI uses the optional Supertonic Reader model, reads short
     same-page chunks, prefetches sooner, and uses a shorter audio tail guard to
     reduce paragraph gaps.
-  - Voice settings now use customer-facing names: Device voice, Edge AI
+  - Voice settings now use customer-facing names: Device voice, rF AI
     (on-device), and Cloud AI (cloud allowance).
   - Library remove is visible on document cards and the Continue card, removes
     cached parsed text/bookmarks, and updates metadata before deleting the
     physical file so deletion does not feel stuck.
 - 2026-06-29 local phone build `1.0.20` cleaned the shelf UI by removing the
-  repeated voice status strip/card. Edge AI/Phone/Cloud details now live in the
+  repeated voice status strip/card. rF AI/Phone/Cloud details now live in the
   Voice sheet instead of crowding the first screen.
 - Multilingual PDF endpoint test on 2026-06-29 used downloaded public samples
   for Persian text, Persian scanned/image, Arabic, Russian, Japanese, and
@@ -490,7 +514,7 @@ Local native smoke test without spending EAS quota:
 3. Run `npx expo prebuild --platform android --clean`.
 4. Run `.\android\gradlew.bat :app:assembleDebug -x lint -x test` or
    `npx expo run:android`.
-5. If testing Edge AI, open Voice, download/select Edge AI, tap Listen,
+5. If testing rF AI, open Voice, download/select rF AI, tap Listen,
    and watch logs for Sherpa model resolution and Android media-session playback.
 
 Critical rule: never reuse an Android `versionCode`. EAS/Play consume codes even
@@ -596,8 +620,8 @@ Cloud voice:
 - Uses the selected cloud voice from shelf preferences.
 - Falls back to the selected device voice if cloud voice is offline or over
   quota, and shows a one-time allowance message.
-- Uses `expo-audio` with `shouldPlayInBackground: true` for paid/natural voice
-  lock-screen listening.
+- Uses `expo-audio` with `shouldPlayInBackground: false`; all reading audio is
+  foreground-only in the current product.
 - Keeps the native player alive between clips to avoid unnecessary handoff
   pauses.
 - Has a short tail guard to avoid cutting off final words.
@@ -634,11 +658,11 @@ Highlighting:
 - Exact word-level sync would require timestamp data from the TTS provider. The
   current backend returns MP3 audio only, not word timings.
 
-Edge AI voice:
+rF AI voice:
 - Current implementation uses `react-native-sherpa-onnx` and
   `@dr.pogodin/react-native-fs`.
 - Current model: `sherpa-onnx-supertonic-tts-int8-2026-03-06` (Supertonic
-  Reader/Edge AI), downloaded on demand from the Sherpa model release.
+  Reader/rF AI), downloaded on demand from the Sherpa model release.
   Compressed download is about 81 MB; the model is not bundled in the app
   package.
 - Playback uses `LocalNeuralTTSProvider`, which generates WAV clips on-device,
@@ -649,9 +673,10 @@ Edge AI voice:
   catalog seeing a support-data folder in the downloaded local model. It is not a
   playback failure. The app suppresses that warning in LogBox and avoids refreshing the
   full model catalog during ordinary status checks.
-- If native support/model download is missing, the provider falls back to the
-  selected device voice and shows a one-time "Edge AI not ready" message.
-- Treat Edge AI as unlimited from readFlow's billing perspective because it uses
+- If native support/model download is missing, the provider stops rF AI playback
+  and shows a one-time "rF AI not ready" message instead of silently switching
+  to Phone voice.
+- Treat rF AI as unlimited from readFlow's billing perspective because it uses
   phone CPU/battery instead of OpenAI. Product can still decide to make it a paid
   perk, but it has no per-character vendor bill.
 - Kokoro/ExecuTorch remains a possible higher-quality future option, but it is
@@ -674,24 +699,24 @@ Recommended manual phone tests after installing a new build:
 - Open Voice on the shelf, select a device voice, and verify the reader uses it.
 - Open the language selector, choose a non-English language, and verify:
   new imports send the matching OCR language, the Voice sheet filters phone
-  voices for that language, AI answers use that language, and Edge AI explains
+  voices for that language, AI answers use that language, and rF AI explains
   that only English is available for now.
 - For Persian/Arabic specifically, select the language before import/reopen.
   If a book was cached from an older broken extraction, reopening with Persian
   should re-extract instead of using the old English/unknown cache. If the
   source file itself has been deleted, remove and reimport the book.
-- In the reader settings menu, switch between Device, Edge AI, and Cloud AI.
+- In the reader settings menu, switch between Device, rF AI, and Cloud AI.
   Cloud AI should upsell cleanly when the plan is not AI Pro/Power.
 - Select Cloud AI under an AI Pro/Power entitlement and verify `/api/tts`
   consumes cloud voice characters, not generic AI actions.
-- Open Voice, download Edge AI, select it, and verify the first
+- Open Voice, download rF AI, select it, and verify the first
   paragraph generates locally, then subsequent/repeated paragraphs play from
   cache.
-- Edge AI currently keeps six upcoming chunks warm and normalizes speech-only
+- rF AI currently keeps six upcoming chunks warm and normalizes speech-only
   text before synthesis (ligatures, hidden soft hyphens, typographic quotes,
   and obvious app/document acronyms). Keep this conservative; broader word
   rewrites can create new mispronunciations.
-- AI voice modes must never silently downgrade to Device voice. If Edge AI is
+- AI voice modes must never silently downgrade to Device voice. If rF AI is
   not in the plan, not downloaded, or not supported for the language, show the
   themed upgrade/download explanation. If Cloud AI is not in the plan or
   allowance, show the plan/allowance sheet. Device voice is the only silent
@@ -702,8 +727,8 @@ Recommended manual phone tests after installing a new build:
 - Device voice reads in sync.
 - Natural/cloud voice reads the same text, highlights the current line, and does
   not skip final words.
-- Edge AI reads the same text, highlights the current line, and falls
-  back to the selected device voice if the model is missing.
+- rF AI reads the same text and highlights the current line. If the model is
+  missing or unsupported, it stops and shows the download/upgrade explanation.
 - Paragraph handoff feels acceptable.
 - Let playback continue in the foreground and confirm the screen stays awake.
 - Press Home/app-switch/lock while any voice is reading and confirm playback
@@ -717,15 +742,15 @@ Recommended manual phone tests after installing a new build:
 
 Later multilingual backlog:
 - Per-book language memory instead of one global `bookLanguage` preference.
-- Server-driven Edge AI model catalog with language, model id, size, quality,
+- Server-driven rF AI model catalog with language, model id, size, quality,
   and download URL so new language packs do not require an app rebuild.
-- Edge AI voice packs for priority markets after quality/size review. Start
+- rF AI voice packs for priority markets after quality/size review. Start
   with Spanish, French, German, Arabic, Turkish, and Persian if good compact
   models are available.
 - Language auto-detect from the first native-text/OCR pages, with user
   confirmation before spending OCR quota.
 - Mixed-language books and per-section language switching.
-- Local/Edge OCR on strong phones. This is separate from Edge AI voice and needs
+- Local/Edge OCR on strong phones. This is separate from rF AI voice and needs
   a different OCR engine/model.
 
 ## Known Risks / Follow-ups

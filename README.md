@@ -57,7 +57,7 @@ npm start                   # press the QR with Expo Go on your phone
 The app auto-detects your computer's LAN IP and calls the backend on port 4000,
 so your phone and computer must be on the **same Wi‑Fi**.
 
-Expo Go is enough for normal JS/UI work and device voice. Edge AI voice needs
+Expo Go is enough for normal JS/UI work and device voice. rF AI voice needs
 the native Sherpa module, so use a development/native build:
 
 ```pwsh
@@ -71,8 +71,8 @@ workflow.
 
 > Reading aloud can use **Device voice** (works offline after import, no
 > ReadFlow voice cost), capped backend-powered **Cloud AI**, or downloaded
-> **Edge AI** in a native build. Cloud AI requires the backend and OpenAI key;
-> Edge AI uses phone CPU/battery instead.
+> **rF AI** in a native build. Cloud AI requires the backend and OpenAI key;
+> rF AI uses phone CPU/battery instead.
 
 ## Shipping a new Android build
 See **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** → the **"TL;DR — Cut a NEW build"** section
@@ -90,9 +90,9 @@ installed phone voice from the shelf screen.
 
 The shelf `Book language` selector is the multilingual control. It drives OCR
 language, phone voice filtering, reader TTS locale, Cloud AI/AI answer language,
-and Edge AI availability messaging. Edge AI currently has only the English
+and rF AI availability messaging. rF AI currently has only the English
 Supertonic Reader pack; other languages should use Device voice or Cloud AI
-until language-specific Edge AI packs are added.
+until language-specific rF AI packs are added.
 
 Premium Cloud AI voice is implemented through
 `mobile/src/services/tts/CloudTTSProvider.ts` and backend `POST /api/tts`.
@@ -103,12 +103,12 @@ UI highlights the active rendered line. Cloud voice is not unlimited:
 - AI Pro: 60k generated characters/month.
 - Power: 180k generated characters/month.
 
-Edge AI voice is implemented through `react-native-sherpa-onnx` with the
+rF AI voice is implemented through `react-native-sherpa-onnx` with the
 on-demand Supertonic Reader model
 (`sherpa-onnx-supertonic-tts-int8-2026-03-06`, about 81 MB download). It
 requires a fresh native/EAS build and will not run in Expo Go or older installed
-builds. If the model is missing, the reader falls back to the selected device
-voice.
+builds. If the model is missing, the reader stops rF AI playback and shows the
+download/upgrade explanation instead of silently switching voices.
 
 ## Roadmap (after the prototype feels right)
 - RevenueCat mobile SDK + production subscriptions

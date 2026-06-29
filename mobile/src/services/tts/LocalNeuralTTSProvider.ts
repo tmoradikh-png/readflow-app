@@ -17,7 +17,7 @@ async function ensureAudioMode() {
   try {
     await setAudioModeAsync({
       playsInSilentMode: true,
-      shouldPlayInBackground: true,
+      shouldPlayInBackground: false,
       interruptionMode: "duckOthers",
     });
   } catch {
@@ -148,7 +148,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       if (mySeq !== this.seq) return;
       opts.onFallback?.({
         reason: "local_unavailable",
-        message: "Edge AI is not ready on this phone. Download Edge AI before using this voice.",
+        message: "rF AI is not ready on this phone. Download rF AI before using this voice.",
       });
       opts.onError?.(e);
       return;
@@ -206,7 +206,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       try {
         const metadata = {
           title: opts.lockScreenTitle || "readFlow",
-          artist: opts.lockScreenSubtitle || "Edge AI",
+          artist: opts.lockScreenSubtitle || "rF AI",
           albumTitle: opts.lockScreenAlbum || "readFlow",
         };
         player.setActiveForLockScreen(
@@ -229,7 +229,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       if (mySeq !== this.seq) return;
       opts.onFallback?.({
         reason: "local_unavailable",
-        message: "Edge AI could not play on this phone. Use Device voice or Cloud AI for now.",
+        message: "rF AI could not play on this phone. Use Phone voice or Cloud AI on an eligible plan for now.",
       });
       opts.onError?.(e);
       return;
@@ -269,7 +269,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     return [
       {
         id: LOCAL_NEURAL_VOICE_ID,
-        name: `Edge AI - ${LOCAL_NEURAL_MODEL_NAME}`,
+        name: `rF AI - ${LOCAL_NEURAL_MODEL_NAME}`,
         language: "en-US",
       },
     ];

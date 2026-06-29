@@ -80,7 +80,6 @@ interface SpeechChunk {
   lastWithin: number;
 }
 
-const ENFORCE_FREE_LIMIT = false;
 const TTS_PREFETCH_AHEAD = 8;
 const LOCAL_AI_PREFETCH_AHEAD = 6;
 const LOCAL_AI_MAX_CHARS = 420;
@@ -126,7 +125,7 @@ function voiceIdFor(mode: RuntimeVoiceMode, preferences: ReadingPreferences): st
 
 function voiceLabelFor(mode: RuntimeVoiceMode): string {
   if (mode === "natural") return "Cloud AI";
-  if (mode === "local") return "Edge AI";
+  if (mode === "local") return "rF AI";
   return "Device voice";
 }
 
@@ -142,7 +141,7 @@ export function Reader({
   preferences,
   onPreferencesChange,
   language = "en-US",
-  freePageLimit = 10,
+  freePageLimit = 100,
   startSentenceId = 0,
   onProgress,
   onBack,
@@ -181,7 +180,7 @@ export function Reader({
   );
   const [paywallTitle, setPaywallTitle] = useState("Paid feature");
   const [paywallBody, setPaywallBody] = useState(
-    "This feature is available on paid plans. Free users can continue with local reading and device voice."
+    "This feature is available on paid plans. Free users can continue with the limited manual reading preview."
   );
   const [controlsOpen, setControlsOpen] = useState(false);
   // Sound master switch. OFF (default) = pure reading: tapping text won't start
@@ -195,6 +194,12 @@ export function Reader({
 
   const canUseAI = Boolean(entitlement.features.ai);
   const canUseOcr = Boolean(entitlement.features.ocr);
+  const canUseReadAloud =
+    entitlement.tier !== "free" &&
+    (entitlement.features.unlimitedLibrary ||
+      entitlement.features.ai ||
+      entitlement.features.ocr ||
+      entitlement.features.cloudVoice);
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
   const canUseCloudVoice = Boolean(
     readingLanguage.cloudAiVoice &&
@@ -206,10 +211,15 @@ export function Reader({
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement, localVoiceReady);
   const readerVoiceOptions = useMemo(
     () => [
-      { engine: "device" as const, label: "Device", detail: "Free" },
+      {
+        engine: "device" as const,
+        label: "Device",
+        detail: canUseReadAloud ? "Included" : "Reader+",
+        locked: !canUseReadAloud,
+      },
       {
         engine: "local_ai" as const,
-        label: "Edge AI",
+        label: "rF AI",
         detail: !entitlement.features.ai
           ? "AI Pro"
           : !readingLanguage.edgeAi
@@ -231,6 +241,7 @@ export function Reader({
     [
       canUseCloudVoice,
       canUseEdgeVoice,
+      canUseReadAloud,
       entitlement.features.ai,
       localVoiceReady,
       localVoiceStatus,
@@ -364,25 +375,39 @@ export function Reader({
     setShowPaywall(true);
   }
 
+  function openReadAloudOffer() {
+    openFeatureLock(
+      "Unlock read-aloud",
+      "Listen mode starts with Reader Plus. Free keeps the reading preview manual, while Reader Plus unlocks device voice for full native-text books."
+    );
+  }
+
+  function readAloudBlocked(): boolean {
+    if (canUseReadAloud) return false;
+    openReadAloudOffer();
+    return true;
+  }
+
   function selectVoiceEngine(engine: VoiceEngine) {
+    if (engine === "device" && readAloudBlocked()) return;
     if (engine === "local_ai" && !entitlement.features.ai) {
       openFeatureLock(
-        "Unlock Edge AI voice",
-        "Edge AI voice is included in AI Pro and Power. Upgrade to use on-device AI voice; Device voice stays available without AI cost."
+        "Unlock rF AI voice",
+        "rF AI voice is included in AI Pro and Power. Reader Plus and higher include Phone voice without cloud AI cost."
       );
       return;
     }
     if (engine === "local_ai" && !readingLanguage.edgeAi) {
       openFeatureLock(
-        "Edge AI language pack",
-        `Edge AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`
+        "rF AI language pack",
+        `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`
       );
       return;
     }
     if (engine === "local_ai" && localVoiceReady === false) {
       openFeatureLock(
-        "Download Edge AI",
-        "Edge AI is not ready on this phone. Go to Voice on the shelf, download Edge AI, then choose Edge AI again. Until then, use Device voice or Cloud AI."
+        "Download rF AI",
+        "rF AI is not ready on this phone. Go to Voice on the shelf, download rF AI, then choose rF AI again. Until then, use Phone voice or Cloud AI on eligible plans."
       );
       return;
     }
@@ -396,7 +421,7 @@ export function Reader({
     if (engine === "cloud" && !canUseCloudVoice) {
       openFeatureLock(
         "Cloud AI voice",
-        "Cloud AI is our highest-quality voice and is included in AI Pro and Power. Device voice and Edge AI stay available without OpenAI cost."
+        "Cloud AI is our highest-quality voice and is included in AI Pro and Power. Phone voice and rF AI stay available on eligible plans without OpenAI cost."
       );
       return;
     }
@@ -414,29 +439,29 @@ export function Reader({
         "Unlock Cloud AI voice",
         readingLanguage.cloudAiVoice
           ? "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Upgrade to use our highest-quality AI voice."
-          : `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Device voice now; we will add this language after quality testing.`
+          : `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Phone voice on eligible plans while we add this language after quality testing.`
       );
       return true;
     }
     if (preferences.voiceEngine !== "local_ai") return false;
     if (!entitlement.features.ai) {
       openFeatureLock(
-        "Unlock Edge AI voice",
-        "Edge AI voice is included in AI Pro and Power. Upgrade to use on-device AI voice; Device voice stays available without AI cost."
+        "Unlock rF AI voice",
+        "rF AI voice is included in AI Pro and Power. Reader Plus and higher include Phone voice without cloud AI cost."
       );
       return true;
     }
     if (!readingLanguage.edgeAi) {
       openFeatureLock(
-        "Edge AI language pack",
-        `Edge AI is available for English right now. Use Device voice for ${readingLanguage.label} until we add this language pack.`
+        "rF AI language pack",
+        `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} on eligible plans until we add this language pack.`
       );
       return true;
     }
     if (localVoiceReady === false) {
       openFeatureLock(
-        "Download Edge AI",
-        "Edge AI is not ready on this phone. Go to Voice on the shelf, download Edge AI, then choose Edge AI again."
+        "Download rF AI",
+        "rF AI is not ready on this phone. Go to Voice on the shelf, download rF AI, then choose rF AI again."
       );
       return true;
     }
@@ -583,10 +608,14 @@ export function Reader({
     const target = onPage[Math.min(a.within, onPage.length - 1)];
     return target ? target.id : indexRef.current;
   }
+  function planPageCap(): number {
+    const cap = Number(entitlement.limits.perDocPageCap ?? freePageLimit);
+    return Number.isFinite(cap) && cap > 0 ? cap : 0;
+  }
   function freeCap(): number {
     if (doc.truncated && doc.pageCap) return Math.min(totalPages, doc.pageCap);
-    if (!ENFORCE_FREE_LIMIT) return totalPages;
-    return Math.min(totalPages, freePageLimit);
+    const cap = planPageCap();
+    return cap > 0 ? Math.min(totalPages, cap) : totalPages;
   }
   function isBeyondReturnedPageCap(page: number): boolean {
     return Boolean(doc.truncated && doc.pageCap && page > doc.pageCap);
@@ -594,7 +623,7 @@ export function Reader({
   function openPageLimitOffer() {
     openFeatureLock(
       "Page limit reached",
-      `This plan includes the first ${doc.pageCap || freePageLimit} pages of this document. Upgrade to Reader Plus for full native-text books.`
+      `This plan includes the first ${doc.pageCap || planPageCap() || freePageLimit} pages of this document. Upgrade to Reader Plus for full native-text books.`
     );
   }
 
@@ -913,7 +942,7 @@ export function Reader({
           cloudVoiceLimitWarnedRef.current = true;
             openFeatureLock(
               "AI voice allowance used",
-            "Your Cloud AI allowance is used for this month. Device voice will keep reading for free. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
+            "Your Cloud AI allowance is used for this month. Phone voice can keep reading on Reader Plus and higher without cloud AI cost. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
           );
       } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
           localVoiceWarnedRef.current = true;
@@ -929,16 +958,16 @@ export function Reader({
           ttsRef.current = createTTSProvider("device");
           setVoiceMode("device");
           openFeatureLock(
-            "Edge AI not ready",
+            "rF AI not ready",
             info.message ||
-              "Download Edge AI from the Voice panel, or keep reading with device voice."
+              "Download rF AI from the Voice panel, or keep reading with Phone voice on an eligible plan."
           );
         } else if (info.reason === "language_unsupported" && !cloudVoiceLanguageWarnedRef.current) {
           cloudVoiceLanguageWarnedRef.current = true;
           openFeatureLock(
             "Cloud AI voice QA",
             info.message ||
-              "Cloud AI voice is not release-ready for this language yet. Device voice will keep reading."
+              "Cloud AI voice is not release-ready for this language yet. Phone voice can keep reading on eligible plans."
           );
         }
       },
@@ -974,6 +1003,7 @@ export function Reader({
   }
 
   function play() {
+    if (readAloudBlocked()) return;
     if (voiceAccessBlocked()) return;
     playingRef.current = true;
     setIsPlaying(true);
@@ -1008,6 +1038,7 @@ export function Reader({
       setChromeVisible((v) => !v);
       return;
     }
+    if (readAloudBlocked()) return;
     if (voiceAccessBlocked()) return;
     epochRef.current++; // invalidate the sentence we're interrupting (prevents double-read)
     ttsRef.current.stop();
@@ -1020,6 +1051,7 @@ export function Reader({
   onTapWordRef.current = onTapWord;
 
   function toggleSound() {
+    if (!soundEnabledRef.current && readAloudBlocked()) return;
     setSoundEnabled((on) => {
       const next = !on;
       if (!next) {
@@ -1090,6 +1122,7 @@ export function Reader({
     setCurrent(globalId);
     scrollToIndexSafe(globalId, false);
     if (autoplay) {
+      if (readAloudBlocked()) return;
       playingRef.current = true;
       setIsPlaying(true);
       setTimeout(() => speakAt(globalId), 150);
@@ -1353,7 +1386,7 @@ export function Reader({
           onPress={() =>
             openFeatureLock(
               "Unlock AI",
-              "Summaries, explanations, Q&A, and capped Cloud AI are part of AI Pro. Device voice stays unlimited."
+              "Summaries, explanations, Q&A, and capped Cloud AI are part of AI Pro. Reader Plus keeps Phone voice available without cloud voice cost."
             )
           }
         >

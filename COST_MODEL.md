@@ -51,15 +51,15 @@ Current cloud voice implementation:
 - `backend/src/routes/tts.ts` defaults to `tts-1-hd`, and `render.yaml` also
   sets `TTS_MODEL=tts-1-hd`. This is the more expensive legacy TTS model, so the
   current allowances are deliberately small.
-- Source `1.0.18` adds a real Edge AI voice path with `react-native-sherpa-onnx`
+- Source `1.0.18` adds a real rF AI voice path with `react-native-sherpa-onnx`
   and an on-demand Supertonic Reader model. It has no OpenAI per-character bill,
   but it requires a new native/EAS build and consumes the user's phone CPU,
   storage, and battery.
-- The app now presents voice choices as Device voice, Edge AI, and Cloud AI.
-  Edge AI is the local Sherpa/Supertonic path and should be marketed as
+- The app now presents voice choices as Device voice, rF AI, and Cloud AI.
+  rF AI is the local Sherpa/Supertonic path and should be marketed as
   no-cloud, battery/CPU-based reading. Cloud AI is the OpenAI-backed path and
   must remain paid/capped by `cloudVoiceChars`.
-- Edge AI currently downloads `sherpa-onnx-supertonic-tts-int8-2026-03-06` on
+- rF AI currently downloads `sherpa-onnx-supertonic-tts-int8-2026-03-06` on
   demand (about 81 MB) instead of bundling it in the app, so APK/AAB size does
   not grow by the model size until the user chooses to download it. This replaced
   the first 20 MB Piper test voice because the smaller model sounded too robotic
@@ -67,7 +67,8 @@ Current cloud voice implementation:
 - Free-tier source now follows the latest product decision: 1 imported PDF per
   month and the first 100 pages of a native-text document. The backend returns
   `truncated/pageCap` so the reader can show a page-limit message instead of
-  mistaking page 101 for a scanned page.
+  mistaking page 101 for a scanned page. Source `1.0.23` also blocks
+  Listen/read-aloud for Free and routes it to a Reader Plus upgrade prompt.
 - Reader Plus is now intentionally non-OCR: ad-free/full native-text reading,
   larger imports, and device voice. Scanned/image PDFs require AI Pro or Power.
 - Cloud AI voice is language-quality gated. Persian, Arabic, Russian, Hindi,
@@ -75,8 +76,10 @@ Current cloud voice implementation:
   passes; the app falls back to Phone voice instead of letting paid users hear a
   bad cloud result.
 
-Do not launch public subscriptions until RevenueCat identity is wired and the
-free limits are explicit and enforced by the backend/mobile app.
+Do not launch public subscriptions until RevenueCat/Play Billing identity is
+wired. Source `1.0.23` adds a local install id for `x-app-user-id`, which is good
+enough to avoid one shared anonymous quota bucket, but it is not a purchase
+identity and can be reset by reinstalling.
 
 ## Key Principle
 
@@ -316,7 +319,7 @@ nets well above the $3 OpenAI cost on `tts-1-hd`.
 
 Current implementation choice: `react-native-sherpa-onnx` with Supertonic TTS,
 specifically `sherpa-onnx-supertonic-tts-int8-2026-03-06` (Supertonic
-Reader/Edge AI). The model is downloaded on demand from the Sherpa model
+Reader/rF AI). The model is downloaded on demand from the Sherpa model
 registry instead of being bundled in every app install.
 
 Why it is useful:
@@ -346,8 +349,8 @@ Implementation status:
 - DONE in source: `LocalNeuralTTSProvider` generates WAV clips through Sherpa,
   caches them, plays them with `expo-audio`, and reports progress to the same
   line-highlighting path as cloud voice.
-- DONE in source: if local AI is not ready, the reader falls back to the selected
-  device voice and explains the issue once.
+- DONE in source: if local AI is not ready, the reader stops rF AI playback and
+  explains the issue once instead of silently switching to phone voice.
 - DONE: clean local debug APK builds on Windows from a short temp path without
   spending EAS quota. Supertonic still needs on-device listening QA after the
   model downloads.
@@ -435,19 +438,19 @@ force a larger instance if public usage grows.
 
 This is the conservative, profit-protecting plan shape as of 2026-06-29.
 It intentionally makes Reader Plus a strong non-AI reading product while keeping
-OCR, Edge AI, Cloud AI, and AI questions as clear upgrade reasons.
+OCR, rF AI, Cloud AI, and AI questions as clear upgrade reasons.
 
 | Tier | Suggested price | What should be included | Cost risk |
 | --- | ---: | --- | --- |
 | Free | $0 | 1 saved book, about 100 pages, native text preview, bookmarks/basic settings, no read-aloud | Render CPU/bandwidth only |
 | Reader Plus | $4.99/mo | Ad-free full native-text reading, larger library, device read-aloud, themes, bookmarks, focus/follow, good multilingual text-layer PDFs | Render import CPU/bandwidth |
-| AI Pro | $11.99-$14.99/mo | Everything in Reader Plus, OCR, Edge AI voice, limited AI Q&A/summaries, small Cloud AI voice allowance | Fine if OCR/AI/cloud voice are capped |
+| AI Pro | $11.99-$14.99/mo | Everything in Reader Plus, OCR, rF AI voice, limited AI Q&A/summaries, small Cloud AI voice allowance | Fine if OCR/AI/cloud voice are capped |
 | Power | $24.99-$29.99/mo | Higher OCR/AI/cloud voice limits, larger books, exports/batch tools, priority heavy-reader features | Must hard-cap cloud voice |
 | AI voice / OCR packs | Separate add-on | Extra Cloud AI voice characters or extra OCR pages after monthly limits | Best match to real marginal cost |
 
 Recommended starting limits:
 
-| Tier | OCR pages / month | AI actions / month | Cloud AI voice / month | Edge AI |
+| Tier | OCR pages / month | AI actions / month | Cloud AI voice / month | rF AI |
 | --- | ---: | ---: | ---: | --- |
 | Free | 0 | 0 | 0 | No |
 | Reader Plus | 0 | 0 | 0 | No |
@@ -457,11 +460,11 @@ Recommended starting limits:
 Upgrade logic:
 
 - Free users should understand the app value through the reading layout, but
-  Listen, OCR, Edge AI, Cloud AI, and Ask AI should show a clean upgrade prompt.
+  Listen, OCR, rF AI, Cloud AI, and Ask AI should show a clean upgrade prompt.
 - Reader Plus should be excellent for real readers of proper PDFs and Word
   files. It should not include OCR or AI; scanned/image PDFs should clearly say
   AI Pro can unlock them with OCR.
-- AI Pro should feel like the main paid plan: OCR for scanned books, Edge AI
+- AI Pro should feel like the main paid plan: OCR for scanned books, rF AI
   with no cloud voice cost, and enough AI help to taste the value without making
   unlimited OpenAI spend possible.
 - Power is for heavy scanned books, study/research use, exports, and higher
@@ -503,16 +506,15 @@ are also weak and can punish shared networks. For public release, send a stable
    generic `ai`.
 4. DONE: backend `/api/tts` is gated by `cloudVoice` and monthly character
    usage.
-5. DONE in source: first Edge AI voice uses Sherpa-ONNX plus on-demand
+5. DONE in source: first rF AI voice uses Sherpa-ONNX plus on-demand
    Supertonic Reader, outside cloud voice quota. Needs native phone QA before
    product claims.
-6. Product recommendation: Edge AI starts at AI Pro, not Free/Reader Plus. It has
+6. Product recommendation: rF AI starts at AI Pro, not Free/Reader Plus. It has
    no vendor bill, but it is a premium-feeling feature and a strong upgrade
    reason.
-7. Product recommendation: Free is 1 book/about 100 pages with no read-aloud.
-   Backend/mobile currently need to be updated if this decision is approved.
-8. Wire RevenueCat production SDK/user id so limits follow a user/install, not
-   only a local device state.
+7. DONE in source: Free is 1 book/about 100 pages with no read-aloud.
+8. Wire RevenueCat production SDK/user id so paid limits follow the Play account
+   / RevenueCat customer, not only a local device install id.
 9. Move OpenAI production billing to a dedicated readFlow project/key with spend
    alerts.
 10. Re-check OpenAI model pricing and choose the AI text model/TTS model

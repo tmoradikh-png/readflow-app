@@ -107,7 +107,7 @@ export default function App() {
             preferences={preferences}
             onPreferencesChange={updatePreferences}
             language={readingLanguage.voiceLanguage}
-            freePageLimit={10}
+            freePageLimit={entitlement.limits.perDocPageCap ?? 100}
             startSentenceId={item?.lastSentenceId ?? 0}
             onProgress={handleProgress}
             onBack={() => {

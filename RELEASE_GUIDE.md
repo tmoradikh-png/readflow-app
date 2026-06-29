@@ -1,7 +1,7 @@
-# readFlow Android Release Guide (Free app, Internal Testing)
+# readFlow Android Release Guide (Play Store)
 
 App: **readFlow** · Package: **com.urmiaworks.readflow**
-Org: Urmia Works · Free app (in‑app purchases added later)
+Org: Urmia Works · Android package is permanent after first Play upload
 
 EAS account: **tohid123** · Project: **tohid123/readflow**
 (projectId `097b0b5a-db90-46b4-b434-60836687b429`)
@@ -11,6 +11,56 @@ notes, start with **[PROJECT.md](PROJECT.md)**.
 
 > **Sections 0–5 below are the original first‑time setup guide.**
 > **If you just want to ship a new version, read [TL;DR — Cut a NEW build](#tldr--cut-a-new-build-do-this-every-release) first.**
+
+---
+
+## Public Release Gate — 2026-06-29
+
+Current source release candidate: **1.0.23 / Android versionCode 23**.
+
+What is already prepared in source:
+- `mobile/app.json` points at the public backend host
+  `https://readflow-backend.onrender.com`.
+- `npm run check:release` now blocks internal Render URLs, duplicate Android
+  permissions, Android microphone permission, background-audio declarations,
+  missing app-user-id support, stale version numbers, and unsafe public Render
+  dev-override blueprints.
+- Android permissions are intentionally minimal for Play review: `INTERNET`.
+  `expo-audio` is configured with `recordAudioAndroid:false` and
+  `microphonePermission:false`.
+- Free tier is a limited manual-reading preview: 1 document/month, first 100
+  pages of native-text documents, no Listen/read-aloud, no OCR, no rF AI, no
+  Cloud AI, and no AI Q&A.
+- The mobile app sends a locally generated `x-app-user-id` so free backend
+  quotas are per install instead of one global `"anonymous"` bucket.
+
+Do **not** upload a public production release until these account/server items
+are complete:
+- Production Render service `readflow-backend` is deployed and
+  `https://readflow-backend.onrender.com/api/health` returns `200`.
+  On 2026-06-29 it returned `503`; the internal service
+  `readflow-backend-internal` was healthy but must not be used for public
+  release because it grants dev paid access.
+- Render production env has `ENTITLEMENTS_DEV_OVERRIDE=false`,
+  production `APP_KEY`, production `OPENAI_API_KEY`, and production
+  `RC_SECRET_KEY` if subscriptions are sold.
+- Play Billing/RevenueCat mobile SDK is not wired yet. Until that is done, a
+  public build can only be a free-preview app with paid features locked and
+  purchase buttons unavailable. To sell Reader Plus / AI Pro / Power, add the
+  SDK, configure Google Play products, RevenueCat offerings/entitlements, and
+  send RevenueCat's app-user id to the backend.
+- Privacy policy URL must be live and must explain document upload/extraction,
+  OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
+  deletion/contact flow.
+- Play Console App content must be complete: Data safety, privacy policy,
+  target audience, ads declaration, content rating, and review access notes.
+
+For a real paid launch, the order is:
+1. Deploy/fix production Render backend.
+2. Wire Play Billing/RevenueCat in mobile and test sandbox purchases.
+3. Run `npm run check:release`.
+4. Run an EAS Android production/internal AAB build with a new versionCode.
+5. Upload to Play internal testing first, then promote after phone QA.
 
 ---
 
@@ -48,13 +98,13 @@ The first line is the most recent build. **Next free code = highest `appBuildVer
 Set `versionCode` to the next free code and bump the version name. Both must agree.
 
 1. `mobile/app.json`:
-   - `expo.version` → e.g. `"1.0.14"`
-   - `expo.ios.buildNumber` → `"14"`
-   - `expo.android.versionCode` → `14`
+  - `expo.version` → e.g. `"1.0.23"`
+  - `expo.ios.buildNumber` → `"23"`
+  - `expo.android.versionCode` → `23`
 2. `mobile/scripts/check-release-config.mjs` — update the three expected values to
    match (it hard‑checks `versionCode` and `version` so a stale bump fails loudly):
-   - `android.versionCode === 14`
-   - `version === "1.0.14"`
+   - `EXPECTED_VERSION_CODE`
+   - `EXPECTED_VERSION`
    - and their two `fail(...)` message strings.
 
 ### Step 3 — (If the icon changed) regenerate icons from the CLEAN source
@@ -109,15 +159,15 @@ https://expo.dev/accounts/tohid123/projects/readflow/builds
 > new icon or version: **uninstall** the old readFlow from the phone, then **reinstall**
 > from the Play internal‑testing link. A plain in‑place update may keep the old icon.
 
-If the build includes Edge AI voice, test it only in the fresh native build:
-open Voice, download the Supertonic Reader/Edge AI voice, select it, and
+If the build includes rF AI voice, test it only in the fresh native build:
+open Voice, download the Supertonic Reader/rF AI voice, select it, and
 verify local reading/highlighting. Expo Go and older installed builds cannot
 test the Sherpa native module.
 
 Current readFlow QA checklist for any build that changes reading/voice:
 - Fresh-install the app and verify the launcher icon shows the full clean book
   mark, including the red spine.
-- Open Voice and confirm the choices read as Device voice, Edge AI, and Cloud
+- Open Voice and confirm the choices read as Device voice, rF AI, and Cloud
   AI; Android raw voice ids should not dominate the UI.
 - Tap locked/limited Voice options and invalid navigation inputs; warnings
   should use the readFlow themed notice, not a dark native Android alert.
@@ -126,7 +176,7 @@ Current readFlow QA checklist for any build that changes reading/voice:
   `cloudVoiceCharsPerMonth`, and `/api/health` should report
   `ttsProvider: cloud`.
 - Open Book language, choose a non-English language, then reopen Voice. Phone
-  voices should filter to that language, Edge AI should say English-only for
+  voices should filter to that language, rF AI should say English-only for
   now, and new scanned imports should use the matching OCR language.
 - For Persian/Arabic, import both a native-text PDF and a scanned/image PDF.
   Reopen any previously cached broken Persian book after selecting Persian; it
@@ -161,8 +211,8 @@ Current readFlow QA checklist for any build that changes reading/voice:
   should not show an OCR upsell just because the file has one blank or decorative
   page.
 - Open the reader settings menu and confirm the quick selector reads Device,
-  Edge AI, and Cloud AI. Locked Cloud AI should open a clean upgrade prompt.
-- Download/select Edge AI, play several paragraphs, and check for natural
+  rF AI, and Cloud AI. Locked Cloud AI should open a clean upgrade prompt.
+- Download/select rF AI, play several paragraphs, and check for natural
   enough voice quality, short paragraph gaps, and line highlight following the
   spoken text.
 - For Persian, Cloud AI voice should be unavailable/QA-labeled and the app
@@ -391,7 +441,7 @@ service‑account key in Play Console → Setup → API access.)
 
 - ✅ No subscriptions / no in‑app purchases yet.
 - ✅ No AI paid limits / paywall (paywall code is inert; `ENFORCE_FREE_LIMIT=false`).
-- ✅ Permissions: INTERNET only. No background location, contacts, SMS, call log.
+- ✅ Permissions: INTERNET only. No microphone, background location, contacts, SMS, call log.
 - ✅ No medical/health claims. No misleading "free AI" wording in the listing.
 - ✅ Core features shipped: PDF import · read‑aloud (device + natural voice) · OCR fallback ·
   remembers reading position · font/spacing/speed settings · privacy policy · support contact.
@@ -447,8 +497,12 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 15 | 1.0.15 | 34cd381c | finished | finished reader design + AI voice sync/tail fix + exact clean icon |
 | 16 | 1.0.16 | 7b4d5904 | finished | Android adaptive icon safe-zone fix (0.66 foreground scale) |
 | 17 | 1.0.17 | 2900d21c | finished | active line highlight + free audio foreground-only + natural voice lock-screen controls. AAB: https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab |
+| 18-22 | 1.0.18-1.0.22 | local only / no EAS id recorded | phone QA builds | rF AI, multilingual OCR/text repair, OCR controls, scroll/audio fixes installed via local APKs |
+| 23 | 1.0.23 | pending | source release candidate | Play release prep: public backend URL, no mic/background audio, per-install app-user id, Free no Listen, release checker hardened |
 
-**Next free versionCode: 18.**
+**Source candidate versionCode: 23.** Before spending EAS quota, still run
+`eas build:list` and pick a higher code if any account build has consumed 23 or
+above.
 
 ### Lessons baked into this guide (do not relearn the hard way)
 - **Never reuse a versionCode.** Build `f2511def` reused code 13 → a paid build was

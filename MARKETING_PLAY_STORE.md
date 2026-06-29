@@ -21,7 +21,7 @@ readFlow turns supported PDFs and text-based Word `.docx` documents into a
 phone-first reading experience.
 Instead of forcing users to pinch and zoom a fixed page, it extracts the text,
 reflows it into readable mobile typography, highlights the current line or
-paragraph, and can read aloud with phone voice, Edge AI voice, or capped Cloud AI
+paragraph, and can read aloud with phone voice, rF AI voice, or capped Cloud AI
 voice depending on the plan and language.
 
 Recommended one-line positioning:
@@ -92,7 +92,7 @@ Careful claim:
 ### Voice options
 
 - Phone voice: uses the device's installed voices. No per-hour vendor cost.
-- Edge AI voice: downloaded on-device voice for eligible phones. Uses local CPU,
+- rF AI voice: downloaded on-device voice for eligible phones. Uses local CPU,
   storage, and battery after model download.
 - Cloud AI voice: higher quality cloud voice for approved languages and paid
   plans, with monthly allowance.
@@ -180,7 +180,7 @@ Current limits:
 - Manual reading only; no read-aloud/listen mode.
 - No AI answers.
 - No OCR.
-- No Edge AI voice.
+- No rF AI voice.
 - No Cloud AI voice.
 
 ### Reader Plus
@@ -191,7 +191,7 @@ Purpose:
 
 Message:
 
-> Full native-text reading, ad-free, with unlimited device voice.
+> Full native-text reading, ad-free, with Phone voice and no cloud voice cost.
 
 Includes:
 
@@ -221,7 +221,7 @@ Includes:
 - 500 AI actions/month.
 - 1,000 OCR pages/month.
 - 60,000 Cloud AI voice characters/month for approved languages.
-- Edge AI voice option where supported.
+- rF AI voice option where supported.
 
 ### Power
 
@@ -255,14 +255,14 @@ Read PDFs and text-based Word docs in a clean phone view, listen aloud, and ask 
 readFlow helps make long PDFs and text-based Word `.docx` documents easier to
 read on your phone.
 It turns supported documents into a clean mobile reading view, keeps your place,
-and can read aloud with device voice, Edge AI voice, or capped Cloud AI voice
+and can read aloud with device voice, rF AI voice, or capped Cloud AI voice
 depending on your plan, device, and language.
 
 Features:
 
 - Reflow supported PDFs and text-based Word `.docx` documents into phone-friendly text
 - Listen with device voice at no cloud voice cost
-- Use Edge AI voice on eligible phones after downloading the voice model
+- Use rF AI voice on eligible phones after downloading the voice model
 - Use capped Cloud AI voice on supported paid plans and approved languages
 - Highlight text while listening
 - Bookmark pages and continue where you left off
@@ -322,7 +322,7 @@ Important notes:
 
 5. Voice:
    - Phone voice for long listening.
-   - Edge AI voice for local AI narration on supported devices.
+   - rF AI voice for local AI narration on supported devices.
    - Cloud AI voice for capped premium narration.
 
 6. Trust and limitations:
@@ -353,7 +353,7 @@ Use this for OCR:
 Use this for AI voice:
 
 > Cloud AI voice is capped by monthly allowance and enabled only for languages
-> that pass quality testing. Edge AI voice runs on supported phones after model
+> that pass quality testing. rF AI voice runs on supported phones after model
 > download and may use battery, CPU, and storage.
 
 Use this for AI answers:
@@ -368,7 +368,7 @@ Make sure the website and store assets mention:
 - Phone-first PDF/Word reading
 - Reflowed text instead of pinch-zoom
 - Device voice with no cloud voice cost
-- Edge AI voice as an on-device option
+- rF AI voice as an on-device option
 - Capped Cloud AI voice for paid plans
 - AI summaries, explanations, key points, and Q&A
 - OCR for scanned PDFs on AI plans

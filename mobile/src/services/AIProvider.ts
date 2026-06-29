@@ -1,4 +1,5 @@
 import { API_BASE, apiHeaders } from "../config";
+import { loadAppUserId } from "./AppIdentity";
 
 export type AITask = "summary" | "explain" | "simplify" | "key_points" | "ask";
 
@@ -24,6 +25,7 @@ export const AIProvider = {
     question?: string;
     language?: string;
   }): Promise<AIResult> {
+    await loadAppUserId();
     const key = `${params.task}|${params.language || ""}|${params.question || ""}|${params.text.slice(0, 200)}|${params.text.length}`;
     const cached = memoryCache.get(key);
     if (cached) return cached;

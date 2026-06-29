@@ -24,7 +24,10 @@ function readUtf8(filePath) {
 const appJson = JSON.parse(readUtf8(appJsonPath));
 const expo = appJson.expo || {};
 const android = expo.android || {};
+const ios = expo.ios || {};
 const extra = expo.extra || {};
+const EXPECTED_VERSION = "1.0.23";
+const EXPECTED_VERSION_CODE = 23;
 
 // 1) applicationId
 if (android.package === "com.urmiaworks.readflow") {
@@ -34,36 +37,78 @@ if (android.package === "com.urmiaworks.readflow") {
 }
 
 // 2) versionCode
-if (android.versionCode === 22) {
-  pass("versionCode is 22");
+if (android.versionCode === EXPECTED_VERSION_CODE) {
+  pass(`versionCode is ${EXPECTED_VERSION_CODE}`);
 } else {
-  fail(`versionCode expected 22 but got ${String(android.versionCode)}`);
+  fail(`versionCode expected ${EXPECTED_VERSION_CODE} but got ${String(android.versionCode)}`);
 }
 
 // 3) versionName
-if (expo.version === "1.0.22") {
-  pass("versionName is 1.0.22");
+if (expo.version === EXPECTED_VERSION) {
+  pass(`versionName is ${EXPECTED_VERSION}`);
 } else {
-  fail(`versionName expected 1.0.22 but got ${expo.version || "(missing)"}`);
+  fail(`versionName expected ${EXPECTED_VERSION} but got ${expo.version || "(missing)"}`);
 }
 
-// 4) apiUrl points to Render HTTPS URL
-const apiUrl = String(extra.apiUrl || "").trim();
+// 4) apiUrl points to the public Render HTTPS URL (env can override app.json)
+const apiUrl = String(process.env.EXPO_PUBLIC_API_URL || extra.apiUrl || "").trim();
 if (/^https:\/\/.+\.onrender\.com\/?$/i.test(apiUrl)) {
   pass("apiUrl points to Render HTTPS URL");
 } else {
   fail("apiUrl must be a non-empty Render HTTPS URL like https://<service>.onrender.com");
 }
+if (/internal/i.test(apiUrl)) {
+  fail("apiUrl points to an internal/dev backend. Use the public production Render service for Play release.");
+} else {
+  pass("apiUrl is not an internal/dev backend");
+}
 
 // 5) appKey present (must match Render APP_KEY manually)
-const appKey = String(extra.appKey || "").trim();
+const appKey = String(process.env.EXPO_PUBLIC_APP_KEY || extra.appKey || "").trim();
 if (appKey.length >= 16) {
   pass("appKey is set (verify it matches Render APP_KEY)");
 } else {
   fail("appKey is missing/too short. Set expo.extra.appKey to the same APP_KEY used in Render");
 }
 
-// 6) OpenAI key not inside mobile app
+// 6) Android permissions stay review-friendly for a reader app.
+const permissions = Array.isArray(android.permissions) ? android.permissions : [];
+const duplicatePermissions = permissions.filter((p, i) => permissions.indexOf(p) !== i);
+if (duplicatePermissions.length === 0) {
+  pass("Android permissions are not duplicated");
+} else {
+  fail(`Duplicate Android permissions: ${duplicatePermissions.join(", ")}`);
+}
+if (permissions.includes("android.permission.RECORD_AUDIO")) {
+  fail("RECORD_AUDIO is present but readFlow does not record audio. Remove it before Play release.");
+} else {
+  pass("No Android microphone permission requested");
+}
+
+function pluginConfig(name) {
+  const plugins = Array.isArray(expo.plugins) ? expo.plugins : [];
+  for (const plugin of plugins) {
+    if (plugin === name) return {};
+    if (Array.isArray(plugin) && plugin[0] === name) return plugin[1] || {};
+  }
+  return null;
+}
+
+const audioPlugin = pluginConfig("expo-audio");
+if (audioPlugin && audioPlugin.recordAudioAndroid === false && audioPlugin.microphonePermission === false) {
+  pass("expo-audio is configured without microphone access");
+} else {
+  fail("expo-audio must set recordAudioAndroid:false and microphonePermission:false for Play release");
+}
+
+const backgroundModes = ios.infoPlist?.UIBackgroundModes;
+if (Array.isArray(backgroundModes) && backgroundModes.includes("audio")) {
+  fail("iOS background audio mode is enabled even though readFlow is foreground-only");
+} else {
+  pass("No background-audio mode declared");
+}
+
+// 7) OpenAI key not inside mobile app
 const mobileSource = readUtf8(path.join(mobileDir, "src", "config.ts"));
 if (/OPENAI_API_KEY|sk-[A-Za-z0-9]/.test(mobileSource)) {
   fail("Possible OpenAI key reference found in mobile source");
@@ -71,7 +116,15 @@ if (/OPENAI_API_KEY|sk-[A-Za-z0-9]/.test(mobileSource)) {
   pass("No OpenAI key reference in mobile config source");
 }
 
-// 7) Public release config has ENTITLEMENTS_DEV_OVERRIDE=false
+// 8) Mobile sends an app-user id so public users do not share one anonymous quota bucket.
+const identitySource = readUtf8(path.join(mobileDir, "src", "services", "AppIdentity.ts"));
+if (/readflow:appUserId/.test(identitySource) && /x-app-user-id/.test(mobileSource)) {
+  pass("Mobile sends a stable app-user id header for backend quotas");
+} else {
+  fail("Mobile must send x-app-user-id from a stable install identity before public release");
+}
+
+// 9) Public release config has ENTITLEMENTS_DEV_OVERRIDE=false
 function hasDevOverrideFalse(content) {
   return /-\s*key:\s*ENTITLEMENTS_DEV_OVERRIDE[\s\S]{0,120}?value:\s*"?false"?/m.test(content);
 }

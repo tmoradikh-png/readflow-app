@@ -3,6 +3,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { SpeakOptions, TTSProvider } from "./TTSProvider";
 import { DeviceTTSProvider } from "./DeviceTTSProvider";
 import { API_BASE, apiHeaders } from "../../config";
+import { loadAppUserId } from "../AppIdentity";
 
 /**
  * CloudTTSProvider — natural voice via OUR backend (POST /api/tts -> OpenAI).
@@ -19,7 +20,7 @@ async function ensureAudioMode() {
   try {
     await setAudioModeAsync({
       playsInSilentMode: true,
-      shouldPlayInBackground: true,
+      shouldPlayInBackground: false,
       interruptionMode: "duckOthers",
     });
   } catch {
@@ -88,6 +89,7 @@ export class CloudTTSProvider implements TTSProvider {
     voice: string,
     language: string
   ): Promise<string> {
+    await loadAppUserId();
     const res = await fetch(`${API_BASE}/api/tts`, {
       method: "POST",
       headers: apiHeaders({ "Content-Type": "application/json" }),

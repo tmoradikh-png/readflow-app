@@ -2,7 +2,7 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.22",
+    "version": "1.0.23",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
@@ -20,24 +20,16 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urmiaworks.readflow",
-      "buildNumber": "22",
+      "buildNumber": "23",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "UIBackgroundModes": [
-          "audio"
-        ]
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 22,
+      "versionCode": 23,
       "permissions": [
-        "INTERNET",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "INTERNET",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
+        "INTERNET"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -60,11 +52,17 @@
           "resizeMode": "contain"
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "recordAudioAndroid": false,
+          "microphonePermission": false
+        }
+      ],
       "./plugins/withSherpaCodegenGradleFix"
     ],
     "extra": {
-      "apiUrl": "https://readflow-backend-internal.onrender.com",
+      "apiUrl": "https://readflow-backend.onrender.com",
       "appKey": "8bdafe087ef5b82bdc6790a2b9d62d29",
       "supportEmail": "support@urmiaworks.com",
       "website": "https://urmiaworks.com",
