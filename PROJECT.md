@@ -687,6 +687,10 @@ Recommended manual phone tests after installing a new build:
 - Open Voice, download Edge AI, select it, and verify the first
   paragraph generates locally, then subsequent/repeated paragraphs play from
   cache.
+- Edge AI currently keeps six upcoming chunks warm and normalizes speech-only
+  text before synthesis (ligatures, hidden soft hyphens, typographic quotes,
+  and obvious app/document acronyms). Keep this conservative; broader word
+  rewrites can create new mispronunciations.
 - Device voice reads in sync.
 - Natural/cloud voice reads the same text, highlights the current line, and does
   not skip final words.

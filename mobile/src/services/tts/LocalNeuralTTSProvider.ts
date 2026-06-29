@@ -121,7 +121,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
   }
 
   async prefetch(text: string, opts: SpeakOptions): Promise<void> {
-    const t = (text || "").trim();
+    const t = normalizeLocalSpeechText(text);
     if (!t) return;
 
     const timer = setTimeout(() => {
@@ -134,7 +134,8 @@ export class LocalNeuralTTSProvider implements TTSProvider {
   async speak(text: string, opts: SpeakOptions): Promise<void> {
     const mySeq = ++this.seq;
     const speed = clampSpeed(opts.rate);
-    const t = (text || "").trim();
+    const rawText = (text || "").trim();
+    const t = normalizeLocalSpeechText(rawText);
     if (!t) {
       opts.onDone?.();
       return;
@@ -151,7 +152,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
         reason: "local_unavailable",
         message: "Edge AI is not ready. Continuing with device voice.",
       });
-      return this.device.speak(t, { ...opts, voiceId: opts.fallbackVoiceId });
+      return this.device.speak(rawText, { ...opts, voiceId: opts.fallbackVoiceId });
     }
     if (mySeq !== this.seq) return;
 
@@ -231,7 +232,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
         reason: "local_unavailable",
         message: "Edge AI could not play. Continuing with device voice.",
       });
-      return this.device.speak(t, { ...opts, voiceId: opts.fallbackVoiceId });
+      return this.device.speak(rawText, { ...opts, voiceId: opts.fallbackVoiceId });
     }
   }
 
@@ -306,6 +307,29 @@ function clampSpeed(rate?: number): number {
 
 function tailGuardMs(speed: number): number {
   return Math.round(Math.max(80, Math.min(180, 140 / speed)));
+}
+
+function normalizeLocalSpeechText(value: string): string {
+  return (value || "")
+    .normalize("NFKC")
+    .replace(/\u00ad/g, "")
+    .replace(/[“”„‟]/g, '"')
+    .replace(/[‘’‚‛]/g, "'")
+    .replace(/[‐‑‒–—―]/g, "-")
+    .replace(/[…]/g, "...")
+    .replace(/&/g, " and ")
+    .replace(/%/g, " percent ")
+    .replace(/\bAI\b/g, "A I")
+    .replace(/\bOCR\b/g, "O C R")
+    .replace(/\bPDF\b/g, "P D F")
+    .replace(/\bDr\./g, "Doctor")
+    .replace(/\bMr\./g, "Mister")
+    .replace(/\bMrs\./g, "Missus")
+    .replace(/\bMs\./g, "Miss")
+    .replace(/\bProf\./g, "Professor")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .trim();
 }
 
 function toNativePath(uri: string): string {

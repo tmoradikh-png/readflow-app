@@ -77,6 +77,7 @@ interface SpeechChunk {
 
 const ENFORCE_FREE_LIMIT = false;
 const TTS_PREFETCH_AHEAD = 8;
+const LOCAL_AI_PREFETCH_AHEAD = 6;
 const LOCAL_AI_MAX_CHARS = 420;
 const LOCAL_AI_MAX_SENTENCES = 2;
 const KEEP_AWAKE_TAG = "readflow-reading";
@@ -753,7 +754,7 @@ export function Reader({
     // Warm upcoming clips through the provider's in-flight cache so natural
     // voice can hand off smoothly without charging/fetching duplicates.
     let nextIndex = chunk.nextIndex;
-    const prefetchAhead = voiceMode === "local" ? 4 : TTS_PREFETCH_AHEAD;
+    const prefetchAhead = voiceMode === "local" ? LOCAL_AI_PREFETCH_AHEAD : TTS_PREFETCH_AHEAD;
     for (let ahead = 1; ahead <= prefetchAhead; ahead++) {
       const nextChunk = buildSpeechChunk(nextIndex, f, voiceMode);
       if (!nextChunk) break;
