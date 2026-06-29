@@ -215,6 +215,13 @@ export function isNetworkError(e: unknown): boolean {
   );
 }
 
+/** True when the app is pointed at a developer machine instead of hosted Render. */
+export function isLocalBackendTarget(): boolean {
+  return /^http:\/\/(localhost|127\.0\.0\.1|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/i.test(
+    API_BASE
+  );
+}
+
 export function apiErrorCode(e: unknown): string {
   return String((e as any)?.code || (e as any)?.message || "");
 }

@@ -12,7 +12,12 @@ import {
 import Constants from "expo-constants";
 import * as Speech from "expo-speech";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { PDFParser, ParsedPdf, isNetworkError } from "../services/PDFParser";
+import {
+  PDFParser,
+  ParsedPdf,
+  isLocalBackendTarget,
+  isNetworkError,
+} from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
 import { Bookmarks } from "../services/Bookmarks";
@@ -142,7 +147,7 @@ export function LibraryScreen({
     } catch (e: any) {
       setError(
         isNetworkError(e)
-          ? "You're offline. Connect to the internet to add a new book — once added it works offline."
+          ? importConnectionMessage()
           : e?.message || "Could not read that PDF."
       );
     } finally {
@@ -182,15 +187,9 @@ export function LibraryScreen({
           if (cached && cacheMatchesLanguage && isNetworkError(netErr)) {
             // Offline: open whatever text we already saved.
             doc = DocCache.toParsed(cached);
-            setError(
-              "You're offline — opened the saved copy. Any scanned pages will finish loading when you reconnect."
-            );
+            setError(savedCopyConnectionMessage());
           } else if (isNetworkError(netErr)) {
-            setError(
-              cached
-                ? `Connect once to reopen this book with ${readingLanguage.label} extraction.`
-                : "You're offline and this book isn't saved for offline reading yet. Open it once with internet, then it'll work in airplane mode."
-            );
+            setError(reopenConnectionMessage(Boolean(cached), readingLanguage.label));
             return;
           } else {
             throw netErr;
@@ -444,6 +443,31 @@ function formatChars(n: number): string {
 
 function estimatePages(chars: number): number {
   return Math.max(0, Math.floor(chars / 1650));
+}
+
+function importConnectionMessage(): string {
+  if (isLocalBackendTarget()) {
+    return "This test build can't reach the ReadFlow backend on this computer. Keep the USB cable connected and make sure the local backend is running, then try again.";
+  }
+  return "ReadFlow couldn't reach the document extraction server. Your internet may be fine; please try again in a moment.";
+}
+
+function reopenConnectionMessage(hasCachedCopy: boolean, languageLabel: string): string {
+  if (isLocalBackendTarget()) {
+    return hasCachedCopy
+      ? `This test build can't reach the local backend to reopen this book with ${languageLabel} extraction. Keep USB connected and make sure the backend is running, then try again.`
+      : "This test build can't reach the ReadFlow backend on this computer. Keep USB connected and make sure the backend is running, then try again.";
+  }
+  return hasCachedCopy
+    ? `ReadFlow couldn't reach the extraction server to reopen this book with ${languageLabel} extraction. Please try again in a moment.`
+    : "ReadFlow couldn't reach the extraction server and this book is not saved for offline reading yet. Open it once after the server is reachable, then it will work offline.";
+}
+
+function savedCopyConnectionMessage(): string {
+  if (isLocalBackendTarget()) {
+    return "Opened the saved copy. Scanned pages will finish after the local backend is reachable again.";
+  }
+  return "Opened the saved copy. Scanned pages will finish after ReadFlow can reach the extraction server again.";
 }
 
 interface DeviceVoiceOption {

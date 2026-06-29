@@ -245,6 +245,11 @@ Temporary connected-phone Cloud AI test used on 2026-06-29:
 - Build/install a temporary APK with `EXPO_PUBLIC_API_URL=http://127.0.0.1:4000`.
   This APK is for USB-connected QA only; public/internal Render builds should use
   HTTPS Render URLs and should not enable cleartext traffic.
+- If this temporary APK says it cannot reach the ReadFlow backend while the phone
+  has internet, check the PC first: `GET http://127.0.0.1:4000/api/health` must
+  return `ok: true`, and `adb reverse --list` must include `tcp:4000 tcp:4000`.
+  In this setup, "server unreachable" usually means the local backend process
+  stopped, not that the phone's Wi-Fi/mobile data is off.
 
 ## Local Workspace
 
