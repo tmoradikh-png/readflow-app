@@ -22,6 +22,9 @@ const OCR_MAX_PAGES = Number(process.env.OCR_MAX_PAGES || 50); // cap work per u
 const OCR_SCALE = Number(process.env.OCR_SCALE || 2.5); // render scale → OCR accuracy
 const OCR_DPI = Number(process.env.OCR_DPI || 300); // hint Tesseract for sizing
 const OCR_PREPROCESS = (process.env.OCR_PREPROCESS ?? "true").toLowerCase() !== "false";
+const OCR_LANG_PATH = process.env.OCR_LANG_PATH || "";
+const OCR_TESSDATA_CACHE_PATH =
+  process.env.OCR_TESSDATA_CACHE_PATH || "/tmp/readflow-tessdata";
 
 export interface OcrPageResult {
   text: string;
@@ -282,7 +285,21 @@ async function getWorker(lang: string): Promise<any | null> {
     return null;
   }
   const promise = (async () => {
-    const worker = await tesseract.createWorker(lang);
+    const fs = require("fs");
+    const path = require("path");
+    fs.mkdirSync(OCR_TESSDATA_CACHE_PATH, { recursive: true });
+
+    const localLangPath = findLocalLangPath(fs, path, lang);
+    const options: Record<string, unknown> = {
+      cachePath: OCR_TESSDATA_CACHE_PATH,
+      cacheMethod: "write",
+    };
+    if (localLangPath) {
+      options.langPath = localLangPath;
+      options.gzip = false;
+    }
+
+    const worker = await tesseract.createWorker(lang, undefined, options);
     await worker.setParameters({
       preserve_interword_spaces: "1", // keep word/column spacing
       user_defined_dpi: String(OCR_DPI), // avoids "low resolution" guesses
@@ -295,6 +312,20 @@ async function getWorker(lang: string): Promise<any | null> {
   });
   workerPromises.set(lang, promise);
   return promise;
+}
+
+function findLocalLangPath(fs: any, path: any, lang: string): string | null {
+  const candidates = [
+    OCR_LANG_PATH,
+    path.join(process.cwd(), "tessdata"),
+    process.cwd(),
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, `${lang}.traineddata`))) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 /** Normalize OCR text: trim line ends, collapse big gaps, keep real line breaks. */

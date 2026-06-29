@@ -17,12 +17,15 @@ app.use(express.json({ limit: "2mb" }));
 
 // Public health check (no entitlement needed).
 app.get("/api/health", (_req, res) => {
+  const ttsProvider =
+    process.env.TTS_PROVIDER || (process.env.OPENAI_API_KEY ? "cloud" : "device");
   res.json({
     ok: true,
     aiProvider: process.env.AI_PROVIDER || "openai",
-    ttsProvider: process.env.TTS_PROVIDER || "device",
+    ttsProvider,
     capabilities: {
       forceOcr: true,
+      cloudVoice: ttsProvider === "cloud",
     },
   });
 });

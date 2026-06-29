@@ -37,6 +37,9 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/dist ./dist
+COPY *.traineddata ./tessdata/
+ENV OCR_LANG_PATH=/app/tessdata
+ENV OCR_TESSDATA_CACHE_PATH=/tmp/readflow-tessdata
 
 # Render/most hosts inject PORT; the app reads process.env.PORT.
 EXPOSE 4000

@@ -243,6 +243,24 @@ Changes after the latest finished build and included in source `1.0.18`:
   The USB/local-backend test APK was preserved beside it as `app-local-backend.apk`.
   When testing `Fix text`, the shelf/reader must show `OCR rebuild`; if not, the
   user is still viewing an old native import or an older backend response.
+- 2026-06-29 release QA notes are in `RELEASE_QA_2026-06-29.md`. Synthetic
+  fixtures passed native extraction for English, German/Norwegian, Russian,
+  Chinese, Japanese, and Korean, and OCR extraction for scanned English,
+  Russian, and Chinese. Real-document checks confirmed the exact Persian
+  Distiller sample now opens as readable Persian text; good Persian text-layer
+  books stay native; scanned Persian books route to OCR/pending pages for AI
+  Pro and to `needsPaidOcr=true` for Reader Plus without spending OCR cost.
+- Backend OCR workers now prefer local Tesseract language packs when present.
+  The Docker image copies committed `.traineddata` files into `/app/tessdata`
+  and uses `/tmp/readflow-tessdata` for downloaded/cached packs. Committed packs
+  currently cover `ara`, `chi_sim`, `deu`, `eng`, `fas`, `jpn`, `nor`, and
+  `rus`; other exposed OCR languages still depend on Tesseract.js runtime
+  download/cache until packs are bundled or the UI copy marks them as first-use
+  downloads.
+- Phone smoke on Samsung `SM_G975F` after the backend QA launched installed
+  app `1.0.18` / code `18` without fatal startup logcat lines. The phone was
+  intentionally kept awake while plugged in for long QA with ADB stay-awake
+  settings.
 
 ## Account Map
 
@@ -684,6 +702,12 @@ Later multilingual backlog:
   paid purchase button.
 - Current free-tier code/config does not yet match the latest product intent of
   1 free book and about 100 pages. See `COST_MODEL.md`.
+- UI exposes OCR languages beyond the `.traineddata` packs committed into the
+  backend image. Missing packs can download at runtime through Tesseract.js, but
+  this adds first-use latency and a Render network dependency. Before public
+  launch, either bundle all advertised OCR packs during the Docker build or make
+  the product copy explicit that some OCR languages are server-downloaded on
+  first use.
 
 ## Release Notes Template
 
