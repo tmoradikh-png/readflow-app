@@ -44,8 +44,9 @@ Do **not** upload a public production release until these account/server items
 are complete:
 - Production Render service `readflow-backend` is deployed and
   `https://readflow-backend.onrender.com/api/health` returns `200`.
-  On 2026-06-29 it returned `503`; the internal service
-  `readflow-backend-internal` was healthy but must not be used for public
+  On 2026-06-29 it returned Render's owner-state message
+  `Service Suspended`; the internal service `readflow-backend-internal` was
+  healthy and accepted the current app key, but must not be used for public
   release because it grants dev paid access.
 - Render production env has `ENTITLEMENTS_DEV_OVERRIDE=false`,
   production `APP_KEY`, production `OPENAI_API_KEY`, and production
@@ -71,6 +72,14 @@ For a real paid launch, the order is:
 3. Run `npm run check:release`.
 4. Run an EAS Android production/internal AAB build with a new versionCode.
 5. Upload to Play internal testing first, then promote after phone QA.
+
+Immediate Render action when `Service Suspended` appears:
+1. Sign in to Render with `support@urmiaworks.com`.
+2. Open the `readflow-backend` service.
+3. Unsuspend/reactivate the service, or upgrade/restore billing if Render asks.
+4. Trigger **Manual Deploy -> Deploy latest commit** from `main`.
+5. Re-check `https://readflow-backend.onrender.com/api/health`; it must return
+   JSON with `"ok":true` before any public Play build is submitted.
 
 ---
 

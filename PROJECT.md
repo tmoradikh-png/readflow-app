@@ -56,8 +56,12 @@ uploaded/installed before the source changes can be verified on-device.
 Current Play release prep in source `1.0.23`:
 - `mobile/app.json` now points at the public backend host
   `https://readflow-backend.onrender.com`, not the internal dev-override backend.
-  As of the release-prep check on 2026-06-29, that public service returned 503,
-  so it must be deployed/fixed before uploading a public Play build.
+  As of the release-prep check on 2026-06-29, that public service returned
+  Render's `Service Suspended` owner-state page. This requires Render dashboard
+  action before any public Play build can be uploaded. The internal backend
+  `https://readflow-backend-internal.onrender.com` was healthy and accepted the
+  current mobile app key, but it must stay internal because it grants dev paid
+  access.
 - Android permissions are reduced to `INTERNET`; `expo-audio` is configured with
   `recordAudioAndroid: false` and `microphonePermission: false`.
 - iOS background audio mode and Expo foreground/background playback flags are
@@ -86,6 +90,13 @@ Current Play release prep in source `1.0.23`:
     before going live.
   - The old local-AI label has been removed from tracked app source; the public
     customer-facing name is `rF AI`.
+
+Current external blocker:
+- Production Render service `readflow-backend` is suspended by owner as of
+  2026-06-29. Sign in to Render with `support@urmiaworks.com`, unsuspend or fix
+  billing/plan state, then manually deploy latest `main`. Public release is
+  blocked until `/api/health` returns `{"ok":true,...}` from
+  `https://readflow-backend.onrender.com`.
 
 Changes after the latest finished build and included in source `1.0.18`:
 - Cloud AI voice is gated by `features.cloudVoice`, not generic AI.

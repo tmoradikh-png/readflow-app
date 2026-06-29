@@ -39,8 +39,10 @@ Missing before paid launch:
 - RevenueCat offerings are not configured.
 - The mobile app does not yet open the native Play Billing purchase flow.
 - The backend still needs the production RevenueCat secret key in Render.
-- The public production backend is currently not healthy. On 2026-06-29,
-  `https://readflow-backend.onrender.com/api/health` returned `503`.
+- The public production backend is currently suspended in Render. On
+  2026-06-29, `https://readflow-backend.onrender.com/api/health` returned
+  Render's `Service Suspended` page. This requires owner dashboard action before
+  Play release.
 
 Until these are complete, the app can be released only as a free preview with
 paid features locked and purchase buttons unavailable.

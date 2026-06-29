@@ -23,7 +23,8 @@ Current source status:
 
 Not ready for paid public launch:
 
-- Production backend health is not green yet.
+- Production backend health is not green yet; on 2026-06-29 the public Render
+  service returned `Service Suspended`.
 - Play Billing/RevenueCat is not wired in the mobile purchase flow.
 - Legal URLs are not live yet.
 - Final AI Pro/Power pricing needs a product decision before Play products are
