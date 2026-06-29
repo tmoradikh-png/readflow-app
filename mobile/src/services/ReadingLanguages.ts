@@ -7,6 +7,7 @@ export interface ReadingLanguage {
   aiLanguage: string;
   voicePrefixes: string[];
   edgeAi: boolean;
+  rtl?: boolean;
 }
 
 export const READING_LANGUAGES: ReadingLanguage[] = [
@@ -209,6 +210,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Arabic",
     voicePrefixes: ["ar"],
     edgeAi: false,
+    rtl: true,
   },
   {
     code: "fa",
@@ -219,6 +221,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Persian",
     voicePrefixes: ["fa", "fas"],
     edgeAi: false,
+    rtl: true,
   },
 ];
 

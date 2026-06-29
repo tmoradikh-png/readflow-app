@@ -67,13 +67,52 @@ export function resolveOcrLang(requested?: string): string {
 }
 
 /** Decide whether a page's native text is too poor to read and needs OCR. */
-export function needsOcr(text: string): boolean {
+export function needsOcr(text: string, lang?: string): boolean {
   const t = (text || "").trim();
   if (t.length < 16) return true; // essentially empty → scanned image
+  if (looksCorrupted(t)) return true;
+
+  const profile = scriptProfile(resolveOcrLang(lang));
+  if (profile) {
+    const scriptChars = (t.match(profile.re) || []).length;
+    const ratio = scriptChars / t.length;
+    if (ratio < profile.minRatio) return true;
+    return false;
+  }
+
   const letters = (t.match(/[A-Za-z\u00C0-\u024F]/g) || []).length;
   const ratio = letters / t.length;
   // Mostly symbols/gibberish on a short page → likely a bad extraction.
   return ratio < 0.35 && t.length < 200;
+}
+
+function looksCorrupted(text: string): boolean {
+  const replacement = (text.match(/\uFFFD/g) || []).length;
+  const mojibake = (text.match(/[ÂÃÄÅÆØÙÛÜÝÞÐ]/g) || []).length;
+  const nonLatin = /[^\u0000-\u024F\s\d.,;:!?'"()[\]{}\-–—/\\]/.test(text);
+  const repeatedA = nonLatin ? (text.match(/A{2,}/g) || []).length : 0;
+  const bad = replacement + mojibake + repeatedA * 2;
+  return bad / Math.max(1, text.length) > 0.018;
+}
+
+function scriptProfile(lang: string): { re: RegExp; minRatio: number } | null {
+  switch (lang) {
+    case "ara":
+    case "fas":
+      return { re: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g, minRatio: 0.45 };
+    case "rus":
+      return { re: /[\u0400-\u04FF]/g, minRatio: 0.45 };
+    case "hin":
+      return { re: /[\u0900-\u097F]/g, minRatio: 0.45 };
+    case "jpn":
+      return { re: /[\u3040-\u30FF\u4E00-\u9FFF]/g, minRatio: 0.35 };
+    case "kor":
+      return { re: /[\uAC00-\uD7AF\u1100-\u11FF]/g, minRatio: 0.45 };
+    case "chi_sim":
+      return { re: /[\u4E00-\u9FFF]/g, minRatio: 0.35 };
+    default:
+      return null;
+  }
 }
 
 let pdfjsLib: any = null;

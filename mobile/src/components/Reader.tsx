@@ -1000,7 +1000,7 @@ export function Reader({
   // The control bar shows when listening (pinned) or when the chrome is revealed.
   const controlsShown = soundEnabled || chromeVisible;
   // Float the AI button just above the controls; the bar height varies by state.
-  const fabBottom = (controlsOpen ? 268 : controlsShown ? 96 : 24) + insets.bottom;
+  const fabBottom = (controlsOpen ? 330 : controlsShown ? 150 : 24) + insets.bottom;
   const readerBottomPad = (controlsOpen ? 300 : controlsShown ? 132 : 56) + insets.bottom;
 
   return (
@@ -1116,6 +1116,7 @@ export function Reader({
             fontSize={settings.fontSize}
             lineHeight={lineHeight}
             layoutKey={`${Math.round(windowWidth)}:${Math.round(windowHeight)}:${lineHeight}`}
+            rtl={Boolean(readingLanguage.rtl)}
             onTapWord={tapHandler}
             onLineRanges={handleLineRanges}
             showPageDivider={index === 0 || flat[index - 1].page !== item.page}
@@ -1220,6 +1221,7 @@ interface SentenceRowProps {
   fontSize: number;
   lineHeight: number;
   layoutKey: string;
+  rtl: boolean;
   onTapWord: (globalId: number, charOffset: number) => void;
   onLineRanges: (sentenceId: number, ranges: LineRange[]) => void;
   showPageDivider?: boolean;
@@ -1231,6 +1233,7 @@ const SentenceRow = React.memo(function SentenceRow({
   fontSize,
   lineHeight,
   layoutKey,
+  rtl,
   onTapWord,
   onLineRanges,
   showPageDivider,
@@ -1262,9 +1265,14 @@ const SentenceRow = React.memo(function SentenceRow({
     ));
   }
 
-  const textStyle = { fontSize, lineHeight };
+  const textStyle = {
+    fontSize,
+    lineHeight,
+    textAlign: rtl ? "right" : "left",
+    writingDirection: rtl ? "rtl" : "ltr",
+  } as const;
   return (
-    <View>
+    <View style={rtl ? styles.rtlRowWrap : undefined}>
       {showPageDivider ? (
         <View style={styles.pageDivider}>
           <View style={styles.pageDividerLine} />
@@ -1281,6 +1289,7 @@ const SentenceRow = React.memo(function SentenceRow({
                 key={`${line.start}-${lineIndex}`}
                 style={[
                   styles.rowLine,
+                  rtl && styles.rowLineRtl,
                   textStyle,
                   activeLineIndex === lineIndex && styles.activeLine,
                 ]}
@@ -1496,6 +1505,7 @@ const styles = StyleSheet.create({
   reader: { flex: 1 },
   readerContent: { padding: theme.spacing(3) },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
+  rtlRowWrap: { alignItems: "stretch" },
   activeLineBlock: { paddingVertical: 3 },
   rowLine: {
     alignSelf: "flex-start",
@@ -1503,6 +1513,9 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.serif,
     borderRadius: 6,
     paddingHorizontal: 2,
+  },
+  rowLineRtl: {
+    alignSelf: "flex-end",
   },
   pageDivider: {
     flexDirection: "row",

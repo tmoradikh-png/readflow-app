@@ -119,6 +119,12 @@ Current ReadFlow QA checklist for any build that changes reading/voice:
   mark, including the red spine.
 - Open Voice and confirm the choices read as Device voice, Edge AI, and Cloud
   AI; Android raw voice ids should not dominate the UI.
+- Tap locked/limited Voice options and invalid navigation inputs; warnings
+  should use the ReadFlow themed notice, not a dark native Android alert.
+- For Cloud AI phone QA, verify the backend first: internal testing should
+  return `tier: ai_pro`, `features.cloudVoice: true`, non-zero
+  `cloudVoiceCharsPerMonth`, and `/api/health` should report
+  `ttsProvider: cloud`.
 - Open Book language, choose a non-English language, then reopen Voice. Phone
   voices should filter to that language, Edge AI should say English-only for
   now, and new scanned imports should use the matching OCR language.

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Alert,
   Linking,
   Modal,
 } from "react-native";
@@ -18,6 +17,7 @@ import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
 import { Bookmarks } from "../services/Bookmarks";
 import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
+import { ThemedNotice, ThemedNoticeAction } from "../components/ThemedNotice";
 import {
   downloadLocalNeuralVoice,
   formatLocalModelSize,
@@ -47,6 +47,13 @@ interface Props {
   onRefreshUsage?: () => void;
 }
 
+interface NoticeState {
+  title: string;
+  body: string;
+  primary?: ThemedNoticeAction;
+  secondary?: ThemedNoticeAction;
+}
+
 /** Deterministic cover variant from the document id. */
 function coverVariant(id: string): 0 | 1 | 2 | 3 {
   let h = 0;
@@ -70,6 +77,7 @@ export function LibraryScreen({
   const [showLanguage, setShowLanguage] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [notice, setNotice] = useState<NoticeState | null>(null);
   const [deviceVoices, setDeviceVoices] = useState<DeviceVoiceOption[]>([]);
   const [localStatus, setLocalStatus] = useState<LocalNeuralVoiceStatus>(
     getLocalNeuralVoiceStatus()
@@ -205,7 +213,10 @@ export function LibraryScreen({
       await DocCache.remove(item.id);
       await Bookmarks.removeAll(item.id);
     } catch (e: any) {
-      Alert.alert("Remove document", e?.message || "Could not remove that document.");
+      setNotice({
+        title: "Remove document",
+        body: e?.message || "Could not remove that document.",
+      });
     } finally {
       await refresh();
       setBusyId(null);
@@ -213,14 +224,16 @@ export function LibraryScreen({
   }
 
   function confirmRemove(item: LibraryItem) {
-    Alert.alert("Remove from library?", `“${item.title}” will be removed from this device.`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
+    setNotice({
+      title: "Remove from library?",
+      body: `"${item.title}" will be removed from this device.`,
+      secondary: { label: "Cancel", tone: "secondary" },
+      primary: {
+        label: "Remove",
+        tone: "danger",
         onPress: () => removeItem(item).catch(() => {}),
       },
-    ]);
+    });
   }
 
   async function installLocalVoice() {
@@ -234,11 +247,12 @@ export function LibraryScreen({
       setLocalStatus(status);
       onPreferencesChange({ ...preferences, voiceEngine: "local_ai" });
     } catch (e: any) {
-      Alert.alert(
-        "Edge AI voice",
-        e?.message ||
-          "Could not download Edge AI. Check your connection and try again."
-      );
+      setNotice({
+        title: "Edge AI voice",
+        body:
+          e?.message ||
+          "Could not download Edge AI. Check your connection and try again.",
+      });
       refreshLocalVoiceStatus().catch(() => {});
     } finally {
       setLocalDownloading(false);
@@ -381,6 +395,7 @@ export function LibraryScreen({
         onClose={() => setShowVoice(false)}
         onChange={onPreferencesChange}
         onDownloadLocalVoice={installLocalVoice}
+        onNotice={setNotice}
       />
       <LanguageSettingsSheet
         visible={showLanguage}
@@ -389,6 +404,14 @@ export function LibraryScreen({
         onChange={onPreferencesChange}
       />
       <HelpAboutSheet visible={showHelp} onClose={() => setShowHelp(false)} />
+      <ThemedNotice
+        visible={Boolean(notice)}
+        title={notice?.title || ""}
+        body={notice?.body || ""}
+        primary={notice?.primary}
+        secondary={notice?.secondary}
+        onClose={() => setNotice(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -621,6 +644,7 @@ function VoiceSettingsSheet({
   onClose,
   onChange,
   onDownloadLocalVoice,
+  onNotice,
 }: {
   visible: boolean;
   entitlement: EntitlementSnapshot;
@@ -634,6 +658,7 @@ function VoiceSettingsSheet({
   onClose: () => void;
   onChange: (next: ReadingPreferences) => void;
   onDownloadLocalVoice: () => void;
+  onNotice: (notice: NoticeState) => void;
 }) {
   const cloudLimit = entitlement.limits.cloudVoiceCharsPerMonth || 0;
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
@@ -655,38 +680,45 @@ function VoiceSettingsSheet({
 
   function selectEngine(engine: VoiceEngine) {
     if (engine === "cloud" && !canUseCloud) {
-      Alert.alert(
-        "AI voice allowance",
-        "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Device voice stays unlimited."
-      );
+      onNotice({
+        title: "Cloud AI voice",
+        body:
+          "Cloud AI is active for AI Pro and Power when the backend grants a monthly voice allowance. Device voice stays unlimited.",
+      });
       return;
     }
     if (engine === "local_ai" && !readingLanguage.edgeAi) {
-      Alert.alert(
-        "Edge AI language pack",
-        `Edge AI is available for English right now. Use Device voice or Cloud AI for ${readingLanguage.label} until we add this language pack.`
-      );
+      onNotice({
+        title: "Edge AI language pack",
+        body: `Edge AI is available for English right now. Use Device voice or Cloud AI for ${readingLanguage.label} until we add this language pack.`,
+      });
       return;
     }
     if (engine === "local_ai" && !localStatus.engineInstalled) {
       if (localStatus.nativeAvailable && !localStatus.modelDownloaded) {
-        Alert.alert("Download Edge AI voice", localStatus.detail, [
-          { text: "Not now", style: "cancel" },
-          { text: "Download", onPress: onDownloadLocalVoice },
-        ]);
+        onNotice({
+          title: "Download Edge AI voice",
+          body: localStatus.detail,
+          secondary: { label: "Not now", tone: "secondary" },
+          primary: { label: "Download", onPress: onDownloadLocalVoice },
+        });
         return;
       }
-      Alert.alert("Edge AI voice", localStatus.detail);
+      onNotice({
+        title: "Edge AI voice",
+        body: localStatus.detail,
+      });
       return;
     }
     onChange({ ...preferences, voiceEngine: engine });
   }
 
   function buyMoreVoice() {
-    Alert.alert(
-      "AI voice packs",
-      "The cost-safe product path is a Play Billing top-up, for example 100k AI voice characters. Purchases are not live in this build yet."
-    );
+    onNotice({
+      title: "AI voice packs",
+      body:
+        "The cost-safe product path is a Play Billing top-up, for example 100k AI voice characters. Purchases are not live in this build yet.",
+    });
   }
 
   return (
@@ -747,10 +779,11 @@ function VoiceSettingsSheet({
                 detail={
                   canUseCloud
                     ? `${formatChars(cloudRemaining)} left this month. Best cloud quality.`
-                    : "Cloud AI for AI Pro and Power. Best quality, monthly allowance."
+                    : "Included in AI Pro and Power. Best quality, monthly allowance."
                 }
                 active={preferences.voiceEngine === "cloud"}
                 locked={!canUseCloud}
+                stateLabel={canUseCloud ? undefined : "AI Pro"}
                 onPress={() => selectEngine("cloud")}
               />
             </View>
@@ -957,7 +990,7 @@ function VoiceChoice({
           {title}
         </Text>
         <Text style={[styles.voiceChoiceState, active && styles.voiceChoiceStateOn]}>
-          {stateLabel || (locked ? "Soon" : active ? "On" : "Use")}
+          {stateLabel || (locked ? "Locked" : active ? "On" : "Use")}
         </Text>
       </View>
       <Text style={[styles.voiceChoiceDetail, active && styles.voiceChoiceDetailOn]}>

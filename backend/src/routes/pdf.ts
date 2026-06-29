@@ -107,7 +107,7 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
     // OCR is a PAID feature. Free users never trigger server OCR cost.
     if (isPdf && features.ocr) {
       docToken = putDoc(req.file.buffer);
-      const lowQuality = doc.pages.filter((p) => needsOcr(p.text)).map((p) => p.page);
+      const lowQuality = doc.pages.filter((p) => needsOcr(p.text, ocrLang)).map((p) => p.page);
       if (lowQuality.length > 0) {
         // Only OCR the first few pages now; the rest are pending (on demand).
         const eager = lowQuality.slice(0, Math.max(0, OCR_EAGER_PAGES));
@@ -137,7 +137,7 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
     const hasText = doc.pages.some((p) => p.text.length > 0);
     // Did this doc have scanned pages the user's plan couldn't OCR?
     const needsPaidOcr =
-      isPdf && !features.ocr && doc.pages.some((p) => needsOcr(p.text));
+      isPdf && !features.ocr && doc.pages.some((p) => needsOcr(p.text, ocrLang));
 
     return res.json({
       ...doc,

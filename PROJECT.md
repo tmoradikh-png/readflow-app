@@ -59,17 +59,26 @@ Changes after the latest finished build and included in source `1.0.18`:
   currently selected mode so readers do not see raw Android voice clutter.
 - The reader settings menu also includes a quick `Device` / `Edge AI` /
   `Cloud AI` selector. Cloud AI acts as an upgrade prompt when the plan does
-  not include `features.cloudVoice`.
+  not include `features.cloudVoice`; locked labels must say `AI Pro`/`Locked`,
+  not `Soon`, because Cloud AI is a live paid feature once the backend grants a
+  voice allowance.
 - The shelf now has a `Book language` selector. The selected language is saved
   in preferences and drives import OCR (`ocrLang`), on-demand OCR, phone voice
   filtering, reader TTS locale, Cloud AI/AI answer language, and Edge AI
   eligibility messaging. Edge AI remains English-only until more local voice
   packs are added.
+- App warnings and confirmations use `ThemedNotice` / `UpgradeSheet`, not native
+  Android alerts, so upgrade, quota, delete, download, and validation messages
+  stay in the ReadFlow visual style.
 - OCR language options currently exposed from mobile:
   English, Spanish, French, German, Italian, Portuguese, Dutch, Swedish,
   Norwegian, Danish, Finnish, Turkish, Indonesian, Vietnamese, Japanese,
   Korean, Chinese (Simplified), Hindi, Russian, Arabic, and Persian. Backend
   Tesseract allow-list includes matching codes, including `fas` for Persian.
+- Backend OCR quality detection is language-aware for non-Latin scripts. When
+  the user selects Persian/Arabic/etc., corrupted native PDF text layers (for
+  example repeated `AA`/mojibake mixed into Persian) are treated as OCR
+  candidates instead of being accepted as readable text.
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
 - Edge AI voice now uses `react-native-sherpa-onnx` plus an on-demand
@@ -170,6 +179,31 @@ Secrets and where they belong:
 
 If a developer needs access, invite them to the account/dashboard or give them
 credentials through a password manager, not through Git.
+
+Internal backend QA note from 2026-06-29: the source plan config grants
+`cloudVoice: true` and `cloudVoiceCharsPerMonth: 60000` for `ai_pro`, but the
+live `https://readflow-backend-internal.onrender.com` response returned
+`features.cloudVoice: false` and `/api/health` returned `ttsProvider: device`.
+Before testing Cloud AI on a phone, redeploy the internal Render service from the
+current backend and verify:
+
+```powershell
+Invoke-RestMethod https://readflow-backend-internal.onrender.com/api/health
+Invoke-RestMethod https://readflow-backend-internal.onrender.com/api/entitlements -Headers @{ 'x-app-key' = '<APP_KEY>' }
+```
+
+Expected internal results are `ttsProvider: cloud`, `tier: ai_pro`,
+`features.cloudVoice: true`, and a non-zero `limits.cloudVoiceCharsPerMonth`.
+
+Temporary connected-phone Cloud AI test used on 2026-06-29:
+- Run local backend from `backend/dist/index.js` with
+  `ENTITLEMENTS_DEV_OVERRIDE=true`, `DEV_DEFAULT_TIER=ai_pro`, `TTS_PROVIDER=cloud`,
+  and the same `APP_KEY` as mobile.
+- Verify `http://127.0.0.1:4000/api/tts` returns `audio/mpeg`.
+- Run `adb reverse tcp:4000 tcp:4000`.
+- Build/install a temporary APK with `EXPO_PUBLIC_API_URL=http://127.0.0.1:4000`.
+  This APK is for USB-connected QA only; public/internal Render builds should use
+  HTTPS Render URLs and should not enable cleartext traffic.
 
 ## Local Workspace
 

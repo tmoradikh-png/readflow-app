@@ -6,10 +6,10 @@ import {
   StyleSheet,
   TextInput,
   ScrollView,
-  Alert,
   Keyboard,
 } from "react-native";
 import { Bookmark, Bookmarks } from "../services/Bookmarks";
+import { ThemedNotice } from "./ThemedNotice";
 import { theme } from "../theme";
 
 interface CurrentPos {
@@ -41,6 +41,7 @@ export function BookmarkPanel({
   const [items, setItems] = useState<Bookmark[]>([]);
   const [tag, setTag] = useState("");
   const [pageInput, setPageInput] = useState("");
+  const [notice, setNotice] = useState<{ title: string; body: string } | null>(null);
   // Lift the sheet above the on-screen keyboard so the input stays visible.
   const [kb, setKb] = useState(0);
 
@@ -85,7 +86,10 @@ export function BookmarkPanel({
   function go() {
     const n = parseInt(pageInput, 10);
     if (!Number.isFinite(n) || n < 1 || n > pageCount) {
-      Alert.alert("Go to page", `Enter a page between 1 and ${pageCount}.`);
+      setNotice({
+        title: "Go to page",
+        body: `Enter a page between 1 and ${pageCount}.`,
+      });
       return;
     }
     onGoToPage(n);
@@ -157,6 +161,12 @@ export function BookmarkPanel({
         ))}
       </ScrollView>
     </View>
+    <ThemedNotice
+      visible={Boolean(notice)}
+      title={notice?.title || ""}
+      body={notice?.body || ""}
+      onClose={() => setNotice(null)}
+    />
     </>
   );
 }
