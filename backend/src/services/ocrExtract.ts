@@ -92,9 +92,9 @@ export function needsOcr(text: string, lang?: string): boolean {
 
 function looksCorrupted(text: string, lang: string): boolean {
   const replacement = (text.match(/\uFFFD/g) || []).length;
-  const mojibake = (text.match(/[ÂÃÄÅÆØÙÛÜÝÞÐÑâãäåæðñøùûüýþÿ]/g) || []).length;
+  const mojibakeChars = (text.match(/[ÂÃÄÅÆØÙÛÜÝÞÐÑâãäåæðñøùûüýþÿ]/g) || []).length;
   const mojibakePairs = (
-    text.match(/(?:Ã.|Â.|Ð.|Ñ.|Ø.|Ù.|Ú.|Û.|à[^\s]|á[^\s]|â[^\s]|ã[^\s]|ä[^\s]|å[^\s]|æ[^\s])/g) || []
+    text.match(/(?:Ã.|Â.|Ð.|Ñ.|Ø.|Ù.|Ú.|Û.|â[€\u0080-\u00BF]?)/g) || []
   ).length;
   const nonLatin = /[^\u0000-\u024F\s\d.,;:!?'"()[\]{}\-–—/\\]/.test(text);
   const repeatedA = nonLatin ? (text.match(/A{2,}/g) || []).length : 0;
@@ -115,11 +115,15 @@ function looksCorrupted(text: string, lang: string): boolean {
     ) {
       return true;
     }
-    if ((replacement + mojibake + mojibakePairs) / Math.max(1, text.length) > 0.012) {
+    if ((replacement + mojibakeChars + mojibakePairs) / Math.max(1, text.length) > 0.012) {
       return true;
     }
   }
-  const bad = replacement + mojibake + mojibakePairs * 2 + repeatedA * 2;
+  // Latin-script books legitimately contain characters such as å, ø, æ, ü,
+  // ñ and ÿ. Treat only mojibake *patterns* as suspicious there; reserve the
+  // broad single-character mojibake count for non-Latin script repair.
+  const bad =
+    replacement + mojibakePairs * 2 + (profile ? mojibakeChars : 0) + repeatedA * 2;
   return bad / Math.max(1, text.length) > 0.018;
 }
 
