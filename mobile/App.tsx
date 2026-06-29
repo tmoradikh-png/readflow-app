@@ -33,6 +33,7 @@ import {
   ReadingPreferences,
   savePreferences,
 } from "./src/services/Preferences";
+import { getReadingLanguage } from "./src/services/ReadingLanguages";
 import { theme } from "./src/theme";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -44,6 +45,7 @@ export default function App() {
   const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(FREE_ENTITLEMENT);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [preferences, setPreferences] = useState<ReadingPreferences>(DEFAULT_PREFERENCES);
+  const readingLanguage = getReadingLanguage(preferences.bookLanguage);
 
   const [fontsLoaded] = useFonts({
     Spectral_400Regular,
@@ -104,7 +106,7 @@ export default function App() {
             entitlement={entitlement}
             preferences={preferences}
             onPreferencesChange={updatePreferences}
-            language="en-US"
+            language={readingLanguage.voiceLanguage}
             freePageLimit={10}
             startSentenceId={item?.lastSentenceId ?? 0}
             onProgress={handleProgress}

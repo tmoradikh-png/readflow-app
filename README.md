@@ -88,6 +88,12 @@ at the top is the step‑by‑step routine (bump `versionCode`, regenerate the i
 Device voice is implemented through `expo-speech` and now supports choosing an
 installed phone voice from the shelf screen.
 
+The shelf `Book language` selector is the multilingual control. It drives OCR
+language, phone voice filtering, reader TTS locale, Cloud AI/AI answer language,
+and Edge AI availability messaging. Edge AI currently has only the English
+Supertonic Reader pack; other languages should use Device voice or Cloud AI
+until language-specific Edge AI packs are added.
+
 Premium Cloud AI voice is implemented through
 `mobile/src/services/tts/CloudTTSProvider.ts` and backend `POST /api/tts`.
 The mobile app never stores the OpenAI key; it sends text to the backend and

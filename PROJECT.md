@@ -60,6 +60,16 @@ Changes after the latest finished build and included in source `1.0.18`:
 - The reader settings menu also includes a quick `Device` / `Edge AI` /
   `Cloud AI` selector. Cloud AI acts as an upgrade prompt when the plan does
   not include `features.cloudVoice`.
+- The shelf now has a `Book language` selector. The selected language is saved
+  in preferences and drives import OCR (`ocrLang`), on-demand OCR, phone voice
+  filtering, reader TTS locale, Cloud AI/AI answer language, and Edge AI
+  eligibility messaging. Edge AI remains English-only until more local voice
+  packs are added.
+- OCR language options currently exposed from mobile:
+  English, Spanish, French, German, Italian, Portuguese, Dutch, Swedish,
+  Norwegian, Danish, Finnish, Turkish, Indonesian, Vietnamese, Japanese,
+  Korean, Chinese (Simplified), Hindi, Russian, Arabic, and Persian. Backend
+  Tesseract allow-list includes matching codes, including `fas` for Persian.
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
 - Edge AI voice now uses `react-native-sherpa-onnx` plus an on-demand
@@ -446,6 +456,10 @@ Recommended manual phone tests after installing a new build:
 - Import a normal PDF and verify reflowed reading.
 - Toggle Sound on/off.
 - Open Voice on the shelf, select a device voice, and verify the reader uses it.
+- Open the language selector, choose a non-English language, and verify:
+  new imports send the matching OCR language, the Voice sheet filters phone
+  voices for that language, AI answers use that language, and Edge AI explains
+  that only English is available for now.
 - In the reader settings menu, switch between Device, Edge AI, and Cloud AI.
   Cloud AI should upsell cleanly when the plan is not AI Pro/Power.
 - Select Cloud AI under an AI Pro/Power entitlement and verify `/api/tts`
@@ -468,6 +482,19 @@ Recommended manual phone tests after installing a new build:
 - AI button opens, summary/explain/Q&A route works under internal paid override.
 - Scanned PDF/OCR path shows correct paid messaging and progress.
 - Offline/poor-network states do not crash.
+
+Later multilingual backlog:
+- Per-book language memory instead of one global `bookLanguage` preference.
+- Server-driven Edge AI model catalog with language, model id, size, quality,
+  and download URL so new language packs do not require an app rebuild.
+- Edge AI voice packs for priority markets after quality/size review. Start
+  with Spanish, French, German, Arabic, Turkish, and Persian if good compact
+  models are available.
+- Language auto-detect from the first native-text/OCR pages, with user
+  confirmation before spending OCR quota.
+- Mixed-language books and per-section language switching.
+- Local/Edge OCR on strong phones. This is separate from Edge AI voice and needs
+  a different OCR engine/model.
 
 ## Known Risks / Follow-ups
 

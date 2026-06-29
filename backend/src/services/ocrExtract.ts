@@ -55,6 +55,7 @@ export const SUPPORTED_OCR_LANGS = new Set<string>([
   "hin", // Hindi
   "rus", // Russian
   "ara", // Arabic
+  "fas", // Persian
   "tha", // Thai
 ]);
 

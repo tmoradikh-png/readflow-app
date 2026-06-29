@@ -119,6 +119,9 @@ Current ReadFlow QA checklist for any build that changes reading/voice:
   mark, including the red spine.
 - Open Voice and confirm the choices read as Device voice, Edge AI, and Cloud
   AI; Android raw voice ids should not dominate the UI.
+- Open Book language, choose a non-English language, then reopen Voice. Phone
+  voices should filter to that language, Edge AI should say English-only for
+  now, and new scanned imports should use the matching OCR language.
 - Open the reader settings menu and confirm the quick selector reads Device,
   Edge AI, and Cloud AI. Locked Cloud AI should open a clean upgrade prompt.
 - Download/select Edge AI, play several paragraphs, and check for natural

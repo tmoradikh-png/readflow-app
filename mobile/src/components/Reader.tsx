@@ -28,6 +28,7 @@ import { BookmarkPanel } from "./BookmarkPanel";
 import { UpgradeSheet } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
+import { getReadingLanguage } from "../services/ReadingLanguages";
 import { theme } from "../theme";
 
 interface Props {
@@ -86,7 +87,7 @@ function preferredVoiceMode(
   preferences: ReadingPreferences,
   entitlement: EntitlementSnapshot
 ): RuntimeVoiceMode {
-  if (preferences.voiceEngine === "local_ai") {
+  if (preferences.voiceEngine === "local_ai" && getReadingLanguage(preferences.bookLanguage).edgeAi) {
     return "local";
   }
   if (
@@ -176,11 +177,17 @@ export function Reader({
   const canUseCloudVoice = Boolean(
     entitlement.features.cloudVoice && entitlement.limits.cloudVoiceCharsPerMonth > 0
   );
+  const readingLanguage = getReadingLanguage(preferences.bookLanguage);
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement);
   const readerVoiceOptions = useMemo(
     () => [
       { engine: "device" as const, label: "Device", detail: "Free" },
-      { engine: "local_ai" as const, label: "Edge AI", detail: "On phone" },
+      {
+        engine: "local_ai" as const,
+        label: "Edge AI",
+        detail: readingLanguage.edgeAi ? "On phone" : "English",
+        locked: !readingLanguage.edgeAi,
+      },
       {
         engine: "cloud" as const,
         label: "Cloud AI",
@@ -188,7 +195,7 @@ export function Reader({
         locked: !canUseCloudVoice,
       },
     ],
-    [canUseCloudVoice]
+    [canUseCloudVoice, readingLanguage.edgeAi]
   );
 
   const insets = useSafeAreaInsets();
@@ -301,6 +308,13 @@ export function Reader({
   }
 
   function selectVoiceEngine(engine: VoiceEngine) {
+    if (engine === "local_ai" && !readingLanguage.edgeAi) {
+      openFeatureLock(
+        "Edge AI language pack",
+        `Edge AI is available for English right now. Use Device voice or Cloud AI for ${readingLanguage.label} until we add this language pack.`
+      );
+      return;
+    }
     if (engine === "cloud" && !canUseCloudVoice) {
       openFeatureLock(
         "Cloud AI voice",
@@ -545,6 +559,7 @@ export function Reader({
     OcrLoader.start({
       docId: doc.docId,
       token: doc.docToken,
+      ocrLang: readingLanguage.ocrLang,
       pages: doc.pages,
       pending: doc.pendingOcr ?? [],
     });
@@ -555,7 +570,7 @@ export function Reader({
     });
     return unsub; // unsubscribe on unmount; the job keeps running in the background
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc, canUseOcr]);
+  }, [doc, canUseOcr, readingLanguage.ocrLang]);
 
   // Re-anchor the highlight + reading index after OCR inserts pages so they stay
   // glued to the SAME sentence even though array indices shifted. Runs during
@@ -1164,7 +1179,7 @@ export function Reader({
             .filter((s) => Math.abs(s.page - currentPage) <= 2)
             .map((s) => s.text)
             .join(" ")}
-          language={langCode}
+          language={readingLanguage.aiLanguage || langCode}
           onClose={() => setShowAI(false)}
         />
       )}

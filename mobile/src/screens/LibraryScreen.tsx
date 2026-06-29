@@ -27,6 +27,14 @@ import {
   LocalNeuralVoiceStatus,
 } from "../services/LocalNeuralVoice";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
+import {
+  getReadingLanguage,
+  languageMatchesVoice,
+  READING_LANGUAGES,
+  ReadingLanguage,
+  voiceRegionKey,
+  voiceRegionLabel,
+} from "../services/ReadingLanguages";
 import { theme } from "../theme";
 
 interface Props {
@@ -59,6 +67,7 @@ export function LibraryScreen({
   const [loading, setLoading] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showLanguage, setShowLanguage] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [deviceVoices, setDeviceVoices] = useState<DeviceVoiceOption[]>([]);
@@ -68,6 +77,7 @@ export function LibraryScreen({
   const [localDownloading, setLocalDownloading] = useState(false);
   const [localDownloadProgress, setLocalDownloadProgress] =
     useState<LocalNeuralDownloadProgress | null>(null);
+  const readingLanguage = getReadingLanguage(preferences.bookLanguage);
 
   const refresh = useCallback(async () => {
     setItems(await Library.list());
@@ -101,10 +111,10 @@ export function LibraryScreen({
   useEffect(() => {
     Speech.getAvailableVoicesAsync()
       .then((voices) => {
-        setDeviceVoices(formatDeviceVoices(voices));
+        setDeviceVoices(formatDeviceVoices(voices, readingLanguage));
       })
       .catch(() => setDeviceVoices([]));
-  }, []);
+  }, [readingLanguage.code]);
 
   useEffect(() => {
     onRefreshUsage?.();
@@ -114,7 +124,7 @@ export function LibraryScreen({
     setError(null);
     setLoading(true);
     try {
-      const doc = await PDFParser.pickAndParse();
+      const doc = await PDFParser.pickAndParse({ ocrLang: readingLanguage.ocrLang });
       if (!doc) return; // cancelled
       const item = await Library.saveOpened(doc, doc.sourceUri, doc.mimeType);
       // Save the parsed text so this book can be reopened offline later.
@@ -153,6 +163,7 @@ export function LibraryScreen({
             uri: item.storedUri,
             fileName: item.fileName,
             mimeType: item.mimeType || undefined,
+            ocrLang: readingLanguage.ocrLang,
           });
           doc = cached ? DocCache.mergeCachedOcr(fresh, cached) : fresh;
           await DocCache.save(doc);
@@ -269,6 +280,13 @@ export function LibraryScreen({
               {planLabel}
             </Text>
           </View>
+          <Pressable
+            style={styles.headerMiniBtn}
+            onPress={() => setShowLanguage(true)}
+            hitSlop={8}
+          >
+            <Text style={styles.headerMiniText}>{readingLanguage.shortLabel}</Text>
+          </Pressable>
           <Pressable style={styles.headerMiniBtn} onPress={() => setShowVoice(true)} hitSlop={8}>
             <Text style={styles.headerMiniText}>Voice</Text>
           </Pressable>
@@ -355,6 +373,7 @@ export function LibraryScreen({
         entitlement={entitlement}
         usage={usage}
         preferences={preferences}
+        readingLanguage={readingLanguage}
         deviceVoices={deviceVoices}
         localStatus={localStatus}
         localDownloading={localDownloading}
@@ -362,6 +381,12 @@ export function LibraryScreen({
         onClose={() => setShowVoice(false)}
         onChange={onPreferencesChange}
         onDownloadLocalVoice={installLocalVoice}
+      />
+      <LanguageSettingsSheet
+        visible={showLanguage}
+        preferences={preferences}
+        onClose={() => setShowLanguage(false)}
+        onChange={onPreferencesChange}
       />
       <HelpAboutSheet visible={showHelp} onClose={() => setShowHelp(false)} />
     </SafeAreaView>
@@ -404,11 +429,14 @@ interface DeviceVoiceOption {
   rank: number;
 }
 
-function formatDeviceVoices(voices: Speech.Voice[]): DeviceVoiceOption[] {
+function formatDeviceVoices(
+  voices: Speech.Voice[],
+  readingLanguage: ReadingLanguage
+): DeviceVoiceOption[] {
   const seen = new Set<string>();
   return voices
-    .filter((voice) => /^en([-_]|$)/i.test(voice.language || ""))
-    .map((voice, index) => toDeviceVoiceOption(voice, index))
+    .filter((voice) => languageMatchesVoice(voice.language, readingLanguage))
+    .map((voice, index) => toDeviceVoiceOption(voice, index, readingLanguage))
     .sort((a, b) => a.rank - b.rank || a.displayName.localeCompare(b.displayName))
     .filter((voice) => {
       const key = `${voice.regionKey}:${voice.detail}`;
@@ -419,12 +447,16 @@ function formatDeviceVoices(voices: Speech.Voice[]): DeviceVoiceOption[] {
     .slice(0, 8);
 }
 
-function toDeviceVoiceOption(voice: Speech.Voice, index: number): DeviceVoiceOption {
-  const language = normalizeLanguage(voice.language || "en-US");
+function toDeviceVoiceOption(
+  voice: Speech.Voice,
+  index: number,
+  readingLanguage: ReadingLanguage
+): DeviceVoiceOption {
+  const language = normalizeVoiceLanguage(voice.language || readingLanguage.voiceLanguage);
   const rawName = String(voice.name || voice.identifier || "");
   const lower = `${rawName} ${voice.identifier || ""}`.toLowerCase();
-  const regionKey = regionKeyFromLanguage(language);
-  const regionLabel = regionLabelFromKey(regionKey);
+  const regionKey = voiceRegionKey(language);
+  const regionLabel = voiceRegionLabel(language, readingLanguage);
   const quality = lower.includes("network")
     ? "Network voice"
     : lower.includes("local") || lower.includes("offline") || lower.includes("google")
@@ -433,42 +465,37 @@ function toDeviceVoiceOption(voice: Speech.Voice, index: number): DeviceVoiceOpt
   const number = index + 1;
   return {
     id: voice.identifier,
-    name: rawName || `${regionLabel} voice ${number}`,
+    name: rawName || `${readingLanguage.label} voice ${number}`,
     language,
     regionKey,
     regionLabel,
     displayName: regionLabel,
     detail: quality === "Network voice" ? "Needs Android voice data" : "Available on this phone",
-    rank: regionRank(regionKey) * 10 + (quality === "Offline voice" ? 0 : quality === "Phone voice" ? 1 : 2),
+    rank:
+      regionRank(regionKey, readingLanguage) * 10 +
+      (quality === "Offline voice" ? 0 : quality === "Phone voice" ? 1 : 2),
   };
 }
 
-function normalizeLanguage(language: string): string {
+function normalizeVoiceLanguage(language: string): string {
   return language.replace("_", "-") || "en-US";
 }
 
-function regionKeyFromLanguage(language: string): string {
-  const parts = normalizeLanguage(language).split("-");
-  return (parts[1] || "US").toUpperCase();
-}
-
-function regionLabelFromKey(regionKey: string): string {
-  const labels: Record<string, string> = {
-    US: "American English",
-    GB: "British English",
-    UK: "British English",
-    AU: "Australian English",
-    CA: "Canadian English",
-    IN: "Indian English",
-    IE: "Irish English",
-    ZA: "South African English",
-    NZ: "New Zealand English",
+function regionRank(regionKey: string, readingLanguage: ReadingLanguage): number {
+  const preferred = voiceRegionKey(readingLanguage.voiceLanguage);
+  const ranks: Record<string, number> = {
+    [preferred]: 0,
+    US: 1,
+    GB: 2,
+    UK: 2,
+    ES: 3,
+    MX: 4,
+    FR: 5,
+    CA: 6,
+    DE: 7,
+    BR: 8,
+    PT: 9,
   };
-  return labels[regionKey] || `${regionKey} English`;
-}
-
-function regionRank(regionKey: string): number {
-  const ranks: Record<string, number> = { US: 0, GB: 1, UK: 1, AU: 2, CA: 3, IN: 4 };
   return ranks[regionKey] ?? 9;
 }
 
@@ -508,11 +535,85 @@ function VoiceOverview({
   );
 }
 
+function LanguageSettingsSheet({
+  visible,
+  preferences,
+  onClose,
+  onChange,
+}: {
+  visible: boolean;
+  preferences: ReadingPreferences;
+  onClose: () => void;
+  onChange: (next: ReadingPreferences) => void;
+}) {
+  const current = getReadingLanguage(preferences.bookLanguage);
+
+  function selectLanguage(language: ReadingLanguage) {
+    onChange({
+      ...preferences,
+      bookLanguage: language.code,
+      deviceVoiceId: undefined,
+      voiceEngine:
+        preferences.voiceEngine === "local_ai" && !language.edgeAi
+          ? "device"
+          : preferences.voiceEngine,
+    });
+    onClose();
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Book language</Text>
+            <Pressable onPress={onClose} hitSlop={10}>
+              <Text style={styles.modalClose}>x</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalContent}>
+            <View style={styles.voiceGuide}>
+              <Text style={styles.voiceGuideTitle}>Improve scanned text and reading voice</Text>
+              <Text style={styles.voiceGuideText}>
+                ReadFlow uses this for OCR, phone voices, Cloud AI, and AI answers.
+                Edge AI is English-only until more language packs are added.
+              </Text>
+            </View>
+
+            <View style={styles.languageGrid}>
+              {READING_LANGUAGES.map((language) => {
+                const active = language.code === current.code;
+                return (
+                  <Pressable
+                    key={language.code}
+                    style={[styles.languageChoice, active && styles.languageChoiceOn]}
+                    onPress={() => selectLanguage(language)}
+                  >
+                    <Text style={[styles.languageChoiceTitle, active && styles.languageChoiceTitleOn]}>
+                      {language.label}
+                    </Text>
+                    <Text style={[styles.languageChoiceMeta, active && styles.languageChoiceMetaOn]}>
+                      OCR {language.ocrLang}
+                      {language.edgeAi ? " · Edge AI" : ""}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function VoiceSettingsSheet({
   visible,
   entitlement,
   usage,
   preferences,
+  readingLanguage,
   deviceVoices,
   localStatus,
   localDownloading,
@@ -525,6 +626,7 @@ function VoiceSettingsSheet({
   entitlement: EntitlementSnapshot;
   usage: UsageSnapshot | null;
   preferences: ReadingPreferences;
+  readingLanguage: ReadingLanguage;
   deviceVoices: DeviceVoiceOption[];
   localStatus: LocalNeuralVoiceStatus;
   localDownloading: boolean;
@@ -556,6 +658,13 @@ function VoiceSettingsSheet({
       Alert.alert(
         "AI voice allowance",
         "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Device voice stays unlimited."
+      );
+      return;
+    }
+    if (engine === "local_ai" && !readingLanguage.edgeAi) {
+      Alert.alert(
+        "Edge AI language pack",
+        `Edge AI is available for English right now. Use Device voice or Cloud AI for ${readingLanguage.label} until we add this language pack.`
       );
       return;
     }
@@ -595,7 +704,7 @@ function VoiceSettingsSheet({
             <View style={styles.voiceGuide}>
               <Text style={styles.voiceGuideTitle}>Choose how books are read aloud</Text>
               <Text style={styles.voiceGuideText}>
-                Edge AI is recommended for long books. Extra settings appear only for the
+                Book language is {readingLanguage.label}. Extra settings appear only for the
                 voice you choose.
               </Text>
             </View>
@@ -605,13 +714,17 @@ function VoiceSettingsSheet({
                 title="Edge AI"
                 detail={
                   localStatus.engineInstalled
-                    ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
+                    ? readingLanguage.edgeAi
+                      ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
+                      : "English voice pack only for now. More Edge AI languages can be added later."
                     : localStatus.detail
                 }
                 active={preferences.voiceEngine === "local_ai"}
-                locked={!localStatus.engineInstalled}
+                locked={!localStatus.engineInstalled || !readingLanguage.edgeAi}
                 stateLabel={
-                  localStatus.engineInstalled
+                  !readingLanguage.edgeAi
+                    ? "English"
+                    : localStatus.engineInstalled
                     ? undefined
                     : localStatus.nativeAvailable
                       ? "Download"
@@ -624,7 +737,7 @@ function VoiceSettingsSheet({
                 detail={
                   currentDeviceVoice
                     ? `Uses ${currentDeviceVoice.displayName}. Smallest battery use.`
-                    : "Uses the phone's built-in reader voice. Smallest battery use."
+                    : `Uses the phone's built-in ${readingLanguage.label} voice when available.`
                 }
                 active={preferences.voiceEngine === "device"}
                 onPress={() => selectEngine("device")}
@@ -689,7 +802,7 @@ function VoiceSettingsSheet({
               <View style={styles.voiceBlock}>
                 <Text style={styles.voiceBlockTitle}>Phone voice accent</Text>
                 <Text style={styles.voiceBlockHint}>
-                  Optional. Choose an English accent, or keep the phone default.
+                  Optional. Choose a {readingLanguage.label} phone voice, or keep the phone default.
                 </Text>
                 <View style={styles.voiceRegionRow}>
                   {regionOptions.map((region) => {
@@ -741,7 +854,9 @@ function VoiceSettingsSheet({
                     </Text>
                   </Pressable>
                   {deviceVoices.length === 0 ? (
-                    <Text style={styles.voiceEmpty}>No optional English voices were reported.</Text>
+                    <Text style={styles.voiceEmpty}>
+                      No optional {readingLanguage.label} voices were reported.
+                    </Text>
                   ) : (
                     visibleDeviceVoices.map((voice) => {
                       const active = preferences.deviceVoiceId === voice.id;
@@ -887,6 +1002,7 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
             </Text>
             <View style={styles.helpRows}>
               <HelpRow label="+" text="Add a PDF or Word document." />
+              <HelpRow label="Lang" text="Sets OCR, phone voices, Cloud AI, and AI answer language." />
               <HelpRow label="Voice" text="Choose unlimited device voice, capped Cloud AI, or downloaded Edge AI." />
               <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
               <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />
@@ -1458,6 +1574,44 @@ const styles = StyleSheet.create({
   },
   voiceChoiceGroup: {
     gap: theme.spacing(1),
+  },
+  languageGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  languageChoice: {
+    width: "48%",
+    minHeight: 64,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    justifyContent: "center",
+  },
+  languageChoiceOn: {
+    borderColor: theme.colors.teal,
+    backgroundColor: theme.colors.tealSoft,
+  },
+  languageChoiceTitle: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 13,
+  },
+  languageChoiceTitleOn: {
+    color: theme.colors.teal,
+  },
+  languageChoiceMeta: {
+    color: theme.colors.textDim,
+    fontFamily: theme.fonts.sans,
+    fontSize: 10.5,
+    lineHeight: 13,
+    marginTop: 3,
+  },
+  languageChoiceMetaOn: {
+    color: theme.colors.textMute,
   },
 
   voiceChoice: {

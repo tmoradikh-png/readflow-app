@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { normalizeReadingLanguageCode } from "./ReadingLanguages";
 
 export type VoiceEngine = "device" | "cloud" | "local_ai";
 
@@ -6,6 +7,7 @@ export interface ReadingPreferences {
   voiceEngine: VoiceEngine;
   deviceVoiceId?: string;
   cloudVoiceId: string;
+  bookLanguage: string;
 }
 
 const KEY = "readflow.preferences.v1";
@@ -13,6 +15,7 @@ const KEY = "readflow.preferences.v1";
 export const DEFAULT_PREFERENCES: ReadingPreferences = {
   voiceEngine: "device",
   cloudVoiceId: "nova",
+  bookLanguage: "en",
 };
 
 export async function loadPreferences(): Promise<ReadingPreferences> {
@@ -45,5 +48,6 @@ export function normalizePreferences(
     typeof value?.deviceVoiceId === "string" && value.deviceVoiceId.trim()
       ? value.deviceVoiceId.trim()
       : undefined;
-  return { voiceEngine, cloudVoiceId, deviceVoiceId };
+  const bookLanguage = normalizeReadingLanguageCode(value?.bookLanguage);
+  return { voiceEngine, cloudVoiceId, deviceVoiceId, bookLanguage };
 }
