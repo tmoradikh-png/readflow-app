@@ -17,6 +17,7 @@ import {
   ParsedPdf,
   isLocalBackendTarget,
   isNetworkError,
+  isQuotaError,
 } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
@@ -227,6 +228,66 @@ export function LibraryScreen({
     }
   }
 
+  async function rebuildWithOcr(item: LibraryItem) {
+    if (item.kind !== "pdf") {
+      setNotice({
+        title: "OCR rebuild",
+        body: "OCR rebuild is for PDFs. Word documents already provide structured text.",
+      });
+      return;
+    }
+    if (!entitlement.features.ocr) {
+      setNotice({
+        title: "OCR rebuild",
+        body:
+          "Rebuilding a PDF from page images uses OCR and is available in AI Pro and Power. Reader Plus stays cost-safe for normal text PDFs.",
+      });
+      return;
+    }
+    if (!item.storedUri) {
+      setNotice({
+        title: "OCR rebuild",
+        body: "This document's saved file is missing. Add the PDF again, then rebuild with OCR.",
+      });
+      return;
+    }
+
+    setError(null);
+    setBusyId(item.id);
+    try {
+      await DocCache.remove(item.id);
+      const doc = await PDFParser.parseUri({
+        uri: item.storedUri,
+        fileName: item.fileName,
+        mimeType: item.mimeType || undefined,
+        ocrLang: readingLanguage.ocrLang,
+        forceOcr: true,
+      });
+      await DocCache.save(doc);
+      const saved = await Library.saveOpened(doc, item.storedUri, item.mimeType || undefined);
+      await Library.updateProgress(doc.docId, {
+        lastPage: 1,
+        lastSentenceId: 0,
+        totalPages: doc.pageCount,
+      });
+      const freshItem = (await Library.get(doc.docId)) || saved;
+      await refresh();
+      setNotice({
+        title: "OCR rebuild started",
+        body:
+          "readFlow is rebuilding this PDF from page images. The first pages open now; remaining pages continue through the paid OCR allowance.",
+        primary: { label: "Open", onPress: () => onOpen(doc, freshItem) },
+      });
+    } catch (e: any) {
+      setNotice({
+        title: "OCR rebuild",
+        body: rebuildOcrErrorMessage(e),
+      });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function confirmRemove(item: LibraryItem) {
     setNotice({
       title: "Remove from library?",
@@ -236,6 +297,23 @@ export function LibraryScreen({
         label: "Remove",
         tone: "danger",
         onPress: () => removeItem(item).catch(() => {}),
+      },
+    });
+  }
+
+  function confirmRebuildWithOcr(item: LibraryItem) {
+    if (!entitlement.features.ocr) {
+      rebuildWithOcr(item).catch(() => {});
+      return;
+    }
+    setNotice({
+      title: "Rebuild with OCR?",
+      body:
+        "Use this when a PDF imports with wrong order, missing words, or strange characters. It rebuilds from page images and counts pages against your monthly OCR allowance.",
+      secondary: { label: "Cancel", tone: "secondary" },
+      primary: {
+        label: "Rebuild",
+        onPress: () => rebuildWithOcr(item).catch(() => {}),
       },
     });
   }
@@ -365,6 +443,7 @@ export function LibraryScreen({
               busy={busyId === recent.id}
               onPress={() => openItem(recent)}
               onRemove={() => confirmRemove(recent)}
+              onRebuildOcr={() => confirmRebuildWithOcr(recent)}
             />
           )}
 
@@ -381,6 +460,7 @@ export function LibraryScreen({
                 busy={busyId === item.id}
                 onPress={() => openItem(item)}
                 onRemove={() => confirmRemove(item)}
+                onRebuildOcr={() => confirmRebuildWithOcr(item)}
               />
             ))}
             {rest.length === 0 && (
@@ -472,6 +552,20 @@ function savedCopyConnectionMessage(): string {
     return "Opened the saved copy. Scanned pages will finish after the local backend is reachable again.";
   }
   return "Opened the saved copy. Scanned pages will finish after readFlow can reach the extraction server again.";
+}
+
+function rebuildOcrErrorMessage(e: unknown): string {
+  const message = (e as any)?.message ? String((e as any).message) : "";
+  if (isNetworkError(e)) {
+    return importConnectionMessage();
+  }
+  if (isQuotaError(e) || /quota_exceeded/i.test(message)) {
+    return "Your monthly OCR allowance is used. The saved PDF can be rebuilt after the limit resets, or on a higher OCR tier.";
+  }
+  if (/upgrade_required|ocr/i.test(message)) {
+    return "OCR rebuild is available in AI Pro and Power because it uses backend OCR pages.";
+  }
+  return message || "Could not rebuild this PDF with OCR.";
 }
 
 interface DeviceVoiceOption {
@@ -1086,6 +1180,7 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
               <HelpRow label="Lang" text="Sets OCR, phone voices, Cloud AI, and AI answer language." />
               <HelpRow label="Voice" text="Choose unlimited device voice, capped Cloud AI, or downloaded Edge AI." />
               <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
+              <HelpRow label="Fix text" text="Rebuilds a bad PDF import with paid OCR." />
               <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />
               <HelpRow label="Focus" text="Hides controls for a cleaner reading view." />
               <HelpRow label="BM" text="Opens bookmarks and page navigation." />
@@ -1154,11 +1249,13 @@ function ContinueCard({
   busy,
   onPress,
   onRemove,
+  onRebuildOcr,
 }: {
   item: LibraryItem;
   busy: boolean;
   onPress: () => void;
   onRemove: () => void;
+  onRebuildOcr: () => void;
 }) {
   const pct = Math.round((item.progress || 0) * 100);
   return (
@@ -1186,6 +1283,18 @@ function ContinueCard({
       >
         <Text style={styles.cardRemoveText}>Remove</Text>
       </Pressable>
+      {item.kind === "pdf" ? (
+        <Pressable
+          style={styles.cardOcrBtn}
+          onPress={(event) => {
+            event.stopPropagation();
+            onRebuildOcr();
+          }}
+          hitSlop={8}
+        >
+          <Text style={styles.cardOcrText}>Fix text</Text>
+        </Pressable>
+      ) : null}
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
     </Pressable>
   );
@@ -1196,11 +1305,13 @@ function DocCard({
   busy,
   onPress,
   onRemove,
+  onRebuildOcr,
 }: {
   item: LibraryItem;
   busy: boolean;
   onPress: () => void;
   onRemove: () => void;
+  onRebuildOcr: () => void;
 }) {
   return (
     <Pressable
@@ -1224,6 +1335,18 @@ function DocCard({
       >
         <Text style={styles.docRemoveText}>Remove</Text>
       </Pressable>
+      {item.kind === "pdf" ? (
+        <Pressable
+          style={styles.docOcrBtn}
+          onPress={(event) => {
+            event.stopPropagation();
+            onRebuildOcr();
+          }}
+          hitSlop={8}
+        >
+          <Text style={styles.docOcrText}>Fix text</Text>
+        </Pressable>
+      ) : null}
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
     </Pressable>
   );
@@ -1495,6 +1618,22 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sansSemiBold,
     fontSize: 11,
   },
+  cardOcrBtn: {
+    position: "absolute",
+    right: 12,
+    top: 47,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: theme.colors.tealSoft,
+    borderWidth: 1,
+    borderColor: "#BBD7D1",
+  },
+  cardOcrText: {
+    color: theme.colors.teal,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 11,
+  },
 
   /* section */
   sectionRow: {
@@ -1528,6 +1667,21 @@ const styles = StyleSheet.create({
   },
   docRemoveText: {
     color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 10.5,
+  },
+  docOcrBtn: {
+    alignSelf: "flex-start",
+    marginTop: 5,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.tealSoft,
+    borderWidth: 1,
+    borderColor: "#BBD7D1",
+  },
+  docOcrText: {
+    color: theme.colors.teal,
     fontFamily: theme.fonts.sansSemiBold,
     fontSize: 10.5,
   },

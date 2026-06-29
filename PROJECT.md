@@ -197,6 +197,13 @@ Changes after the latest finished build and included in source `1.0.18`:
   presentation forms, removes the U+0467 filler, strips footnote-star markers
   and page-bottom footnote blocks from reader flow, and bumps mobile parsed-text
   cache to version 3.
+- The same sample proves that clean-looking native text can still be semantically
+  wrong across a whole PDF because the hidden text layer interleaves body text
+  and footnotes. Do not keep expanding one-off text repairs for this class.
+  AI Pro/Power users now have a document action, `Fix text`, that reparses the
+  stored PDF with `forceOcr=true`, uses the paid monthly OCR allowance, saves the
+  OCR cache, and opens the rebuilt document while remaining pages continue via
+  background OCR.
 - Reader text cleanup now removes page-number-only lines, common URL/watermark
   lines, and repeated short headers/footers before building reader sentences.
   This affects display, TTS, and AI context so the app does not read page

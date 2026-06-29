@@ -54,7 +54,7 @@ export interface ImportProgressHooks {
 
 export const PDFParser = {
   async pickAndParse(
-    opts?: { ocrLang?: string } & ImportProgressHooks
+    opts?: { ocrLang?: string; forceOcr?: boolean } & ImportProgressHooks
   ): Promise<ParsedPdf | null> {
     const picked = await DocumentPicker.getDocumentAsync({
       type: ["application/pdf", DOCX_TYPE],
@@ -69,6 +69,7 @@ export const PDFParser = {
       fileName: asset.name || "document",
       mimeType: asset.mimeType || "application/octet-stream",
       ocrLang: opts?.ocrLang,
+      forceOcr: opts?.forceOcr,
       onProgress: opts?.onProgress,
       onUploaded: opts?.onUploaded,
     });
@@ -80,6 +81,7 @@ export const PDFParser = {
     fileName: string;
     mimeType?: string;
     ocrLang?: string;
+    forceOcr?: boolean;
   } & ImportProgressHooks): Promise<ParsedPdf> {
     const form = new FormData();
     // React Native FormData file shape:
@@ -90,6 +92,7 @@ export const PDFParser = {
     } as any);
     // Optional OCR language hint (backend validates against its allow-list).
     if (args.ocrLang) form.append("ocrLang", args.ocrLang);
+    if (args.forceOcr) form.append("forceOcr", "true");
 
     // Use XHR (not fetch) so we get real upload-byte progress for the UI.
     const data = await uploadForm(

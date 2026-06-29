@@ -24,13 +24,14 @@ const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingm
 
 /**
  * POST /api/pdf/extract
- * form-data: file=<pdf|docx>
+ * form-data: file=<pdf|docx>, ocrLang?, forceOcr?
  * -> { pageCount, pages: [{ page, text, source, confidence? }], scanned, kind, ocrPages, truncated? }
  *
  * Tier rules:
  *   - Free: native text only, capped to `perDocPageCap` pages, NO OCR. Ads UI.
  *   - Reader Plus: full native-text documents, NO OCR and no AI cost.
- *   - AI Pro / Power: OCR for scanned pages (counts toward monthly quota).
+ *   - AI Pro / Power: OCR for scanned pages, or full rebuild when forceOcr=true
+ *     (counts toward monthly quota).
  * Per-tier file-size and page limits are enforced from the plan config so a
  * free user can't push large/expensive jobs through the backend.
  */
@@ -78,6 +79,13 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
         .json({ error: "Unsupported file. Upload a PDF or Word (.docx) document." });
     }
 
+    const forceOcr =
+      isPdf &&
+      ["1", "true", "yes"].includes(String(req.body?.forceOcr || "").trim().toLowerCase());
+    if (forceOcr && !features.ocr) {
+      return res.status(402).json({ error: "upgrade_required", feature: "ocr" });
+    }
+
     const doc = isPdf ? await extractPdf(req.file.buffer) : await extractDocx(req.file.buffer);
     addUsage(ent.appUserId, "pdfs");
 
@@ -99,7 +107,9 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
       typeof req.body?.ocrLang === "string" ? req.body.ocrLang : undefined;
 
     const lowQuality = isPdf
-      ? doc.pages.filter((p) => needsOcr(p.text, ocrLang)).map((p) => p.page)
+      ? forceOcr
+        ? doc.pages.map((p) => p.page)
+        : doc.pages.filter((p) => needsOcr(p.text, ocrLang)).map((p) => p.page)
       : [];
 
     // Keep the original bytes briefly so the client can OCR more pages on
@@ -129,7 +139,9 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
           for (const p of doc.pages) {
             const r = ocr.get(p.page);
             const shouldReplace =
-              r && r.text.trim() && (lowQualitySet.has(p.page) || r.text.length > p.text.length);
+              r &&
+              r.text.trim() &&
+              (forceOcr || lowQualitySet.has(p.page) || r.text.length > p.text.length);
             if (shouldReplace) {
               p.text = r.text;
               p.source = "ocr";
