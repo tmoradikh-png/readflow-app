@@ -230,6 +230,19 @@ Changes after the latest finished build and included in source `1.0.18`:
   `EXPO_PUBLIC_API_URL=http://127.0.0.1:4000` plus
   `adb reverse tcp:4000 tcp:4000`, and launched without fatal startup logcat
   errors. This APK is for USB-connected QA only, not Play/internal distribution.
+- 2026-06-29 OCR rebuild deployment check: the old Render backend ignored
+  `forceOcr=true` and returned native Persian text, which made `Fix text` look
+  unchanged on the phone. Commit `b1f6b79` was pushed to both
+  `origin/codex/local-ai-voice-polish` and `origin/main`; after Render deployed,
+  `https://readflow-backend-internal.onrender.com/api/health` returned
+  `capabilities.forceOcr=true`. A direct Persian PDF request then returned
+  `forceOcr=true`, `ocrPages=4`, and pending OCR for the remaining 25 pages.
+- Latest phone install on Samsung `SM_G975F` (`R58M168KTSZ`) is the normal
+  Render-connected APK:
+  `C:\rf-mobile-test-voice2\android\app\build\outputs\apk\release\app-render.apk`.
+  The USB/local-backend test APK was preserved beside it as `app-local-backend.apk`.
+  When testing `Fix text`, the shelf/reader must show `OCR rebuild`; if not, the
+  user is still viewing an old native import or an older backend response.
 
 ## Account Map
 
