@@ -415,8 +415,17 @@ Play Console → your app → **Testing → Internal testing → Create new rele
 - Add testers (an email list or a Google Group). Save → Review → **Roll out**.
 - Share the opt‑in link with your testers; they install via Play.
 
-(Optional CLI submit: `eas submit -p android --profile internal` after configuring a Google
-service‑account key in Play Console → Setup → API access.)
+Build 23 AAB is available here and was also downloaded locally to
+`artifacts/readflow-1.0.23-23.aab`:
+`https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`
+
+Optional CLI submit:
+- Command: `eas submit -p android --profile internal --id <build-id> --wait`
+- Status on 2026-06-29: blocked because Expo has no Google Service Account JSON
+  configured for `com.urmiaworks.readflow`.
+- To enable it, create/download a service-account JSON in Play Console →
+  Setup → API access, then either provide its local file path to `eas submit` or
+  configure it in Expo credentials. Do not commit the JSON file.
 
 ---
 
@@ -508,7 +517,8 @@ npm run check:release
 npx --yes eas-cli build -p android --profile internal --non-interactive --no-wait
 
 # (optional) submit straight to the Play internal track
-eas submit -p android --profile internal
+# requires Google Service Account JSON first
+eas submit -p android --profile internal --id 8c701727-dcc5-403d-9b69-4f4d2e4fc9b2 --wait
 ```
 
 ```powershell

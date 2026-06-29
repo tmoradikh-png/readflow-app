@@ -543,7 +543,10 @@ Short version:
    ```
 7. Add a row to the build ledger in `RELEASE_GUIDE.md` as soon as a build is
    started. Mark it finished and add the artifact URL once EAS finishes.
-8. Upload the `.aab` to Google Play Console internal testing.
+8. Upload the `.aab` to Google Play Console internal testing. Build 23 artifact:
+   `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`.
+   EAS submit is not automated yet because the Expo project does not have a
+   Google Service Account JSON configured for Play upload.
 9. On the phone, uninstall the old app before reinstalling. Android launchers and
    Play cache icons/version metadata aggressively.
 
