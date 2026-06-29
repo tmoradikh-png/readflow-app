@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -21,6 +21,7 @@ import {
 } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
+import { OcrLoader, OcrProgress } from "../services/OcrLoader";
 import { Bookmarks } from "../services/Bookmarks";
 import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
 import { ThemedNotice, ThemedNoticeAction } from "../components/ThemedNotice";
@@ -84,6 +85,11 @@ export function LibraryScreen({
   const [showVoice, setShowVoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [rebuildStartingIds, setRebuildStartingIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [rebuildProgress, setRebuildProgress] = useState<Record<string, OcrProgress>>({});
+  const rebuildUnsubsRef = useRef<Map<string, () => void>>(new Map());
   const [deviceVoices, setDeviceVoices] = useState<DeviceVoiceOption[]>([]);
   const [localStatus, setLocalStatus] = useState<LocalNeuralVoiceStatus>(
     getLocalNeuralVoiceStatus()
@@ -105,6 +111,21 @@ export function LibraryScreen({
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    for (const item of items) {
+      const progress = OcrLoader.progress(item.id);
+      if (progress) watchRebuildProgress(item.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
+  useEffect(() => {
+    return () => {
+      for (const unsub of rebuildUnsubsRef.current.values()) unsub();
+      rebuildUnsubsRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -168,6 +189,11 @@ export function LibraryScreen({
       const cacheMatchesLanguage = cached
         ? DocCache.isForLanguage(cached, readingLanguage.ocrLang)
         : false;
+      const shouldForceOcr =
+        item.kind === "pdf" &&
+        Boolean(cached?.forceOcr) &&
+        cacheMatchesLanguage &&
+        Boolean(entitlement.features.ocr);
       let doc: ParsedPdf;
 
       if (cached && cacheMatchesLanguage && DocCache.isComplete(cached)) {
@@ -181,6 +207,7 @@ export function LibraryScreen({
             fileName: item.fileName,
             mimeType: item.mimeType || undefined,
             ocrLang: readingLanguage.ocrLang,
+            forceOcr: shouldForceOcr,
           });
           doc = cached && cacheMatchesLanguage ? DocCache.mergeCachedOcr(fresh, cached) : fresh;
           await DocCache.save(doc);
@@ -229,6 +256,13 @@ export function LibraryScreen({
   }
 
   async function rebuildWithOcr(item: LibraryItem) {
+    if (isRebuildInProgress(item.id)) {
+      setNotice({
+        title: "OCR rebuild running",
+        body: "This book is already being rebuilt from page images. Wait for the progress to finish before starting another rebuild.",
+      });
+      return;
+    }
     if (item.kind !== "pdf") {
       setNotice({
         title: "OCR rebuild",
@@ -253,6 +287,7 @@ export function LibraryScreen({
     }
 
     setError(null);
+    setRebuildStarting(item.id, true);
     setBusyId(item.id);
     try {
       await DocCache.remove(item.id);
@@ -271,6 +306,17 @@ export function LibraryScreen({
         totalPages: doc.pageCount,
       });
       const freshItem = (await Library.get(doc.docId)) || saved;
+      if (doc.docToken && (doc.pendingOcr?.length ?? 0) > 0) {
+        const progress = OcrLoader.start({
+          docId: doc.docId,
+          token: doc.docToken,
+          ocrLang: readingLanguage.ocrLang,
+          pages: doc.pages,
+          pending: doc.pendingOcr ?? [],
+        });
+        setRebuildProgress((current) => ({ ...current, [doc.docId]: progress }));
+        watchRebuildProgress(doc.docId);
+      }
       await refresh();
       setNotice({
         title: "OCR rebuild started",
@@ -284,6 +330,7 @@ export function LibraryScreen({
         body: rebuildOcrErrorMessage(e),
       });
     } finally {
+      setRebuildStarting(item.id, false);
       setBusyId(null);
     }
   }
@@ -302,6 +349,13 @@ export function LibraryScreen({
   }
 
   function confirmRebuildWithOcr(item: LibraryItem) {
+    if (isRebuildInProgress(item.id)) {
+      setNotice({
+        title: "OCR rebuild running",
+        body: "This book is already being rebuilt. The shelf shows progress and readFlow will save each OCR batch as it finishes.",
+      });
+      return;
+    }
     if (!entitlement.features.ocr) {
       rebuildWithOcr(item).catch(() => {});
       return;
@@ -340,6 +394,41 @@ export function LibraryScreen({
       setLocalDownloading(false);
       setLocalDownloadProgress(null);
     }
+  }
+
+  function setRebuildStarting(id: string, active: boolean) {
+    setRebuildStartingIds((current) => {
+      const next = new Set(current);
+      if (active) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function watchRebuildProgress(docId: string) {
+    if (rebuildUnsubsRef.current.has(docId)) return;
+    const existing = OcrLoader.progress(docId);
+    if (existing) {
+      setRebuildProgress((current) => ({ ...current, [docId]: existing }));
+    }
+    const unsub = OcrLoader.subscribe(docId, (_pages, progress) => {
+      setRebuildProgress((current) => ({ ...current, [docId]: progress }));
+      if (progress.complete) setRebuildStarting(docId, false);
+    });
+    rebuildUnsubsRef.current.set(docId, unsub);
+  }
+
+  function isRebuildInProgress(docId: string): boolean {
+    const progress = rebuildProgress[docId];
+    return rebuildStartingIds.has(docId) || Boolean(progress && !progress.complete);
+  }
+
+  function rebuildLabel(docId: string): string {
+    const progress = rebuildProgress[docId];
+    if (rebuildStartingIds.has(docId)) return "Starting...";
+    if (progress && !progress.complete) return `Fixing ${progress.percent}%`;
+    if (progress?.complete) return "Fixed";
+    return "Fix text";
   }
 
   const recent = items[0];
@@ -441,6 +530,9 @@ export function LibraryScreen({
             <ContinueCard
               item={recent}
               busy={busyId === recent.id}
+              rebuildActive={isRebuildInProgress(recent.id)}
+              rebuildLabel={rebuildLabel(recent.id)}
+              rebuildProgress={rebuildProgress[recent.id]}
               onPress={() => openItem(recent)}
               onRemove={() => confirmRemove(recent)}
               onRebuildOcr={() => confirmRebuildWithOcr(recent)}
@@ -458,6 +550,9 @@ export function LibraryScreen({
                 key={item.id}
                 item={item}
                 busy={busyId === item.id}
+                rebuildActive={isRebuildInProgress(item.id)}
+                rebuildLabel={rebuildLabel(item.id)}
+                rebuildProgress={rebuildProgress[item.id]}
                 onPress={() => openItem(item)}
                 onRemove={() => confirmRemove(item)}
                 onRebuildOcr={() => confirmRebuildWithOcr(item)}
@@ -1247,12 +1342,18 @@ function Empty({
 function ContinueCard({
   item,
   busy,
+  rebuildActive,
+  rebuildLabel,
+  rebuildProgress,
   onPress,
   onRemove,
   onRebuildOcr,
 }: {
   item: LibraryItem;
   busy: boolean;
+  rebuildActive: boolean;
+  rebuildLabel: string;
+  rebuildProgress?: OcrProgress;
   onPress: () => void;
   onRemove: () => void;
   onRebuildOcr: () => void;
@@ -1272,6 +1373,19 @@ function ContinueCard({
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${Math.max(4, pct)}%` }]} />
         </View>
+        {rebuildActive && rebuildProgress ? (
+          <View style={styles.rebuildProgress}>
+            <Text style={styles.rebuildProgressText}>{rebuildLabel}</Text>
+            <View style={styles.rebuildTrack}>
+              <View
+                style={[
+                  styles.rebuildFill,
+                  { width: `${Math.max(3, rebuildProgress.percent)}%` },
+                ]}
+              />
+            </View>
+          </View>
+        ) : null}
       </View>
       <Pressable
         style={styles.cardRemoveBtn}
@@ -1285,14 +1399,18 @@ function ContinueCard({
       </Pressable>
       {item.kind === "pdf" ? (
         <Pressable
-          style={styles.cardOcrBtn}
+          style={[styles.cardOcrBtn, rebuildActive && styles.ocrBtnDisabled]}
           onPress={(event) => {
             event.stopPropagation();
+            if (rebuildActive) return;
             onRebuildOcr();
           }}
+          disabled={rebuildActive}
           hitSlop={8}
         >
-          <Text style={styles.cardOcrText}>Fix text</Text>
+          <Text style={[styles.cardOcrText, rebuildActive && styles.ocrTextDisabled]}>
+            {rebuildLabel}
+          </Text>
         </Pressable>
       ) : null}
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
@@ -1303,12 +1421,18 @@ function ContinueCard({
 function DocCard({
   item,
   busy,
+  rebuildActive,
+  rebuildLabel,
+  rebuildProgress,
   onPress,
   onRemove,
   onRebuildOcr,
 }: {
   item: LibraryItem;
   busy: boolean;
+  rebuildActive: boolean;
+  rebuildLabel: string;
+  rebuildProgress?: OcrProgress;
   onPress: () => void;
   onRemove: () => void;
   onRebuildOcr: () => void;
@@ -1337,15 +1461,29 @@ function DocCard({
       </Pressable>
       {item.kind === "pdf" ? (
         <Pressable
-          style={styles.docOcrBtn}
+          style={[styles.docOcrBtn, rebuildActive && styles.ocrBtnDisabled]}
           onPress={(event) => {
             event.stopPropagation();
+            if (rebuildActive) return;
             onRebuildOcr();
           }}
+          disabled={rebuildActive}
           hitSlop={8}
         >
-          <Text style={styles.docOcrText}>Fix text</Text>
+          <Text style={[styles.docOcrText, rebuildActive && styles.ocrTextDisabled]}>
+            {rebuildLabel}
+          </Text>
         </Pressable>
+      ) : null}
+      {rebuildActive && rebuildProgress ? (
+        <View style={styles.docRebuildTrack}>
+          <View
+            style={[
+              styles.rebuildFill,
+              { width: `${Math.max(3, rebuildProgress.percent)}%` },
+            ]}
+          />
+        </View>
       ) : null}
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
     </Pressable>
@@ -1634,6 +1772,26 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sansSemiBold,
     fontSize: 11,
   },
+  rebuildProgress: { marginTop: 9 },
+  rebuildProgressText: {
+    color: theme.colors.teal,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 11,
+    marginBottom: 5,
+  },
+  rebuildTrack: {
+    height: 4,
+    backgroundColor: "#D6E9E4",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  rebuildFill: { height: "100%", backgroundColor: theme.colors.teal, borderRadius: 3 },
+  ocrBtnDisabled: {
+    opacity: 0.78,
+  },
+  ocrTextDisabled: {
+    color: theme.colors.textMute,
+  },
 
   /* section */
   sectionRow: {
@@ -1684,6 +1842,13 @@ const styles = StyleSheet.create({
     color: theme.colors.teal,
     fontFamily: theme.fonts.sansSemiBold,
     fontSize: 10.5,
+  },
+  docRebuildTrack: {
+    height: 4,
+    marginTop: 5,
+    backgroundColor: "#D6E9E4",
+    borderRadius: 3,
+    overflow: "hidden",
   },
   hint: { fontFamily: theme.fonts.sans, color: theme.colors.textDim, fontSize: 13, paddingVertical: 8 },
 

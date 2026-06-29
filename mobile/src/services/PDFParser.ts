@@ -36,6 +36,8 @@ export interface ParsedPdf {
   truncated?: boolean;
   /** Highest page returned for this plan when truncated. */
   pageCap?: number;
+  /** True when this document was rebuilt from page images instead of native text. */
+  forceOcr?: boolean;
 }
 
 const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -119,6 +121,7 @@ export const PDFParser = {
       needsPaidOcr: Boolean(data.needsPaidOcr),
       truncated: Boolean(data.truncated),
       pageCap: Number.isFinite(Number(data.pageCap)) ? Number(data.pageCap) : undefined,
+      forceOcr: Boolean(data.forceOcr),
     };
   },
 

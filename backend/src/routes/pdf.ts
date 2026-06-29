@@ -175,6 +175,7 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
       truncated, // client shows paywall when more pages exist beyond the cap
       pageCap,
       needsPaidOcr, // client shows "upgrade to read scanned PDFs"
+      forceOcr, // client/cache remember this document was rebuilt from page images
       // Scanned = a PDF where we still couldn't recover usable text anywhere.
       scanned: isPdf && !hasText,
     });

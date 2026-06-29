@@ -20,6 +20,7 @@ export interface CachedDoc {
   needsPaidOcr: boolean;
   truncated?: boolean;
   pageCap?: number;
+  forceOcr?: boolean;
   ocrLang?: string;
   pages: PdfPage[];
   /** Pages still needing OCR (empty = fully saved for offline). */
@@ -28,7 +29,7 @@ export interface CachedDoc {
 }
 
 const DIR = (FileSystem.documentDirectory || "") + "doccache/";
-const CACHE_SCHEMA_VERSION = 3;
+const CACHE_SCHEMA_VERSION = 4;
 
 function fileFor(docId: string): string {
   const safe = docId.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 80);
@@ -78,6 +79,7 @@ export const DocCache = {
         needsPaidOcr: Boolean(doc.needsPaidOcr),
         truncated: Boolean(doc.truncated),
         pageCap: doc.pageCap,
+        forceOcr: Boolean(doc.forceOcr),
         ocrLang: doc.ocrLang,
         pages: doc.pages,
         pendingOcr: doc.pendingOcr ?? [],
@@ -133,6 +135,7 @@ export const DocCache = {
       needsPaidOcr: c.needsPaidOcr,
       truncated: Boolean(c.truncated),
       pageCap: c.pageCap,
+      forceOcr: Boolean(c.forceOcr),
     };
   },
 
@@ -166,6 +169,11 @@ export const DocCache = {
       cached.pages.filter((p) => p.source === "ocr" && p.text).map((p) => p.page)
     );
     const pendingOcr = (fresh.pendingOcr ?? []).filter((p) => !alreadyOcr.has(p));
-    return { ...fresh, pages, pendingOcr };
+    return {
+      ...fresh,
+      pages,
+      pendingOcr,
+      forceOcr: Boolean(cached.forceOcr || fresh.forceOcr),
+    };
   },
 };

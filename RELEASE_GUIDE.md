@@ -142,6 +142,10 @@ Current readFlow QA checklist for any build that changes reading/voice:
   native-text repair case by default, and AI Pro/Power should offer `Fix text`
   to rebuild the saved PDF with OCR when the visual PDF and imported text do not
   match.
+- While `Fix text` is running, the same book must show visible progress and must
+  not allow a second OCR rebuild to start. Reopen the book after leaving the
+  reader and verify it stays on the forced-OCR cache/token path instead of
+  falling back to the native text layer.
 - For multilingual native-text PDFs, verify line/sentence order by reading a few
   paragraphs aloud visually. Do not accept a test that only proves the letters or
   words exist; Persian/Arabic can have correct words in the wrong order if PDF
