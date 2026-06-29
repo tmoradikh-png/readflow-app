@@ -1,6 +1,5 @@
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from "expo-audio";
 import * as FileSystem from "expo-file-system/legacy";
-import { DeviceTTSProvider } from "./DeviceTTSProvider";
 import { SpeakOptions, TTSProvider } from "./TTSProvider";
 import {
   getLocalNeuralModelPath,
@@ -31,7 +30,6 @@ export class LocalNeuralTTSProvider implements TTSProvider {
   readonly kind = "local" as const;
 
   private player: AudioPlayer | null = null;
-  private device = new DeviceTTSProvider();
   private seq = 0;
   private enginePromise: Promise<TtsEngine> | null = null;
   private generationQueue: Promise<unknown> = Promise.resolve();
@@ -150,9 +148,10 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       if (mySeq !== this.seq) return;
       opts.onFallback?.({
         reason: "local_unavailable",
-        message: "Edge AI is not ready. Continuing with device voice.",
+        message: "Edge AI is not ready on this phone. Download Edge AI before using this voice.",
       });
-      return this.device.speak(rawText, { ...opts, voiceId: opts.fallbackVoiceId });
+      opts.onError?.(e);
+      return;
     }
     if (mySeq !== this.seq) return;
 
@@ -230,9 +229,10 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       if (mySeq !== this.seq) return;
       opts.onFallback?.({
         reason: "local_unavailable",
-        message: "Edge AI could not play. Continuing with device voice.",
+        message: "Edge AI could not play on this phone. Use Device voice or Cloud AI for now.",
       });
-      return this.device.speak(rawText, { ...opts, voiceId: opts.fallbackVoiceId });
+      opts.onError?.(e);
+      return;
     }
   }
 
@@ -246,7 +246,6 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       this.player?.clearLockScreenControls();
     } catch {}
     this.releasePlayer();
-    await this.device.stop();
   }
 
   async pause(): Promise<void> {
@@ -258,7 +257,6 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     try {
       this.player?.pause();
     } catch {}
-    await this.device.pause();
   }
 
   async resume(): Promise<void> {

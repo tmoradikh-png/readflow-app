@@ -29,6 +29,11 @@ import { UpgradeSheet } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
 import { getReadingLanguage } from "../services/ReadingLanguages";
+import {
+  getLocalNeuralVoiceStatus,
+  loadLocalNeuralVoiceStatus,
+  LocalNeuralVoiceStatus,
+} from "../services/LocalNeuralVoice";
 import { theme } from "../theme";
 
 interface Props {
@@ -86,10 +91,16 @@ type RuntimeVoiceMode = "natural" | "device" | "local";
 
 function preferredVoiceMode(
   preferences: ReadingPreferences,
-  entitlement: EntitlementSnapshot
+  entitlement: EntitlementSnapshot,
+  localVoiceReady?: boolean
 ): RuntimeVoiceMode {
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
-  if (preferences.voiceEngine === "local_ai" && readingLanguage.edgeAi) {
+  if (
+    preferences.voiceEngine === "local_ai" &&
+    entitlement.features.ai &&
+    readingLanguage.edgeAi &&
+    localVoiceReady !== false
+  ) {
     return "local";
   }
   if (
@@ -117,6 +128,12 @@ function voiceLabelFor(mode: RuntimeVoiceMode): string {
   if (mode === "natural") return "Cloud AI";
   if (mode === "local") return "Edge AI";
   return "Device voice";
+}
+
+function voiceEngineForMode(mode: RuntimeVoiceMode): VoiceEngine {
+  if (mode === "natural") return "cloud";
+  if (mode === "local") return "local_ai";
+  return "device";
 }
 
 export function Reader({
@@ -158,6 +175,7 @@ export function Reader({
   const [showAI, setShowAI] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [localVoiceStatus, setLocalVoiceStatus] = useState<LocalNeuralVoiceStatus | null>(null);
   const [voiceMode, setVoiceMode] = useState<RuntimeVoiceMode>(
     preferredVoiceMode(preferences, entitlement)
   );
@@ -183,15 +201,25 @@ export function Reader({
       entitlement.features.cloudVoice &&
       entitlement.limits.cloudVoiceCharsPerMonth > 0
   );
-  const desiredVoiceMode = preferredVoiceMode(preferences, entitlement);
+  const localVoiceReady = localVoiceStatus?.engineInstalled;
+  const canUseEdgeVoice = Boolean(entitlement.features.ai && readingLanguage.edgeAi && localVoiceReady);
+  const desiredVoiceMode = preferredVoiceMode(preferences, entitlement, localVoiceReady);
   const readerVoiceOptions = useMemo(
     () => [
       { engine: "device" as const, label: "Device", detail: "Free" },
       {
         engine: "local_ai" as const,
         label: "Edge AI",
-        detail: readingLanguage.edgeAi ? "On phone" : "English",
-        locked: !readingLanguage.edgeAi,
+        detail: !entitlement.features.ai
+          ? "AI Pro"
+          : !readingLanguage.edgeAi
+          ? "English"
+          : localVoiceStatus == null
+            ? "Checking"
+            : localVoiceReady
+              ? "On phone"
+              : "Download",
+        locked: !canUseEdgeVoice,
       },
       {
         engine: "cloud" as const,
@@ -200,7 +228,15 @@ export function Reader({
         locked: !canUseCloudVoice,
       },
     ],
-    [canUseCloudVoice, readingLanguage.cloudAiVoice, readingLanguage.edgeAi]
+    [
+      canUseCloudVoice,
+      canUseEdgeVoice,
+      entitlement.features.ai,
+      localVoiceReady,
+      localVoiceStatus,
+      readingLanguage.cloudAiVoice,
+      readingLanguage.edgeAi,
+    ]
   );
 
   const insets = useSafeAreaInsets();
@@ -224,8 +260,10 @@ export function Reader({
   const initialJumpRef = useRef(false);
   const layoutSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollInteractionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollFailureCountRef = useRef(0);
   const layoutScrollQuietRef = useRef(false);
+  const isUserScrollingRef = useRef(false);
   const settingsRef = useRef(settings);
   // Stable tap handler so memoized rows never re-render on scroll/highlight.
   const onTapWordRef = useRef<(id: number, offset: number) => void>(() => {});
@@ -260,6 +298,19 @@ export function Reader({
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+  useEffect(() => {
+    let alive = true;
+    loadLocalNeuralVoiceStatus()
+      .then((status) => {
+        if (alive) setLocalVoiceStatus(status);
+      })
+      .catch(() => {
+        if (alive) setLocalVoiceStatus((current) => current ?? getLocalNeuralVoiceStatus());
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
   useEffect(() => {
     if (!isPlaying) {
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
@@ -314,10 +365,24 @@ export function Reader({
   }
 
   function selectVoiceEngine(engine: VoiceEngine) {
+    if (engine === "local_ai" && !entitlement.features.ai) {
+      openFeatureLock(
+        "Unlock Edge AI voice",
+        "Edge AI voice is included in AI Pro and Power. Upgrade to use on-device AI voice; Device voice stays available without AI cost."
+      );
+      return;
+    }
     if (engine === "local_ai" && !readingLanguage.edgeAi) {
       openFeatureLock(
         "Edge AI language pack",
         `Edge AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`
+      );
+      return;
+    }
+    if (engine === "local_ai" && localVoiceReady === false) {
+      openFeatureLock(
+        "Download Edge AI",
+        "Edge AI is not ready on this phone. Go to Voice on the shelf, download Edge AI, then choose Edge AI again. Until then, use Device voice or Cloud AI."
       );
       return;
     }
@@ -341,6 +406,41 @@ export function Reader({
     setIsPlaying(false);
     ttsRef.current.stop();
     onPreferencesChange({ ...preferences, voiceEngine: engine });
+  }
+
+  function voiceAccessBlocked(): boolean {
+    if (preferences.voiceEngine === "cloud" && !canUseCloudVoice) {
+      openFeatureLock(
+        "Unlock Cloud AI voice",
+        readingLanguage.cloudAiVoice
+          ? "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Upgrade to use our highest-quality AI voice."
+          : `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Device voice now; we will add this language after quality testing.`
+      );
+      return true;
+    }
+    if (preferences.voiceEngine !== "local_ai") return false;
+    if (!entitlement.features.ai) {
+      openFeatureLock(
+        "Unlock Edge AI voice",
+        "Edge AI voice is included in AI Pro and Power. Upgrade to use on-device AI voice; Device voice stays available without AI cost."
+      );
+      return true;
+    }
+    if (!readingLanguage.edgeAi) {
+      openFeatureLock(
+        "Edge AI language pack",
+        `Edge AI is available for English right now. Use Device voice for ${readingLanguage.label} until we add this language pack.`
+      );
+      return true;
+    }
+    if (localVoiceReady === false) {
+      openFeatureLock(
+        "Download Edge AI",
+        "Edge AI is not ready on this phone. Go to Voice on the shelf, download Edge AI, then choose Edge AI again."
+      );
+      return true;
+    }
+    return false;
   }
 
   function ocrProgressLabel(): string {
@@ -377,6 +477,7 @@ export function Reader({
       playingRef.current = false;
       if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
       if (scrollRetryTimerRef.current) clearTimeout(scrollRetryTimerRef.current);
+      if (scrollInteractionTimerRef.current) clearTimeout(scrollInteractionTimerRef.current);
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
       ttsRef.current.stop();
     };
@@ -719,6 +820,29 @@ export function Reader({
     }, quiet ? 160 : 80);
   }
 
+  function markUserScrollActive() {
+    isUserScrollingRef.current = true;
+    if (scrollInteractionTimerRef.current) {
+      clearTimeout(scrollInteractionTimerRef.current);
+      scrollInteractionTimerRef.current = null;
+    }
+  }
+
+  function markUserScrollSettling(delay = 180) {
+    if (scrollInteractionTimerRef.current) clearTimeout(scrollInteractionTimerRef.current);
+    scrollInteractionTimerRef.current = setTimeout(() => {
+      scrollInteractionTimerRef.current = null;
+      isUserScrollingRef.current = false;
+    }, delay);
+  }
+
+  function onReaderScrollBeginDrag() {
+    markUserScrollActive();
+    if (!followRef.current) return;
+    followRef.current = false;
+    setAutoFollow(false);
+  }
+
   // ----- playback -----
   function speakAt(i: number) {
     const myEpoch = ++epochRef.current; // any earlier utterance's callback is now stale
@@ -791,8 +915,19 @@ export function Reader({
               "AI voice allowance used",
             "Your Cloud AI allowance is used for this month. Device voice will keep reading for free. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
           );
-        } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
+      } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
           localVoiceWarnedRef.current = true;
+          epochRef.current++;
+          playingRef.current = false;
+          setIsPlaying(false);
+          setLocalVoiceStatus((current) =>
+            current
+              ? { ...current, modelDownloaded: false, engineInstalled: false }
+              : getLocalNeuralVoiceStatus()
+          );
+          ttsRef.current.stop();
+          ttsRef.current = createTTSProvider("device");
+          setVoiceMode("device");
           openFeatureLock(
             "Edge AI not ready",
             info.message ||
@@ -839,6 +974,7 @@ export function Reader({
   }
 
   function play() {
+    if (voiceAccessBlocked()) return;
     playingRef.current = true;
     setIsPlaying(true);
     speakAt(indexRef.current);
@@ -865,12 +1001,14 @@ export function Reader({
 
   // ----- tap-to-read -----
   function onTapWord(globalId: number, charOffset: number) {
+    if (isUserScrollingRef.current) return;
     // Sound off = reading mode: a tap toggles the menus instead of reading,
     // so the page can fill the whole screen.
     if (!soundEnabledRef.current) {
       setChromeVisible((v) => !v);
       return;
     }
+    if (voiceAccessBlocked()) return;
     epochRef.current++; // invalidate the sentence we're interrupting (prevents double-read)
     ttsRef.current.stop();
     indexRef.current = globalId;
@@ -1168,7 +1306,7 @@ export function Reader({
       )}
 
       {/* reading surface — virtualized for smooth, uninterrupted scrolling */}
-      <FlatList
+        <FlatList
         key={doc.docId}
         ref={listRef}
         data={flat}
@@ -1193,12 +1331,15 @@ export function Reader({
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         onScrollToIndexFailed={onScrollToIndexFailed}
+        onScrollBeginDrag={onReaderScrollBeginDrag}
+        onScrollEndDrag={() => markUserScrollSettling(260)}
+        onMomentumScrollEnd={() => markUserScrollSettling(80)}
         initialScrollIndex={initialSentenceIndex > 0 ? initialSentenceIndex : undefined}
         initialNumToRender={14}
         maxToRenderPerBatch={12}
         windowSize={11}
         updateCellsBatchingPeriod={50}
-        removeClippedSubviews
+        removeClippedSubviews={false}
       />
 
       {/* AI launcher (compact) */}
@@ -1232,7 +1373,7 @@ export function Reader({
           onToggleSound={toggleSound}
           expanded={controlsOpen}
           onToggleExpand={() => setControlsOpen((v) => !v)}
-          voiceEngine={preferences.voiceEngine}
+          voiceEngine={voiceEngineForMode(voiceMode)}
           voiceOptions={readerVoiceOptions}
           onVoiceEngineChange={selectVoiceEngine}
           bottomInset={insets.bottom}
@@ -1337,6 +1478,20 @@ const SentenceRow = React.memo(function SentenceRow({
     textAlign: rtl ? "right" : "left",
     writingDirection: rtl ? "rtl" : "ltr",
   } as const;
+  function renderMeasuredLines(measuredLines: LineSegment[]) {
+    return measuredLines.map((line, lineIndex) => {
+      const lineTokens = TextReflow.tokenizeWords(line.text);
+      return (
+        <React.Fragment key={`${line.start}-${lineIndex}`}>
+          {lineIndex > 0 ? "\n" : null}
+          <Text style={activeLineIndex === lineIndex ? styles.activeLine : undefined}>
+            {renderTokenText(lineTokens, line.start)}
+          </Text>
+        </React.Fragment>
+      );
+    });
+  }
+
   return (
     <View style={rtl ? styles.rtlRowWrap : undefined}>
       {showPageDivider ? (
@@ -1346,30 +1501,9 @@ const SentenceRow = React.memo(function SentenceRow({
           <View style={styles.pageDividerLine} />
         </View>
       ) : null}
-      {active && lines?.length ? (
-        <View style={styles.activeLineBlock}>
-          {lines.map((line, lineIndex) => {
-            const lineTokens = TextReflow.tokenizeWords(line.text);
-            return (
-              <Text
-                key={`${line.start}-${lineIndex}`}
-                style={[
-                  styles.rowLine,
-                  rtl && styles.rowLineRtl,
-                  textStyle,
-                  activeLineIndex === lineIndex && styles.activeLine,
-                ]}
-              >
-                {renderTokenText(lineTokens, line.start)}
-              </Text>
-            );
-          })}
-        </View>
-      ) : (
-        <Text style={[styles.row, textStyle]} onTextLayout={active ? handleTextLayout : undefined}>
-          {renderTokenText(tokens)}
-        </Text>
-      )}
+      <Text style={[styles.row, textStyle]} onTextLayout={active ? handleTextLayout : undefined}>
+        {active && lines?.length ? renderMeasuredLines(lines) : renderTokenText(tokens)}
+      </Text>
     </View>
   );
 });
@@ -1589,17 +1723,6 @@ const styles = StyleSheet.create({
   readerContent: { padding: theme.spacing(3) },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
   rtlRowWrap: { alignItems: "stretch" },
-  activeLineBlock: { paddingVertical: 3 },
-  rowLine: {
-    alignSelf: "flex-start",
-    color: theme.colors.body,
-    fontFamily: theme.fonts.serif,
-    borderRadius: 6,
-    paddingHorizontal: 2,
-  },
-  rowLineRtl: {
-    alignSelf: "flex-end",
-  },
   pageDivider: {
     flexDirection: "row",
     alignItems: "center",

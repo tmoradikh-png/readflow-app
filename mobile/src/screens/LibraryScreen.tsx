@@ -25,6 +25,7 @@ import { OcrLoader, OcrProgress } from "../services/OcrLoader";
 import { Bookmarks } from "../services/Bookmarks";
 import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
 import { ThemedNotice, ThemedNoticeAction } from "../components/ThemedNotice";
+import { UpgradeSheet } from "../components/UpgradeSheet";
 import {
   downloadLocalNeuralVoice,
   formatLocalModelSize,
@@ -61,6 +62,11 @@ interface NoticeState {
   secondary?: ThemedNoticeAction;
 }
 
+interface UpgradeState {
+  title: string;
+  body: string;
+}
+
 /** Deterministic cover variant from the document id. */
 function coverVariant(id: string): 0 | 1 | 2 | 3 {
   let h = 0;
@@ -85,6 +91,7 @@ export function LibraryScreen({
   const [showVoice, setShowVoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [upgrade, setUpgrade] = useState<UpgradeState | null>(null);
   const [rebuildStartingIds, setRebuildStartingIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -594,6 +601,10 @@ export function LibraryScreen({
         onChange={onPreferencesChange}
         onDownloadLocalVoice={installLocalVoice}
         onNotice={setNotice}
+        onUpgrade={(next) => {
+          setShowVoice(false);
+          setUpgrade(next);
+        }}
       />
       <LanguageSettingsSheet
         visible={showLanguage}
@@ -609,6 +620,12 @@ export function LibraryScreen({
         primary={notice?.primary}
         secondary={notice?.secondary}
         onClose={() => setNotice(null)}
+      />
+      <UpgradeSheet
+        visible={Boolean(upgrade)}
+        reasonTitle={upgrade?.title}
+        reasonBody={upgrade?.body}
+        onClose={() => setUpgrade(null)}
       />
     </SafeAreaView>
   );
@@ -851,6 +868,7 @@ function VoiceSettingsSheet({
   onChange,
   onDownloadLocalVoice,
   onNotice,
+  onUpgrade,
 }: {
   visible: boolean;
   entitlement: EntitlementSnapshot;
@@ -865,6 +883,7 @@ function VoiceSettingsSheet({
   onChange: (next: ReadingPreferences) => void;
   onDownloadLocalVoice: () => void;
   onNotice: (notice: NoticeState) => void;
+  onUpgrade: (upgrade: UpgradeState) => void;
 }) {
   const cloudLimit = entitlement.limits.cloudVoiceCharsPerMonth || 0;
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
@@ -894,10 +913,18 @@ function VoiceSettingsSheet({
       return;
     }
     if (engine === "cloud" && !planHasCloud) {
-      onNotice({
-        title: "Cloud AI voice",
+      onUpgrade({
+        title: "Unlock Cloud AI voice",
         body:
-          "Cloud AI is active for AI Pro and Power when the backend grants a monthly voice allowance. Device voice stays unlimited.",
+          "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Upgrade to use our highest-quality AI voice. Device voice stays unlimited.",
+      });
+      return;
+    }
+    if (engine === "local_ai" && !entitlement.features.ai) {
+      onUpgrade({
+        title: "Unlock Edge AI voice",
+        body:
+          "Edge AI voice is included in AI Pro and Power. Upgrade to use on-device AI voice; Device voice stays available without AI cost.",
       });
       return;
     }

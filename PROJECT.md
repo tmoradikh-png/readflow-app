@@ -691,6 +691,14 @@ Recommended manual phone tests after installing a new build:
   text before synthesis (ligatures, hidden soft hyphens, typographic quotes,
   and obvious app/document acronyms). Keep this conservative; broader word
   rewrites can create new mispronunciations.
+- AI voice modes must never silently downgrade to Device voice. If Edge AI is
+  not in the plan, not downloaded, or not supported for the language, show the
+  themed upgrade/download explanation. If Cloud AI is not in the plan or
+  allowance, show the plan/allowance sheet. Device voice is the only silent
+  fallback users should ever hear.
+- Reader manual scrolling disables Follow and ignores word taps until the drag
+  settles. This prevents accidental chrome/padding changes while scrolling,
+  which can look like the page jumps backward.
 - Device voice reads in sync.
 - Natural/cloud voice reads the same text, highlights the current line, and does
   not skip final words.
