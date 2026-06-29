@@ -44,7 +44,9 @@ export const TextReflow = {
    * step together).
    */
   cleanOcrText(raw: string, pageNumber?: number, skipLines?: Set<string>): string {
-    return cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
+    return repairLatinOcrWordBreaks(
+      cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
+    )
       .replace(/\r/g, "")
       // de-hyphenate words split across line breaks: "exam-\nple" -> "example"
       .replace(/(\w)-\n(\w)/g, "$1$2")
@@ -348,4 +350,37 @@ function cleanCorruptScriptArtifacts(raw: string): string {
 
 function collapseDuplicateScriptRuns(line: string): string {
   return line.replace(new RegExp(`([${NON_LATIN_SCRIPT_RANGES}]{3,})\\1`, "g"), "$1");
+}
+
+function repairLatinOcrWordBreaks(raw: string): string {
+  return (raw || "")
+    .split("\n")
+    .map((line) => {
+      if (!isMostlyLatin(line)) return line;
+      let out = line
+        .replace(/\b([A-Za-z]{3,})\s+(er|ers|est|ing|ed|ly|ment|ness|tion|tions|sion|ter|der|per|able|ible|ally|ive|ous)\b/g, "$1$2")
+        .replace(/\b([A-Za-z]{5,})\s+(al|ic|ical|ity|ies)\b/g, "$1$2");
+      for (const word of COMMON_LATIN_OCR_JOIN_WORDS) out = joinKnownWord(out, word);
+      return out;
+    })
+    .join("\n");
+}
+
+const COMMON_LATIN_OCR_JOIN_WORDS = [
+  "apache",
+  "helicopter",
+  "sniper",
+  "overwatch",
+  "south-central",
+];
+
+function joinKnownWord(line: string, word: string): string {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (let i = 2; i <= word.length - 2; i++) {
+    const left = escaped.slice(0, i);
+    const right = escaped.slice(i);
+    const re = new RegExp(`\\b(${left})\\s+(${right})\\b`, "gi");
+    line = line.replace(re, (_match, a: string, b: string) => `${a}${b}`);
+  }
+  return line;
 }

@@ -359,6 +359,11 @@ export function Reader({
     openFeatureLock("More OCR pages", body);
   }
 
+  function toggleOcrPause() {
+    const next = OcrLoader.togglePause(doc.docId);
+    if (next) setOcrProgress(next);
+  }
+
   useEffect(() => {
     return () => {
       // Hard-stop on unmount so the voice never keeps reading after you leave.
@@ -1125,6 +1130,24 @@ export function Reader({
                   </Pressable>
                 </View>
               ) : null}
+              {ocrProgress.pausedReason === "user" || !ocrProgress.pausedReason ? (
+                <Pressable
+                  style={[
+                    styles.progressButton,
+                    ocrProgress.pausedReason === "user" && styles.progressButtonSecondary,
+                  ]}
+                  onPress={toggleOcrPause}
+                >
+                  <Text
+                    style={[
+                      styles.progressButtonText,
+                      ocrProgress.pausedReason === "user" && styles.progressButtonSecondaryText,
+                    ]}
+                  >
+                    {ocrProgress.pausedReason === "user" ? "Resume OCR" : "Pause OCR"}
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           ) : null}
         </>
@@ -1515,6 +1538,14 @@ const styles = StyleSheet.create({
     color: theme.colors.onAccent,
     fontSize: 12,
     fontFamily: theme.fonts.sansSemiBold,
+  },
+  progressButtonSecondary: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+  },
+  progressButtonSecondaryText: {
+    color: theme.colors.text,
   },
   progressTrack: {
     height: 6,

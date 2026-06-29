@@ -278,6 +278,14 @@ Changes after the latest finished build and included in source `1.0.18`:
   scans passed for all 21 languages after correcting the scorer for CJK and
   normalizing RTL native text. Harder medium/poor scans are correctly routed to
   OCR but are not reliable enough to market as guaranteed recovery.
+- 2026-06-29 English OCR cleanup: an owner report from a clean English book
+  showed Tesseract spacing artifacts such as `snip er`, `Ap ache`, and
+  `helicop ter`. Backend OCR now disables preserved inter-word spaces for
+  Latin-script workers, keeps preserved spacing only for scripts where it helps
+  readability, bumps the OCR cache version to `2026-06-29-latin-spacing-v5`,
+  and runs a conservative Latin OCR word-break repair. Mobile `TextReflow` runs
+  the same repair on saved OCR text so already-cached documents display better
+  after an app update.
 
 ## Account Map
 
@@ -604,6 +612,11 @@ Leaving the app/reader:
   original file in local library storage, caches OCR'd pages, saves pending OCR
   pages, pauses with an explanation when monthly OCR quota is reached, and can
   re-upload the local file later to mint a fresh OCR token after quota reset.
+- Background OCR can now be paused/resumed by the user. `OcrLoader.pause()` stops
+  new OCR page requests after the current batch, keeps completed pages saved in
+  `DocCache`, and `OcrLoader.resume()` continues from the remaining pending
+  pages. Reader and Library both expose Pause/Resume OCR controls while a job is
+  active.
 - React Native cannot always distinguish phone lock from Home/app switch in JS.
   If exact "paid lock continues, Home/app switch stops" behavior becomes
   mandatory for natural voice too, add a small native Android signal/module

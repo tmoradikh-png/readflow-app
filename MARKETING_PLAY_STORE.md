@@ -17,7 +17,8 @@ OCR, AI voice, and multilingual reading are still improving.
 
 ## Core Positioning
 
-readFlow turns PDFs and Word documents into a phone-first reading experience.
+readFlow turns supported PDFs and text-based Word `.docx` documents into a
+phone-first reading experience.
 Instead of forcing users to pinch and zoom a fixed page, it extracts the text,
 reflows it into readable mobile typography, highlights the current line or
 paragraph, and can read aloud with phone voice, Edge AI voice, or capped Cloud AI
@@ -25,7 +26,7 @@ voice depending on the plan and language.
 
 Recommended one-line positioning:
 
-> readFlow makes long PDFs and Word documents easier to read and listen to on a phone.
+> readFlow makes long PDFs and text-based Word `.docx` documents easier to read and listen to on a phone.
 
 Shorter store positioning:
 
@@ -72,16 +73,21 @@ Suggested legal-safe product note:
 
 ### Phone-first PDF and Word reading
 
-- Converts text-based PDFs and Word documents into a clean mobile reading view.
+- Converts text-based PDFs and modern Word `.docx` documents into a clean mobile
+  reading view.
 - Avoids constant pinch-zooming on small screens.
 - Keeps reading position, bookmarks, and navigation.
 - Filters common page numbers, repeated headers/footers, URLs, and watermark
   lines from the reading flow when possible.
+- Word support means real selectable text in `.docx` files. Picture-based Word
+  pages, embedded scans/images, legacy `.doc`, complex tables, columns,
+  footnotes, and advanced formatting should not be promised as fully preserved.
 
 Careful claim:
 
-> Works best with text-based PDFs and Word documents. Scanned, image-heavy, or
-> damaged files may require OCR and may not always convert perfectly.
+> Works best with text-based PDFs and modern Word `.docx` files that contain real
+> text. Scanned, image-heavy, legacy, or heavily formatted documents may require
+> OCR or may not convert perfectly.
 
 ### Voice options
 
@@ -165,15 +171,16 @@ Purpose:
 
 Message:
 
-> Try phone-first reading with limited imports and device voice.
+> Try the clean phone reading view with a limited preview.
 
 Current limits:
 
-- 1 imported PDF/month.
+- 1 imported PDF or Word `.docx` document/month.
 - First 100 pages of native-text documents.
-- Device voice only.
+- Manual reading only; no read-aloud/listen mode.
 - No AI answers.
 - No OCR.
+- No Edge AI voice.
 - No Cloud AI voice.
 
 ### Reader Plus
@@ -188,7 +195,7 @@ Message:
 
 Includes:
 
-- Larger native-text PDF/Word imports.
+- Larger native-text PDF and Word `.docx` imports.
 - Full text-based books.
 - Device voice.
 - Bookmarks and reading progress.
@@ -241,18 +248,19 @@ readFlow: PDF Reader & Voice
 
 ### Short Description
 
-Read PDFs and Word docs in a clean phone view, listen aloud, and ask AI.
+Read PDFs and text-based Word docs in a clean phone view, listen aloud, and ask AI.
 
 ### Full Description
 
-readFlow helps make long PDFs and Word documents easier to read on your phone.
+readFlow helps make long PDFs and text-based Word `.docx` documents easier to
+read on your phone.
 It turns supported documents into a clean mobile reading view, keeps your place,
 and can read aloud with device voice, Edge AI voice, or capped Cloud AI voice
 depending on your plan, device, and language.
 
 Features:
 
-- Reflow supported PDFs and Word documents into phone-friendly text
+- Reflow supported PDFs and text-based Word `.docx` documents into phone-friendly text
 - Listen with device voice at no cloud voice cost
 - Use Edge AI voice on eligible phones after downloading the voice model
 - Use capped Cloud AI voice on supported paid plans and approved languages
@@ -264,7 +272,9 @@ Features:
 
 Important notes:
 
-- Works best with clean text-based PDFs and Word documents.
+- Works best with clean text-based PDFs and modern Word `.docx` documents.
+- Word files that are mostly pictures/scans, legacy `.doc`, or heavily formatted
+  layouts may not convert cleanly.
 - Good-quality printed scans can be converted with OCR on eligible AI plans.
 - Medium, damaged, blurred, skewed, noisy, or phone-photo scans may take longer
   and may not convert cleanly.
@@ -277,7 +287,7 @@ Important notes:
 ### Keywords And Phrases
 
 - PDF reader
-- Word document reader
+- Word `.docx` document reader
 - PDF voice reader
 - text to speech PDF
 - AI PDF reader
@@ -292,7 +302,7 @@ Important notes:
 
 1. Hero:
    - Headline: `readFlow makes long documents easier on your phone.`
-   - Subcopy: `Reflow PDFs and Word documents into clean mobile reading, listen
+   - Subcopy: `Reflow PDFs and text-based Word .docx documents into clean mobile reading, listen
      aloud, and ask AI when you need help.`
    - CTA: `Try readFlow`
 

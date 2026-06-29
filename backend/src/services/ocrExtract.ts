@@ -25,7 +25,7 @@ const OCR_PREPROCESS = (process.env.OCR_PREPROCESS ?? "true").toLowerCase() !== 
 const OCR_LANG_PATH = process.env.OCR_LANG_PATH || "";
 const OCR_TESSDATA_CACHE_PATH =
   process.env.OCR_TESSDATA_CACHE_PATH || "/tmp/readflow-tessdata";
-const OCR_ENGINE_VERSION = "2026-06-29-fas-ara-v4";
+const OCR_ENGINE_VERSION = "2026-06-29-latin-spacing-v5";
 
 export interface OcrPageResult {
   text: string;
@@ -306,7 +306,7 @@ async function getWorker(lang: string): Promise<any | null> {
 
     const worker = await tesseract.createWorker(lang, undefined, options);
     await worker.setParameters({
-      preserve_interword_spaces: "1", // keep word/column spacing
+      preserve_interword_spaces: shouldPreserveInterwordSpaces(lang) ? "1" : "0",
       user_defined_dpi: String(OCR_DPI), // avoids "low resolution" guesses
     });
     return worker;
@@ -334,12 +334,22 @@ function findLocalLangPath(fs: any, path: any, lang: string): string | null {
   return null;
 }
 
+function shouldPreserveInterwordSpaces(lang: string): boolean {
+  // For Latin prose, preserving detected spacing can keep false gaps inside
+  // words on very clean book scans. Keep it only for scripts/layouts where the
+  // extra spacing helps readability more than it hurts.
+  return ["ara", "fas", "hin", "tha", "jpn", "kor", "chi_sim"].some((part) =>
+    lang.split("+").includes(part)
+  );
+}
+
 /** Normalize OCR text: trim line ends, collapse big gaps, keep real line breaks. */
 function tidy(text: string, lang: string): string {
   return normalizeOcrText(text || "", lang)
     .replace(/\r/g, "")
     .split("\n")
     .map((l, index) => cleanOcrLine(l.trimEnd(), lang, index))
+    .map((l) => repairLatinOcrWordBreaks(l, lang))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n") // collapse big gaps to a single paragraph break
     .trim();
@@ -361,6 +371,54 @@ function cleanOcrLine(line: string, lang: string, index: number): string {
   if (lang === "fas" || lang === "ara") {
     if (/^[\s\d۰-۹٠-٩]{1,8}$/.test(line)) return "";
     return line.replace(/^[\s\d۰-۹٠-٩]{1,8}(?=[\u0600-\u06FF])/, "");
+  }
+  return line;
+}
+
+function repairLatinOcrWordBreaks(line: string, lang: string): string {
+  if (scriptProfile(lang)) return line;
+  if (!isMostlyLatinLine(line)) return line;
+
+  let out = line
+    .replace(/\b([A-Za-z]{3,})\s+(er|ers|est|ing|ed|ly|ment|ness|tion|tions|sion|ter|der|per|able|ible|ally|ive|ous)\b/g, "$1$2")
+    .replace(/\b([A-Za-z]{5,})\s+(al|ic|ical|ity|ies)\b/g, "$1$2");
+
+  for (const word of COMMON_LATIN_OCR_JOIN_WORDS) {
+    out = joinKnownWord(out, word);
+  }
+  return out;
+}
+
+function isMostlyLatinLine(line: string): boolean {
+  const letters = line.match(/[A-Za-z]/g)?.length ?? 0;
+  if (letters < 8) return false;
+  const otherScript = line.match(new RegExp(`[${NON_LATIN_SCRIPT_RANGES}]`, "g"))?.length ?? 0;
+  return letters > otherScript * 3;
+}
+
+const NON_LATIN_SCRIPT_RANGES =
+  "\\u0400-\\u04FF" +
+  "\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF" +
+  "\\u0900-\\u097F" +
+  "\\u0E00-\\u0E7F" +
+  "\\u3040-\\u30FF\\u3400-\\u9FFF" +
+  "\\uAC00-\\uD7AF\\u1100-\\u11FF";
+
+const COMMON_LATIN_OCR_JOIN_WORDS = [
+  "apache",
+  "helicopter",
+  "sniper",
+  "overwatch",
+  "south-central",
+];
+
+function joinKnownWord(line: string, word: string): string {
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  for (let i = 2; i <= word.length - 2; i++) {
+    const left = escaped.slice(0, i);
+    const right = escaped.slice(i);
+    const re = new RegExp(`\\b(${left})\\s+(${right})\\b`, "gi");
+    line = line.replace(re, (_match, a: string, b: string) => `${a}${b}`);
   }
   return line;
 }

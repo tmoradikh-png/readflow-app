@@ -28,7 +28,7 @@ export interface OcrProgress {
   pending: number; // pages still to do
   percent: number; // 0..100
   offline: boolean; // paused because the network dropped
-  pausedReason?: "offline" | "quota" | "expired" | "error";
+  pausedReason?: "offline" | "quota" | "expired" | "error" | "user";
   message?: string;
   complete: boolean; // nothing left to OCR
 }
@@ -44,6 +44,7 @@ interface Job {
   total: number;
   priority: number | null;
   running: boolean;
+  pausedByUser: boolean;
   offline: boolean;
   pausedReason?: OcrProgress["pausedReason"];
   message?: string;
@@ -65,7 +66,7 @@ function bindAppState() {
     if (s !== "active") return;
     // Resume anything that paused while we were backgrounded/offline.
     for (const job of jobs.values()) {
-      if (job.pending.size > 0 && !job.running) {
+      if (job.pending.size > 0 && !job.running && !job.pausedByUser) {
         job.offline = false;
         void runLoop(job);
       }
@@ -82,8 +83,10 @@ function progressOf(job: Job): OcrProgress {
     pending: job.pending.size,
     percent: job.total > 0 ? Math.round((done / job.total) * 100) : 100,
     offline: job.offline,
-    pausedReason: job.pausedReason,
-    message: job.message,
+    pausedReason: job.pausedByUser ? "user" : job.pausedReason,
+    message: job.pausedByUser
+      ? "OCR paused. Resume when you want readFlow to continue loading scanned pages."
+      : job.message,
     complete: job.pending.size === 0,
   };
 }
@@ -122,7 +125,7 @@ function scheduleRetry(job: Job) {
   if (job.retryTimer) return;
   job.retryTimer = setTimeout(() => {
     job.retryTimer = null;
-    if (job.pending.size > 0 && !job.running) {
+    if (job.pending.size > 0 && !job.running && !job.pausedByUser) {
       void runLoop(job);
     }
   }, RETRY_MS);
@@ -134,6 +137,12 @@ async function runLoop(job: Job) {
   bindAppState();
   try {
     while (job.pending.size > 0) {
+      if (job.pausedByUser) {
+        job.pausedReason = "user";
+        job.message = "OCR paused. Resume when you want readFlow to continue loading scanned pages.";
+        notify(job);
+        break;
+      }
       const focus = job.priority ?? 1;
       const want = [...job.pending]
         .sort((a, b) => Math.abs(a - focus) - Math.abs(b - focus) || a - b)
@@ -182,8 +191,10 @@ async function runLoop(job: Job) {
       if (improved.length > 0) mergePages(job, improved);
       if (job.priority != null && !job.pending.has(job.priority)) job.priority = null;
       job.offline = false;
-      job.pausedReason = undefined;
-      job.message = undefined;
+      if (!job.pausedByUser) {
+        job.pausedReason = undefined;
+        job.message = undefined;
+      }
       DocCache.update(job.docId, job.pages, [...job.pending]).catch(() => {});
       notify(job);
       await new Promise((r) => setTimeout(r, GAP_MS));
@@ -214,6 +225,7 @@ export const OcrLoader = {
         total: totalOcrWork(opts.pages, opts.pending),
         priority: null,
         running: false,
+        pausedByUser: false,
         offline: false,
         pausedReason: undefined,
         message: undefined,
@@ -232,12 +244,47 @@ export const OcrLoader = {
         clearTimeout(job.retryTimer);
         job.retryTimer = null;
       }
-      job.offline = false;
-      job.pausedReason = undefined;
-      job.message = undefined;
+      if (!job.pausedByUser) {
+        job.offline = false;
+        job.pausedReason = undefined;
+        job.message = undefined;
+      }
     }
-    if (job.pending.size > 0) void runLoop(job);
+    if (job.pending.size > 0 && !job.pausedByUser) void runLoop(job);
     return progressOf(job);
+  },
+
+  pause(docId: string): OcrProgress | null {
+    const job = jobs.get(docId);
+    if (!job || job.pending.size === 0) return job ? progressOf(job) : null;
+    if (job.retryTimer) {
+      clearTimeout(job.retryTimer);
+      job.retryTimer = null;
+    }
+    job.pausedByUser = true;
+    job.offline = false;
+    job.pausedReason = "user";
+    job.message = "OCR paused. Resume when you want readFlow to continue loading scanned pages.";
+    notify(job);
+    return progressOf(job);
+  },
+
+  resume(docId: string): OcrProgress | null {
+    const job = jobs.get(docId);
+    if (!job) return null;
+    job.pausedByUser = false;
+    job.offline = false;
+    job.pausedReason = undefined;
+    job.message = undefined;
+    notify(job);
+    if (job.pending.size > 0 && !job.running) void runLoop(job);
+    return progressOf(job);
+  },
+
+  togglePause(docId: string): OcrProgress | null {
+    const job = jobs.get(docId);
+    if (!job) return null;
+    return job.pausedByUser ? this.resume(docId) : this.pause(docId);
   },
 
   /** Bias the next OCR batch toward a page (current view / go-to-page target). */

@@ -423,12 +423,46 @@ export function LibraryScreen({
     return rebuildStartingIds.has(docId) || Boolean(progress && !progress.complete);
   }
 
-  function rebuildLabel(docId: string): string {
+  function rebuildActionLabel(docId: string): string {
     const progress = rebuildProgress[docId];
     if (rebuildStartingIds.has(docId)) return "Starting...";
-    if (progress && !progress.complete) return `Fixing ${progress.percent}%`;
+    if (progress && !progress.complete) {
+      if (progress.pausedReason === "user") return "Resume OCR";
+      if (!progress.pausedReason) return "Pause OCR";
+      if (progress.pausedReason === "quota") return "Limit";
+      return "Paused";
+    }
     if (progress?.complete) return "Fixed";
     return "Fix text";
+  }
+
+  function rebuildStatusLabel(docId: string): string {
+    const progress = rebuildProgress[docId];
+    if (rebuildStartingIds.has(docId)) return "Starting OCR...";
+    if (progress && !progress.complete) {
+      return progress.pausedReason === "user"
+        ? `OCR paused ${progress.percent}%`
+        : `Fixing ${progress.percent}%`;
+    }
+    if (progress?.complete) return "OCR rebuild complete";
+    return "Fix text";
+  }
+
+  function handleOcrAction(item: LibraryItem) {
+    const progress = rebuildProgress[item.id];
+    if (progress && !progress.complete) {
+      if (progress.pausedReason && progress.pausedReason !== "user") {
+        setNotice({
+          title: "OCR paused",
+          body: progress.message || "OCR is paused. Open this book to see the next step.",
+        });
+        return;
+      }
+      const next = OcrLoader.togglePause(item.id);
+      if (next) setRebuildProgress((current) => ({ ...current, [item.id]: next }));
+      return;
+    }
+    confirmRebuildWithOcr(item);
   }
 
   const recent = items[0];
@@ -531,11 +565,12 @@ export function LibraryScreen({
               item={recent}
               busy={busyId === recent.id}
               rebuildActive={isRebuildInProgress(recent.id)}
-              rebuildLabel={rebuildLabel(recent.id)}
+              rebuildActionLabel={rebuildActionLabel(recent.id)}
+              rebuildStatusLabel={rebuildStatusLabel(recent.id)}
               rebuildProgress={rebuildProgress[recent.id]}
               onPress={() => openItem(recent)}
               onRemove={() => confirmRemove(recent)}
-              onRebuildOcr={() => confirmRebuildWithOcr(recent)}
+              onRebuildOcr={() => handleOcrAction(recent)}
             />
           )}
 
@@ -551,11 +586,12 @@ export function LibraryScreen({
                 item={item}
                 busy={busyId === item.id}
                 rebuildActive={isRebuildInProgress(item.id)}
-                rebuildLabel={rebuildLabel(item.id)}
+                rebuildActionLabel={rebuildActionLabel(item.id)}
+                rebuildStatusLabel={rebuildStatusLabel(item.id)}
                 rebuildProgress={rebuildProgress[item.id]}
                 onPress={() => openItem(item)}
                 onRemove={() => confirmRemove(item)}
-                onRebuildOcr={() => confirmRebuildWithOcr(item)}
+                onRebuildOcr={() => handleOcrAction(item)}
               />
             ))}
             {rest.length === 0 && (
@@ -1351,7 +1387,8 @@ function ContinueCard({
   item,
   busy,
   rebuildActive,
-  rebuildLabel,
+  rebuildActionLabel,
+  rebuildStatusLabel,
   rebuildProgress,
   onPress,
   onRemove,
@@ -1360,7 +1397,8 @@ function ContinueCard({
   item: LibraryItem;
   busy: boolean;
   rebuildActive: boolean;
-  rebuildLabel: string;
+  rebuildActionLabel: string;
+  rebuildStatusLabel: string;
   rebuildProgress?: OcrProgress;
   onPress: () => void;
   onRemove: () => void;
@@ -1381,7 +1419,7 @@ function ContinueCard({
         </View>
         {rebuildActive && rebuildProgress ? (
           <View style={styles.rebuildProgress}>
-            <Text style={styles.rebuildProgressText}>{rebuildLabel}</Text>
+            <Text style={styles.rebuildProgressText}>{rebuildStatusLabel}</Text>
             <View style={styles.rebuildTrack}>
               <View
                 style={[
@@ -1405,18 +1443,14 @@ function ContinueCard({
       </Pressable>
       {item.kind === "pdf" ? (
         <Pressable
-          style={[styles.cardOcrBtn, rebuildActive && styles.ocrBtnDisabled]}
+          style={styles.cardOcrBtn}
           onPress={(event) => {
             event.stopPropagation();
-            if (rebuildActive) return;
             onRebuildOcr();
           }}
-          disabled={rebuildActive}
           hitSlop={8}
         >
-          <Text style={[styles.cardOcrText, rebuildActive && styles.ocrTextDisabled]}>
-            {rebuildLabel}
-          </Text>
+          <Text style={styles.cardOcrText}>{rebuildActionLabel}</Text>
         </Pressable>
       ) : null}
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
@@ -1428,7 +1462,8 @@ function DocCard({
   item,
   busy,
   rebuildActive,
-  rebuildLabel,
+  rebuildActionLabel,
+  rebuildStatusLabel,
   rebuildProgress,
   onPress,
   onRemove,
@@ -1437,7 +1472,8 @@ function DocCard({
   item: LibraryItem;
   busy: boolean;
   rebuildActive: boolean;
-  rebuildLabel: string;
+  rebuildActionLabel: string;
+  rebuildStatusLabel: string;
   rebuildProgress?: OcrProgress;
   onPress: () => void;
   onRemove: () => void;
@@ -1472,19 +1508,20 @@ function DocCard({
       </Pressable>
       {item.kind === "pdf" ? (
         <Pressable
-          style={[styles.docOcrBtn, rebuildActive && styles.ocrBtnDisabled]}
+          style={styles.docOcrBtn}
           onPress={(event) => {
             event.stopPropagation();
-            if (rebuildActive) return;
             onRebuildOcr();
           }}
-          disabled={rebuildActive}
           hitSlop={8}
         >
-          <Text style={[styles.docOcrText, rebuildActive && styles.ocrTextDisabled]}>
-            {rebuildLabel}
-          </Text>
+          <Text style={styles.docOcrText}>{rebuildActionLabel}</Text>
         </Pressable>
+      ) : null}
+      {rebuildActive && rebuildProgress ? (
+        <Text style={styles.docRebuildText} numberOfLines={1}>
+          {rebuildStatusLabel}
+        </Text>
       ) : null}
       {rebuildActive && rebuildProgress ? (
         <View style={styles.docRebuildTrack}>
@@ -1859,6 +1896,12 @@ const styles = StyleSheet.create({
     color: theme.colors.teal,
     fontFamily: theme.fonts.sansSemiBold,
     fontSize: 10.5,
+  },
+  docRebuildText: {
+    color: theme.colors.textDim,
+    fontFamily: theme.fonts.sansMedium,
+    fontSize: 9.5,
+    marginTop: 4,
   },
   docRebuildTrack: {
     height: 4,
