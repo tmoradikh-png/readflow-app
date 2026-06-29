@@ -384,7 +384,7 @@ Check this header to verify the backend correctly identified the user's tier.
 - OCR for scanned PDFs
 - Cloud AI voice TTS
 
-✅ **AI Pro / Power cloud AI voice is capped:**
+✅ **AI Pro / Power Cloud AI voice is capped:**
 - AI Pro: 60k generated characters/month
 - Power: 180k generated characters/month
 - Extra voice must be sold through a paid top-up or fall back to device voice

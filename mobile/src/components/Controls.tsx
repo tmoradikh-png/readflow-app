@@ -2,11 +2,19 @@ import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Slider from "@react-native-community/slider";
 import { theme } from "../theme";
+import { VoiceEngine } from "../services/Preferences";
 
 export interface ReadingSettings {
   fontSize: number;
   lineSpacing: number; // multiplier
   speed: number; // TTS rate
+}
+
+export interface VoiceModeOption {
+  engine: VoiceEngine;
+  label: string;
+  detail: string;
+  locked?: boolean;
 }
 
 interface Props {
@@ -21,6 +29,9 @@ interface Props {
   /** Whether the full settings (font, spacing, speed) are shown. */
   expanded: boolean;
   onToggleExpand: () => void;
+  voiceEngine: VoiceEngine;
+  voiceOptions: VoiceModeOption[];
+  onVoiceEngineChange: (engine: VoiceEngine) => void;
   /** Safe-area bottom inset (gesture nav bar). */
   bottomInset?: number;
 }
@@ -35,6 +46,9 @@ export function Controls({
   onToggleSound,
   expanded,
   onToggleExpand,
+  voiceEngine,
+  voiceOptions,
+  onVoiceEngineChange,
   bottomInset = 0,
 }: Props) {
   return (
@@ -78,6 +92,33 @@ export function Controls({
               onDec={() => onChange({ ...settings, speed: Math.max(0.5, +(settings.speed - 0.1).toFixed(2)) })}
               onInc={() => onChange({ ...settings, speed: Math.min(2.0, +(settings.speed + 0.1).toFixed(2)) })}
             />
+          </View>
+
+          <View style={styles.voiceSection}>
+            <Text style={styles.voiceLabel}>Voice</Text>
+            <View style={styles.voiceRow}>
+              {voiceOptions.map((option) => {
+                const active = option.engine === voiceEngine;
+                return (
+                  <Pressable
+                    key={option.engine}
+                    style={[
+                      styles.voiceOption,
+                      active && styles.voiceOptionActive,
+                      option.locked && !active && styles.voiceOptionLocked,
+                    ]}
+                    onPress={() => onVoiceEngineChange(option.engine)}
+                  >
+                    <Text style={[styles.voiceOptionText, active && styles.voiceOptionTextActive]}>
+                      {option.label}
+                    </Text>
+                    <Text style={[styles.voiceOptionSub, active && styles.voiceOptionTextActive]}>
+                      {option.detail}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
         </>
       )}
@@ -161,6 +202,46 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: theme.spacing(1) },
   label: { color: theme.colors.textDim, fontSize: 13, width: 64 },
   slider: { flex: 1, height: 36 },
+  voiceSection: { gap: 6 },
+  voiceLabel: {
+    color: theme.colors.textDim,
+    fontSize: 12,
+    fontFamily: theme.fonts.sansSemiBold,
+  },
+  voiceRow: { flexDirection: "row", gap: theme.spacing(0.75) },
+  voiceOption: {
+    flex: 1,
+    minHeight: 58,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    justifyContent: "center",
+  },
+  voiceOptionActive: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  voiceOptionLocked: {
+    opacity: 0.72,
+  },
+  voiceOptionText: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 13,
+    textAlign: "center",
+  },
+  voiceOptionSub: {
+    color: theme.colors.textDim,
+    fontFamily: theme.fonts.sans,
+    fontSize: 10.5,
+    lineHeight: 13,
+    marginTop: 2,
+    textAlign: "center",
+  },
+  voiceOptionTextActive: { color: theme.colors.accent },
   stepper: {
     flexDirection: "row",
     alignItems: "center",

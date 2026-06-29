@@ -224,9 +224,9 @@ export function LibraryScreen({
       onPreferencesChange({ ...preferences, voiceEngine: "local_ai" });
     } catch (e: any) {
       Alert.alert(
-        "Local AI voice",
+        "Edge AI voice",
         e?.message ||
-          "Could not download the local AI voice. Check your connection and try again."
+          "Could not download Edge AI. Check your connection and try again."
       );
       refreshLocalVoiceStatus().catch(() => {});
     } finally {
@@ -292,14 +292,14 @@ export function LibraryScreen({
         <Text style={styles.statusText}>
           {preferences.voiceEngine === "cloud"
             ? cloudVoiceLimit > 0
-              ? `AI voice selected - ${formatChars(cloudVoiceRemaining)} left this month.`
-              : "AI voice selected - upgrade or use device voice before reading."
+              ? `Cloud AI selected - ${formatChars(cloudVoiceRemaining)} left this month.`
+              : "Cloud AI selected - upgrade or use device voice before reading."
             : preferences.voiceEngine === "local_ai"
               ? localStatus.engineInstalled
-                ? "Local AI voice selected - ready on this phone with no cloud voice cost."
+                ? "Edge AI selected - ready on this phone with no cloud voice cost."
                 : localStatus.nativeAvailable
-                  ? "Local AI voice selected - download the voice model before reading."
-                  : "Local AI voice selected - install the new native build first."
+                  ? "Edge AI selected - download the voice model before reading."
+                  : "Edge AI selected - install the new native build first."
               : "Device voice selected - unlimited reading with no ReadFlow voice cost."}
         </Text>
       </View>
@@ -409,14 +409,14 @@ function formatDeviceVoices(voices: Speech.Voice[]): DeviceVoiceOption[] {
   return voices
     .filter((voice) => /^en([-_]|$)/i.test(voice.language || ""))
     .map((voice, index) => toDeviceVoiceOption(voice, index))
+    .sort((a, b) => a.rank - b.rank || a.displayName.localeCompare(b.displayName))
     .filter((voice) => {
-      const key = `${voice.id}:${voice.language}`;
+      const key = `${voice.regionKey}:${voice.detail}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
-    .sort((a, b) => a.rank - b.rank || a.displayName.localeCompare(b.displayName))
-    .slice(0, 24);
+    .slice(0, 8);
 }
 
 function toDeviceVoiceOption(voice: Speech.Voice, index: number): DeviceVoiceOption {
@@ -437,8 +437,8 @@ function toDeviceVoiceOption(voice: Speech.Voice, index: number): DeviceVoiceOpt
     language,
     regionKey,
     regionLabel,
-    displayName: `${regionLabel} ${quality.toLowerCase()}`,
-    detail: quality === "Network voice" ? "May need Android voice data" : `${language} - ${quality}`,
+    displayName: regionLabel,
+    detail: quality === "Network voice" ? "Needs Android voice data" : "Available on this phone",
     rank: regionRank(regionKey) * 10 + (quality === "Offline voice" ? 0 : quality === "Phone voice" ? 1 : 2),
   };
 }
@@ -496,11 +496,11 @@ function VoiceOverview({
       <Text style={styles.voiceOverviewBody}>
         {isCloud
           ? cloudVoiceLimit > 0
-            ? `AI cloud voice: ${formatChars(cloudVoiceRemaining)} left, about ${estimatePages(cloudVoiceRemaining)} pages.`
-            : "AI cloud voice needs AI Pro or Power. Device voice remains unlimited."
+            ? `Cloud AI: ${formatChars(cloudVoiceRemaining)} left, about ${estimatePages(cloudVoiceRemaining)} pages.`
+            : "Cloud AI needs AI Pro or Power. Device voice remains unlimited."
           : isLocal
             ? localStatus.engineInstalled
-              ? "Pocket AI: ready on this phone. It uses battery and CPU, with no cloud cost."
+              ? "Edge AI: ready on this phone. It uses battery and CPU, with no cloud cost."
               : `${localStatus.title}. ${localStatus.detail}`
             : "Phone voice: unlimited, offline after import, and no ReadFlow AI voice cost."}
       </Text>
@@ -561,13 +561,13 @@ function VoiceSettingsSheet({
     }
     if (engine === "local_ai" && !localStatus.engineInstalled) {
       if (localStatus.nativeAvailable && !localStatus.modelDownloaded) {
-        Alert.alert("Download local AI voice", localStatus.detail, [
+        Alert.alert("Download Edge AI voice", localStatus.detail, [
           { text: "Not now", style: "cancel" },
           { text: "Download", onPress: onDownloadLocalVoice },
         ]);
         return;
       }
-      Alert.alert("Local AI voice", localStatus.detail);
+      Alert.alert("Edge AI voice", localStatus.detail);
       return;
     }
     onChange({ ...preferences, voiceEngine: engine });
@@ -592,204 +592,227 @@ function VoiceSettingsSheet({
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent}>
-            <VoiceChoice
-              title="Phone voice"
-              detail={
-                currentDeviceVoice
-                  ? `Using ${currentDeviceVoice.displayName}. Unlimited and no ReadFlow voice cost.`
-                  : "Uses Android's current voice. Unlimited, offline after import, and no ReadFlow voice cost."
-              }
-              active={preferences.voiceEngine === "device"}
-              onPress={() => selectEngine("device")}
-            />
-            <VoiceChoice
-              title="Studio AI"
-              detail={
-                canUseCloud
-                  ? `${formatChars(cloudRemaining)} left this month, about ${estimatePages(cloudRemaining)} pages. Best quality, but capped to protect pricing.`
-                  : "Included in AI Pro and Power only. Best quality, capped to protect pricing."
-              }
-              active={preferences.voiceEngine === "cloud"}
-              locked={!canUseCloud}
-              onPress={() => selectEngine("cloud")}
-            />
-            <VoiceChoice
-              title="Pocket AI"
-              detail={
-                localStatus.engineInstalled
-                  ? "Runs on this phone with no OpenAI cost. Uses battery and CPU."
-                  : localStatus.detail
-              }
-              active={preferences.voiceEngine === "local_ai"}
-              locked={!localStatus.engineInstalled}
-              stateLabel={
-                localStatus.engineInstalled
-                  ? undefined
-                  : localStatus.nativeAvailable
-                    ? "Download"
-                    : "Build"
-              }
-              onPress={() => selectEngine("local_ai")}
-            />
-
-            <View style={styles.voiceBlock}>
-              <Text style={styles.voiceBlockTitle}>Pocket AI model</Text>
-              <Text style={styles.voiceBlockHint}>
-                {localStatus.engineInstalled
-                  ? `${localStatus.modelName} is ready. It reads on-device, uses battery and CPU, and does not use OpenAI.`
-                  : localStatus.nativeAvailable
-                    ? `${localStatus.modelName} downloads once, about ${formatLocalModelSize(localStatus.modelSizeBytes)}.`
-                    : localStatus.detail}
+            <View style={styles.voiceGuide}>
+              <Text style={styles.voiceGuideTitle}>Choose how books are read aloud</Text>
+              <Text style={styles.voiceGuideText}>
+                Edge AI is recommended for long books. Extra settings appear only for the
+                voice you choose.
               </Text>
-              {localDownloading ? (
-                <View style={styles.localProgressWrap}>
-                  <View style={styles.localProgressTrack}>
-                    <View
-                      style={[
-                        styles.localProgressFill,
-                        {
-                          width: `${Math.max(
-                            3,
-                            Math.min(100, localDownloadProgress?.percent ?? 3)
-                          )}%`,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.voiceBlockHint}>
-                    {localDownloadProgress?.phase === "extracting"
-                      ? "Installing voice..."
-                      : `Downloading ${Math.round(localDownloadProgress?.percent ?? 0)}%`}
-                  </Text>
-                </View>
-              ) : localStatus.nativeAvailable && !localStatus.modelDownloaded ? (
-                <Pressable style={styles.voicePackBtn} onPress={onDownloadLocalVoice}>
-                  <Text style={styles.voicePackText}>Download Pocket AI</Text>
-                </Pressable>
-              ) : localStatus.engineInstalled ? (
-                <Text style={styles.localReadyText}>Ready for Pocket AI reading.</Text>
-              ) : null}
             </View>
 
-            <View style={styles.voiceBlock}>
-              <Text style={styles.voiceBlockTitle}>Phone voice accent</Text>
-              <Text style={styles.voiceBlockHint}>
-                Choose the English accent you prefer. ReadFlow hides the technical Android voice names.
-              </Text>
-              <View style={styles.voiceRegionRow}>
-                {regionOptions.map((region) => {
-                  const active = voiceRegion === region.key;
-                  return (
-                    <Pressable
-                      key={region.key}
-                      style={[styles.voiceRegionChip, active && styles.voiceRegionChipOn]}
-                      onPress={() => setVoiceRegion(region.key)}
-                    >
-                      <Text
+            <View style={styles.voiceChoiceGroup}>
+              <VoiceChoice
+                title="Edge AI"
+                detail={
+                  localStatus.engineInstalled
+                    ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
+                    : localStatus.detail
+                }
+                active={preferences.voiceEngine === "local_ai"}
+                locked={!localStatus.engineInstalled}
+                stateLabel={
+                  localStatus.engineInstalled
+                    ? undefined
+                    : localStatus.nativeAvailable
+                      ? "Download"
+                      : "Build"
+                }
+                onPress={() => selectEngine("local_ai")}
+              />
+              <VoiceChoice
+                title="Phone voice"
+                detail={
+                  currentDeviceVoice
+                    ? `Uses ${currentDeviceVoice.displayName}. Smallest battery use.`
+                    : "Uses the phone's built-in reader voice. Smallest battery use."
+                }
+                active={preferences.voiceEngine === "device"}
+                onPress={() => selectEngine("device")}
+              />
+              <VoiceChoice
+                title="Cloud AI"
+                detail={
+                  canUseCloud
+                    ? `${formatChars(cloudRemaining)} left this month. Best cloud quality.`
+                    : "Cloud AI for AI Pro and Power. Best quality, monthly allowance."
+                }
+                active={preferences.voiceEngine === "cloud"}
+                locked={!canUseCloud}
+                onPress={() => selectEngine("cloud")}
+              />
+            </View>
+
+            {preferences.voiceEngine === "local_ai" ? (
+              <View style={styles.voiceBlock}>
+                <Text style={styles.voiceBlockTitle}>
+                  {localStatus.engineInstalled ? "Edge AI is ready" : "Download Edge AI"}
+                </Text>
+                <Text style={styles.voiceBlockHint}>
+                  {localStatus.engineInstalled
+                    ? `${localStatus.modelName} reads on this phone with no OpenAI cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. Reading stops when you leave ReadFlow.`
+                    : localStatus.nativeAvailable
+                      ? `${localStatus.modelName} downloads once, about ${formatLocalModelSize(localStatus.modelSizeBytes)}.`
+                      : localStatus.detail}
+                </Text>
+                {localDownloading ? (
+                  <View style={styles.localProgressWrap}>
+                    <View style={styles.localProgressTrack}>
+                      <View
                         style={[
-                          styles.voiceRegionChipText,
-                          active && styles.voiceRegionChipTextOn,
+                          styles.localProgressFill,
+                          {
+                            width: `${Math.max(
+                              3,
+                              Math.min(100, localDownloadProgress?.percent ?? 3)
+                            )}%`,
+                          },
                         ]}
-                      >
-                        {region.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                      />
+                    </View>
+                    <Text style={styles.voiceBlockHint}>
+                      {localDownloadProgress?.phase === "extracting"
+                        ? "Installing voice..."
+                        : `Downloading ${Math.round(localDownloadProgress?.percent ?? 0)}%`}
+                    </Text>
+                  </View>
+                ) : localStatus.nativeAvailable && !localStatus.modelDownloaded ? (
+                  <Pressable style={styles.voicePackBtn} onPress={onDownloadLocalVoice}>
+                    <Text style={styles.voicePackText}>Download Edge AI</Text>
+                  </Pressable>
+                ) : localStatus.engineInstalled ? (
+                  <Text style={styles.localReadyText}>Ready for Edge AI reading.</Text>
+                ) : null}
               </View>
-              <View style={styles.voiceList}>
-                <Pressable
-                  style={[styles.voiceChip, !preferences.deviceVoiceId && styles.voiceChipOn]}
-                  onPress={() =>
-                    onChange({
-                      ...preferences,
-                      voiceEngine: "device",
-                      deviceVoiceId: undefined,
-                    })
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.voiceChipText,
-                      !preferences.deviceVoiceId && styles.voiceChipTextOn,
-                    ]}
-                  >
-                    Phone default
-                  </Text>
-                  <Text
-                    style={[
-                      styles.voiceChipSub,
-                      !preferences.deviceVoiceId && styles.voiceChipTextOn,
-                    ]}
-                  >
-                    Uses Android setting
-                  </Text>
-                </Pressable>
-                {deviceVoices.length === 0 ? (
-                  <Text style={styles.voiceEmpty}>No downloadable phone voices were reported.</Text>
-                ) : (
-                  visibleDeviceVoices.map((voice) => {
-                    const active = preferences.deviceVoiceId === voice.id;
+            ) : null}
+
+            {preferences.voiceEngine === "device" ? (
+              <View style={styles.voiceBlock}>
+                <Text style={styles.voiceBlockTitle}>Phone voice accent</Text>
+                <Text style={styles.voiceBlockHint}>
+                  Optional. Choose an English accent, or keep the phone default.
+                </Text>
+                <View style={styles.voiceRegionRow}>
+                  {regionOptions.map((region) => {
+                    const active = voiceRegion === region.key;
                     return (
                       <Pressable
-                        key={voice.id}
-                        style={[styles.voiceChip, active && styles.voiceChipOn]}
-                        onPress={() =>
-                          onChange({
-                            ...preferences,
-                            voiceEngine: "device",
-                            deviceVoiceId: voice.id,
-                          })
-                        }
+                        key={region.key}
+                        style={[styles.voiceRegionChip, active && styles.voiceRegionChipOn]}
+                        onPress={() => setVoiceRegion(region.key)}
                       >
-                        <Text style={[styles.voiceChipText, active && styles.voiceChipTextOn]}>
-                          {voice.displayName}
-                        </Text>
-                        <Text style={[styles.voiceChipSub, active && styles.voiceChipTextOn]}>
-                          {voice.detail}
+                        <Text
+                          style={[
+                            styles.voiceRegionChipText,
+                            active && styles.voiceRegionChipTextOn,
+                          ]}
+                        >
+                          {region.label}
                         </Text>
                       </Pressable>
                     );
-                  })
-                )}
-              </View>
-            </View>
-
-            <View style={styles.voiceBlock}>
-              <Text style={styles.voiceBlockTitle}>Cloud voice style</Text>
-              <View style={styles.voiceList}>
-                {CLOUD_VOICES.map((voice) => {
-                  const active = preferences.cloudVoiceId === voice;
-                  return (
-                    <Pressable
-                      key={voice}
-                      style={[styles.cloudChip, active && styles.cloudChipOn]}
-                      onPress={() =>
-                        onChange({
-                          ...preferences,
-                          voiceEngine: canUseCloud ? "cloud" : preferences.voiceEngine,
-                          cloudVoiceId: voice,
-                        })
-                      }
+                  })}
+                </View>
+                <View style={styles.voiceList}>
+                  <Pressable
+                    style={[styles.voiceChip, !preferences.deviceVoiceId && styles.voiceChipOn]}
+                    onPress={() =>
+                      onChange({
+                        ...preferences,
+                        voiceEngine: "device",
+                        deviceVoiceId: undefined,
+                      })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.voiceChipText,
+                        !preferences.deviceVoiceId && styles.voiceChipTextOn,
+                      ]}
                     >
-                      <Text style={[styles.cloudChipText, active && styles.cloudChipTextOn]}>
-                        {voice.charAt(0).toUpperCase() + voice.slice(1)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                      Phone default
+                    </Text>
+                    <Text
+                      style={[
+                        styles.voiceChipSub,
+                        !preferences.deviceVoiceId && styles.voiceChipTextOn,
+                      ]}
+                    >
+                      Uses Android setting
+                    </Text>
+                  </Pressable>
+                  {deviceVoices.length === 0 ? (
+                    <Text style={styles.voiceEmpty}>No optional English voices were reported.</Text>
+                  ) : (
+                    visibleDeviceVoices.map((voice) => {
+                      const active = preferences.deviceVoiceId === voice.id;
+                      return (
+                        <Pressable
+                          key={voice.id}
+                          style={[styles.voiceChip, active && styles.voiceChipOn]}
+                          onPress={() =>
+                            onChange({
+                              ...preferences,
+                              voiceEngine: "device",
+                              deviceVoiceId: voice.id,
+                            })
+                          }
+                        >
+                          <Text style={[styles.voiceChipText, active && styles.voiceChipTextOn]}>
+                            {voice.displayName}
+                          </Text>
+                          <Text style={[styles.voiceChipSub, active && styles.voiceChipTextOn]}>
+                            {voice.detail}
+                          </Text>
+                        </Pressable>
+                      );
+                    })
+                  )}
+                </View>
               </View>
-            </View>
+            ) : null}
 
-            <View style={styles.voiceBlock}>
-              <Text style={styles.voiceBlockTitle}>Need more AI voice?</Text>
-              <Text style={styles.voiceBlockHint}>
-                When the monthly allowance is used, ReadFlow should continue with device voice and offer a paid top-up.
-              </Text>
-              <Pressable style={styles.voicePackBtn} onPress={buyMoreVoice}>
-                <Text style={styles.voicePackText}>AI voice packs</Text>
-              </Pressable>
-            </View>
+            {preferences.voiceEngine === "cloud" ? (
+              <>
+                <View style={styles.voiceBlock}>
+                  <Text style={styles.voiceBlockTitle}>Cloud AI style</Text>
+                  <Text style={styles.voiceBlockHint}>
+                    Cloud AI uses your monthly allowance.
+                  </Text>
+                  <View style={styles.voiceList}>
+                    {CLOUD_VOICES.map((voice) => {
+                      const active = preferences.cloudVoiceId === voice;
+                      return (
+                        <Pressable
+                          key={voice}
+                          style={[styles.cloudChip, active && styles.cloudChipOn]}
+                          onPress={() =>
+                            onChange({
+                              ...preferences,
+                              voiceEngine: canUseCloud ? "cloud" : preferences.voiceEngine,
+                              cloudVoiceId: voice,
+                            })
+                          }
+                        >
+                          <Text style={[styles.cloudChipText, active && styles.cloudChipTextOn]}>
+                            {voice.charAt(0).toUpperCase() + voice.slice(1)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.voiceBlock}>
+                  <Text style={styles.voiceBlockTitle}>Need more Cloud AI?</Text>
+                  <Text style={styles.voiceBlockHint}>
+                    When the monthly allowance is used, ReadFlow should offer a paid top-up.
+                  </Text>
+                  <Pressable style={styles.voicePackBtn} onPress={buyMoreVoice}>
+                    <Text style={styles.voicePackText}>AI voice packs</Text>
+                  </Pressable>
+                </View>
+              </>
+            ) : null}
           </ScrollView>
         </View>
       </View>
@@ -860,11 +883,11 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
               {code ? ` (${code})` : ""}
             </Text>
             <Text style={styles.aboutBody}>
-              ReadFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped cloud AI voice, or downloaded local AI voice.
+              ReadFlow turns PDF and Word documents into phone-sized reading text, then reads with device voice, capped Cloud AI, or downloaded Edge AI.
             </Text>
             <View style={styles.helpRows}>
               <HelpRow label="+" text="Add a PDF or Word document." />
-              <HelpRow label="Voice" text="Choose unlimited phone voice, capped AI cloud voice, or local AI voice when installed." />
+              <HelpRow label="Voice" text="Choose unlimited device voice, capped Cloud AI, or downloaded Edge AI." />
               <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
               <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />
               <HelpRow label="Focus" text="Hides controls for a cleaner reading view." />
@@ -1413,6 +1436,29 @@ const styles = StyleSheet.create({
   },
   modalClose: { color: theme.colors.textDim, fontSize: 18, paddingHorizontal: 4 },
   modalContent: { gap: theme.spacing(1.25), paddingTop: theme.spacing(1.5), paddingBottom: 8 },
+  voiceGuide: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#C7DED8",
+    backgroundColor: theme.colors.tealSoft,
+    paddingHorizontal: theme.spacing(1.25),
+    paddingVertical: theme.spacing(1),
+  },
+  voiceGuideTitle: {
+    color: theme.colors.teal,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 14,
+  },
+  voiceGuideText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12.5,
+    lineHeight: 17,
+    marginTop: 3,
+  },
+  voiceChoiceGroup: {
+    gap: theme.spacing(1),
+  },
 
   voiceChoice: {
     borderWidth: 1,

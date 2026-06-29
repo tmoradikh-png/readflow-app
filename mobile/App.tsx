@@ -103,6 +103,7 @@ export default function App() {
             doc={doc}
             entitlement={entitlement}
             preferences={preferences}
+            onPreferencesChange={updatePreferences}
             language="en-US"
             freePageLimit={10}
             startSentenceId={item?.lastSentenceId ?? 0}

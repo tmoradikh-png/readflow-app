@@ -37,10 +37,10 @@ export function getLocalNeuralVoiceStatus(): LocalNeuralVoiceStatus {
     modelId: LOCAL_NEURAL_MODEL_ID,
     modelName: LOCAL_NEURAL_MODEL_NAME,
     modelSizeBytes: LOCAL_NEURAL_MODEL_SIZE_BYTES,
-    title: supportedDevice ? "Checking local AI voice" : "Phone may be too old",
+    title: supportedDevice ? "Checking Edge AI" : "Phone may be too old",
     detail: supportedDevice
-      ? "Checking whether the native local AI engine and voice model are ready on this phone."
-      : "Local AI voice needs a newer phone. Device voice still works without any ReadFlow cost.",
+      ? "Checking whether the native Edge AI engine and voice model are ready on this phone."
+      : "Edge AI needs a newer phone. Device voice still works without any ReadFlow cost.",
   };
 }
 
@@ -74,7 +74,7 @@ export async function downloadLocalNeuralVoice(
   onProgress?: (progress: LocalNeuralDownloadProgress) => void
 ): Promise<LocalNeuralVoiceStatus> {
   if (!isSupportedDevice()) {
-    throw new Error("This phone is below the minimum version for local AI voice.");
+    throw new Error("This phone is below the minimum version for Edge AI.");
   }
 
   const download = await import("react-native-sherpa-onnx/download");
@@ -107,7 +107,7 @@ export async function getLocalNeuralModelPath(): Promise<string> {
     LOCAL_NEURAL_MODEL_ID
   );
   if (!path) {
-    throw new Error("Local AI voice model is not downloaded.");
+    throw new Error("Edge AI voice model is not downloaded.");
   }
   return path;
 }
@@ -140,19 +140,19 @@ function buildStatus({
 }): LocalNeuralVoiceStatus {
   const modelSize = formatLocalModelSize(modelSizeBytes);
   const engineInstalled = supportedDevice && nativeAvailable && modelDownloaded;
-  let title = "Local AI voice";
+  let title = "Edge AI";
   let detail = "";
 
   if (!supportedDevice) {
     title = "Phone may be too old";
     detail =
-      "Local AI voice needs Android 7 or newer, or iOS 13 or newer. Device voice still works without any ReadFlow cost.";
+      "Edge AI needs Android 7 or newer, or iOS 13 or newer. Device voice still works without any ReadFlow cost.";
   } else if (!nativeAvailable) {
     title = "Needs the new app build";
     detail =
-      "Install the next native build to enable the local AI engine. Device voice keeps working now.";
+      "Install the next native build to enable Edge AI. Device voice keeps working now.";
   } else if (!modelDownloaded) {
-    title = "Download local AI voice";
+    title = "Download Edge AI";
     detail = `Download ${LOCAL_NEURAL_MODEL_NAME} once (about ${modelSize}). It then reads on this phone with no OpenAI cost.`;
   } else {
     title = "Ready on this phone";

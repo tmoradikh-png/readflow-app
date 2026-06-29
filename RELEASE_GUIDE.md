@@ -109,23 +109,29 @@ https://expo.dev/accounts/tohid123/projects/readflow/builds
 > new icon or version: **uninstall** the old ReadFlow from the phone, then **reinstall**
 > from the Play internal‑testing link. A plain in‑place update may keep the old icon.
 
-If the build includes local AI voice, test it only in the fresh native build:
-open Voice, download the Supertonic Reader/Pocket AI voice, select it, and
+If the build includes Edge AI voice, test it only in the fresh native build:
+open Voice, download the Supertonic Reader/Edge AI voice, select it, and
 verify local reading/highlighting. Expo Go and older installed builds cannot
 test the Sherpa native module.
 
 Current ReadFlow QA checklist for any build that changes reading/voice:
 - Fresh-install the app and verify the launcher icon shows the full clean book
   mark, including the red spine.
-- Open Voice and confirm the choices read as Phone voice, Pocket AI, and Studio
+- Open Voice and confirm the choices read as Device voice, Edge AI, and Cloud
   AI; Android raw voice ids should not dominate the UI.
-- Download/select Pocket AI, play several paragraphs, and check for natural
+- Open the reader settings menu and confirm the quick selector reads Device,
+  Edge AI, and Cloud AI. Locked Cloud AI should open a clean upgrade prompt.
+- Download/select Edge AI, play several paragraphs, and check for natural
   enough voice quality, short paragraph gaps, and line highlight following the
   spoken text.
 - Rotate the phone while reading; the current line should re-anchor instead of
-  scrolling through the book forever.
+  scrolling through the book.
+- Open a saved book, jump to a bookmark, and use page navigation; each should
+  land directly without visibly traveling through pages.
 - Let playback run long enough that Android would normally dim/lock; the screen
   should stay awake while playback is active.
+- Press Home/app-switch/lock while any voice is reading; playback should stop
+  promptly instead of finishing the paragraph.
 - Remove the current/continue book and a normal library book; both should
   disappear and remain gone after restart.
 

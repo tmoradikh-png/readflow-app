@@ -57,7 +57,7 @@ npm start                   # press the QR with Expo Go on your phone
 The app auto-detects your computer's LAN IP and calls the backend on port 4000,
 so your phone and computer must be on the **same Wi‑Fi**.
 
-Expo Go is enough for normal JS/UI work and device voice. Local AI voice needs
+Expo Go is enough for normal JS/UI work and device voice. Edge AI voice needs
 the native Sherpa module, so use a development/native build:
 
 ```pwsh
@@ -69,10 +69,10 @@ On Windows, local native builds are more reliable from a short physical path
 such as `C:\rf-mobile-test`; see `RELEASE_GUIDE.md` for the no-EAS local test
 workflow.
 
-> Reading aloud can use the **free on-device voice** (works offline after import,
-> no ReadFlow voice cost), capped backend-powered **AI cloud voice**, or the
-> downloaded **local AI voice** in a native build. AI/cloud voice requires the
-> backend and OpenAI key; local AI voice uses phone CPU/battery instead.
+> Reading aloud can use **Device voice** (works offline after import, no
+> ReadFlow voice cost), capped backend-powered **Cloud AI**, or downloaded
+> **Edge AI** in a native build. Cloud AI requires the backend and OpenAI key;
+> Edge AI uses phone CPU/battery instead.
 
 ## Shipping a new Android build
 See **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** → the **"TL;DR — Cut a NEW build"** section
@@ -88,7 +88,7 @@ at the top is the step‑by‑step routine (bump `versionCode`, regenerate the i
 Device voice is implemented through `expo-speech` and now supports choosing an
 installed phone voice from the shelf screen.
 
-Premium AI cloud voice is implemented through
+Premium Cloud AI voice is implemented through
 `mobile/src/services/tts/CloudTTSProvider.ts` and backend `POST /api/tts`.
 The mobile app never stores the OpenAI key; it sends text to the backend and
 plays the returned MP3. The reader keeps natural audio chunks intact while the
@@ -97,11 +97,12 @@ UI highlights the active rendered line. Cloud voice is not unlimited:
 - AI Pro: 60k generated characters/month.
 - Power: 180k generated characters/month.
 
-Local AI voice is implemented through `react-native-sherpa-onnx` with an
-on-demand Piper VITS voice (`vits-piper-en_US-lessac-medium-int8`, about 20 MB
-compressed). It requires a fresh native/EAS build and will not run in Expo Go or
-older installed builds. If the model is missing, the reader falls back to the
-selected device voice.
+Edge AI voice is implemented through `react-native-sherpa-onnx` with the
+on-demand Supertonic Reader model
+(`sherpa-onnx-supertonic-tts-int8-2026-03-06`, about 81 MB download). It
+requires a fresh native/EAS build and will not run in Expo Go or older installed
+builds. If the model is missing, the reader falls back to the selected device
+voice.
 
 ## Roadmap (after the prototype feels right)
 - RevenueCat mobile SDK + production subscriptions

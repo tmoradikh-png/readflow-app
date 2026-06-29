@@ -149,7 +149,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       if (mySeq !== this.seq) return;
       opts.onFallback?.({
         reason: "local_unavailable",
-        message: "Local AI voice is not ready. Continuing with device voice.",
+        message: "Edge AI is not ready. Continuing with device voice.",
       });
       return this.device.speak(t, { ...opts, voiceId: opts.fallbackVoiceId });
     }
@@ -206,7 +206,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       try {
         const metadata = {
           title: opts.lockScreenTitle || "ReadFlow",
-          artist: opts.lockScreenSubtitle || "Local AI voice",
+          artist: opts.lockScreenSubtitle || "Edge AI",
           albumTitle: opts.lockScreenAlbum || "ReadFlow",
         };
         player.setActiveForLockScreen(
@@ -229,7 +229,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       if (mySeq !== this.seq) return;
       opts.onFallback?.({
         reason: "local_unavailable",
-        message: "Local AI voice could not play. Continuing with device voice.",
+        message: "Edge AI could not play. Continuing with device voice.",
       });
       return this.device.speak(t, { ...opts, voiceId: opts.fallbackVoiceId });
     }
@@ -270,7 +270,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     return [
       {
         id: LOCAL_NEURAL_VOICE_ID,
-        name: `Local AI - ${LOCAL_NEURAL_MODEL_NAME}`,
+        name: `Edge AI - ${LOCAL_NEURAL_MODEL_NAME}`,
         language: "en-US",
       },
     ];

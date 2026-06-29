@@ -27,13 +27,14 @@ import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
 import { UpgradeSheet } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
-import { ReadingPreferences } from "../services/Preferences";
+import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
 import { theme } from "../theme";
 
 interface Props {
   doc: ParsedPdf;
   entitlement: EntitlementSnapshot;
   preferences: ReadingPreferences;
+  onPreferencesChange: (next: ReadingPreferences) => void;
   language?: string; // BCP-47, e.g. "en-US"
   /** Pages readable for free before the subscribe gate. */
   freePageLimit?: number;
@@ -109,8 +110,8 @@ function voiceIdFor(mode: RuntimeVoiceMode, preferences: ReadingPreferences): st
 }
 
 function voiceLabelFor(mode: RuntimeVoiceMode): string {
-  if (mode === "natural") return "AI voice";
-  if (mode === "local") return "Local AI voice";
+  if (mode === "natural") return "Cloud AI";
+  if (mode === "local") return "Edge AI";
   return "Device voice";
 }
 
@@ -118,6 +119,7 @@ export function Reader({
   doc,
   entitlement,
   preferences,
+  onPreferencesChange,
   language = "en-US",
   freePageLimit = 10,
   startSentenceId = 0,
@@ -175,6 +177,19 @@ export function Reader({
     entitlement.features.cloudVoice && entitlement.limits.cloudVoiceCharsPerMonth > 0
   );
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement);
+  const readerVoiceOptions = useMemo(
+    () => [
+      { engine: "device" as const, label: "Device", detail: "Free" },
+      { engine: "local_ai" as const, label: "Edge AI", detail: "On phone" },
+      {
+        engine: "cloud" as const,
+        label: "Cloud AI",
+        detail: canUseCloudVoice ? "Premium" : "Locked",
+        locked: !canUseCloudVoice,
+      },
+    ],
+    [canUseCloudVoice]
+  );
 
   const insets = useSafeAreaInsets();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -188,7 +203,6 @@ export function Reader({
   const activeCharRef = useRef<{ sentenceId: number; charOffset: number } | null>(null);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
-  const backgroundAudioAllowedRef = useRef(false);
   const cloudVoiceLimitWarnedRef = useRef(false);
   const localVoiceWarnedRef = useRef(false);
   const saveLastReadRef = useRef<() => void>(() => {});
@@ -234,11 +248,6 @@ export function Reader({
     settingsRef.current = settings;
   }, [settings]);
   useEffect(() => {
-    backgroundAudioAllowedRef.current =
-      entitlement.tier !== "free" && (voiceMode === "natural" || voiceMode === "local");
-  }, [entitlement.tier, voiceMode]);
-
-  useEffect(() => {
     if (!isPlaying) {
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
       return;
@@ -272,9 +281,10 @@ export function Reader({
       const previous = appStateRef.current;
       appStateRef.current = nextState;
       if (previous !== "active" || nextState === "active") return;
-      if (!playingRef.current || backgroundAudioAllowedRef.current) return;
+      if (!playingRef.current) return;
 
-      // Free/device audio is foreground-only. Stop on lock, Home, or app switch.
+      // Reading is foreground-only for now. The app keeps the screen awake while
+      // reading, and any Home/app-switch/background transition hard-stops audio.
       epochRef.current++;
       playingRef.current = false;
       setIsPlaying(false);
@@ -288,6 +298,22 @@ export function Reader({
     setPaywallTitle(title);
     setPaywallBody(body);
     setShowPaywall(true);
+  }
+
+  function selectVoiceEngine(engine: VoiceEngine) {
+    if (engine === "cloud" && !canUseCloudVoice) {
+      openFeatureLock(
+        "Cloud AI voice",
+        "Cloud AI is our highest-quality voice and is included in AI Pro and Power. Device voice and Edge AI stay available without OpenAI cost."
+      );
+      return;
+    }
+    if (engine === preferences.voiceEngine) return;
+    epochRef.current++;
+    playingRef.current = false;
+    setIsPlaying(false);
+    ttsRef.current.stop();
+    onPreferencesChange({ ...preferences, voiceEngine: engine });
   }
 
   function ocrProgressLabel(): string {
@@ -607,7 +633,7 @@ export function Reader({
     const next = !followRef.current;
     followRef.current = next;
     setAutoFollow(next);
-    if (next && currentIdRef.current != null) scrollToIndexSafe(currentIdRef.current, true);
+    if (next && currentIdRef.current != null) scrollToIndexSafe(currentIdRef.current, false);
   }
 
   // onViewableItemsChanged / viewabilityConfig must be stable across renders.
@@ -642,7 +668,7 @@ export function Reader({
     if (scrollRetryTimerRef.current) clearTimeout(scrollRetryTimerRef.current);
     scrollRetryTimerRef.current = setTimeout(() => {
       scrollRetryTimerRef.current = null;
-      scrollToIndexSafe(index, !quiet, false);
+      scrollToIndexSafe(index, false, false);
       initialJumpRef.current = false;
     }, quiet ? 160 : 80);
   }
@@ -718,17 +744,16 @@ export function Reader({
       onFallback: (info) => {
         if (info.reason === "quota" && !cloudVoiceLimitWarnedRef.current) {
           cloudVoiceLimitWarnedRef.current = true;
-          openFeatureLock(
-            "AI voice allowance used",
-            "Your cloud AI voice allowance is used for this month. Device voice will keep reading for free. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
+            openFeatureLock(
+              "AI voice allowance used",
+            "Your Cloud AI allowance is used for this month. Device voice will keep reading for free. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
           );
         } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
           localVoiceWarnedRef.current = true;
-          backgroundAudioAllowedRef.current = false;
           openFeatureLock(
-            "Local AI voice not ready",
+            "Edge AI not ready",
             info.message ||
-              "Download the local AI voice from the Voice panel, or keep reading with device voice."
+              "Download Edge AI from the Voice panel, or keep reading with device voice."
           );
         }
       },
@@ -737,7 +762,7 @@ export function Reader({
         const start = firstPosition?.sentence ?? s;
         setCurrent(start.id);
         setActiveLineByChar(start.id, firstPosition?.charOffset ?? baseOffset);
-        if (followRef.current) scrollToIndexSafe(start.id, true);
+        if (followRef.current) scrollToIndexSafe(start.id, false);
       },
       onProgress: ({ currentTime, duration }) => {
         if (myEpoch !== epochRef.current || duration <= 0) return;
@@ -747,7 +772,7 @@ export function Reader({
         indexRef.current = position.sentence.id;
         if (currentIdRef.current !== position.sentence.id) {
           setCurrent(position.sentence.id);
-          if (followRef.current) scrollToIndexSafe(position.sentence.id, true);
+          if (followRef.current) scrollToIndexSafe(position.sentence.id, false);
         }
         setActiveLineByChar(position.sentence.id, position.charOffset);
       },
@@ -874,7 +899,7 @@ export function Reader({
     indexRef.current = globalId;
     pendingOffsetRef.current = 0;
     setCurrent(globalId);
-    scrollToIndexSafe(globalId, true);
+    scrollToIndexSafe(globalId, false);
     if (autoplay) {
       playingRef.current = true;
       setIsPlaying(true);
@@ -1105,7 +1130,7 @@ export function Reader({
           onPress={() =>
             openFeatureLock(
               "Unlock AI",
-              "Summaries, explanations, Q&A, and capped AI cloud voice are part of AI Pro. Device voice stays unlimited."
+              "Summaries, explanations, Q&A, and capped Cloud AI are part of AI Pro. Device voice stays unlimited."
             )
           }
         >
@@ -1125,6 +1150,9 @@ export function Reader({
           onToggleSound={toggleSound}
           expanded={controlsOpen}
           onToggleExpand={() => setControlsOpen((v) => !v)}
+          voiceEngine={preferences.voiceEngine}
+          voiceOptions={readerVoiceOptions}
+          onVoiceEngineChange={selectVoiceEngine}
           bottomInset={insets.bottom}
         />
       )}

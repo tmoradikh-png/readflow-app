@@ -54,23 +54,35 @@ Changes after the latest finished build and included in source `1.0.18`:
 - AI Pro includes 60k cloud voice characters/month; Power includes 180k.
 - Backend `/api/tts` checks monthly `cloudVoiceChars` before generating fresh
   OpenAI audio.
-- Voice selection moved to the shelf/home screen with device, AI cloud, and
-  local AI voice options.
+- Voice selection uses the public labels `Device voice`, `Edge AI`, and
+  `Cloud AI`. The shelf Voice sheet only shows the detailed settings for the
+  currently selected mode so readers do not see raw Android voice clutter.
+- The reader settings menu also includes a quick `Device` / `Edge AI` /
+  `Cloud AI` selector. Cloud AI acts as an upgrade prompt when the plan does
+  not include `features.cloudVoice`.
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
-- Local AI voice now uses `react-native-sherpa-onnx` plus an on-demand
+- Edge AI voice now uses `react-native-sherpa-onnx` plus an on-demand
   Supertonic local TTS model
   (`sherpa-onnx-supertonic-tts-int8-2026-03-06`). The model is not bundled into
   the app; the user downloads it from the Voice sheet. It is larger than the old
   Piper test voice (about 81 MB instead of 20 MB) because the 20 MB voice sounded
   too machine-like for book reading.
-- Important: local AI voice is a native dependency. It needs a new EAS/native
+- Important: Edge AI voice is a native dependency. It needs a new EAS/native
   build to run on the phone; Expo Go or an older installed build will fall back
   to device voice.
+- Playback policy is currently foreground-only for every voice engine. While a
+  book is reading, ReadFlow keeps the screen awake; if the user locks the phone,
+  presses Home, or app-switches away, audio stops instead of finishing the
+  paragraph/chunk. A future lock-screen audiobook mode would need explicit
+  native media-session controls and product approval.
+- Reader jumps now land directly instead of animating through pages. Resume,
+  page navigation, bookmark jumps, rotation re-anchors, and follow corrections
+  should not visibly scroll through the book.
 - Connected-phone dev test on 2026-06-29: a debug native build was installed on
   Samsung `SM_G975F` (`R58M168KTSZ`) from a short temp path. The first Piper
   experiment proved Sherpa playback worked; current source uses the larger
-  Supertonic Reader/Pocket AI model for better quality. No EAS quota was
+  Supertonic Reader/Edge AI model for better quality. No EAS quota was
   consumed for this test.
 - Follow-up on 2026-06-29: installing the raw `assembleDebug` APK left the app
   stuck on the splash screen because it expected Metro and had no packaged JS
@@ -91,11 +103,11 @@ Changes after the latest finished build and included in source `1.0.18`:
   - Rotation clears stale line measurements, re-anchors by page/sentence
     position, and caps `FlatList` scroll retries so the highlight does not chase
     through the book forever.
-  - Local/Pocket AI uses the optional Supertonic Reader model, reads short
+  - Edge AI uses the optional Supertonic Reader model, reads short
     same-page chunks, prefetches sooner, and uses a shorter audio tail guard to
     reduce paragraph gaps.
-  - Voice settings now use customer-facing names: Phone voice, Pocket AI
-    (on-device), and Studio AI (cloud allowance).
+  - Voice settings now use customer-facing names: Device voice, Edge AI
+    (on-device), and Cloud AI (cloud allowance).
   - Library remove is visible on document cards and the Continue card, removes
     cached parsed text/bookmarks, and updates metadata before deleting the
     physical file so deletion does not feel stuck.
@@ -264,7 +276,7 @@ Local native smoke test without spending EAS quota:
 3. Run `npx expo prebuild --platform android --clean`.
 4. Run `.\android\gradlew.bat :app:assembleDebug -x lint -x test` or
    `npx expo run:android`.
-5. If testing local AI, open Voice, download/select Local AI voice, tap Listen,
+5. If testing Edge AI, open Voice, download/select Edge AI, tap Listen,
    and watch logs for Sherpa model resolution and Android media-session playback.
 
 Critical rule: never reuse an Android `versionCode`. EAS/Play consume codes even
@@ -373,15 +385,12 @@ Cloud voice:
 Leaving the app/reader:
 - The reader explicitly stops playback on back/unmount so voice does not keep
   reading after returning to the library.
-- Free/device audio is foreground-only. The reader stops it when the app leaves
-  the foreground, which covers screen lock, Home, and app switch.
-- Paid natural/cloud voice and paid local AI voice are allowed to continue in
-  the background for lock-screen listening. Free voice modes stop when the app
-  leaves the foreground.
-- Natural/cloud/local voice registers an Expo Audio lock-screen media session with
-  book/page metadata and native play/pause controls. Expo Audio does not expose
-  a separate stop button in the current lock-screen API; pause is the supported
-  lock-screen control.
+- Current source treats all reading audio as foreground-only. The reader keeps
+  the screen awake while playback is active, and stops playback when the app
+  leaves the foreground, which covers screen lock, Home, and app switch.
+- Lock-screen audiobook mode is intentionally not active right now. If product
+  later allows lock-screen playback, add explicit native media-session controls
+  and QA the distinction between lock, Home, and app switch.
 - Large scanned books can continue OCR across multiple months: the app keeps the
   original file in local library storage, caches OCR'd pages, saves pending OCR
   pages, pauses with an explanation when monthly OCR quota is reached, and can
@@ -399,11 +408,11 @@ Highlighting:
 - Exact word-level sync would require timestamp data from the TTS provider. The
   current backend returns MP3 audio only, not word timings.
 
-Local neural voice:
+Edge AI voice:
 - Current implementation uses `react-native-sherpa-onnx` and
   `@dr.pogodin/react-native-fs`.
 - Current model: `sherpa-onnx-supertonic-tts-int8-2026-03-06` (Supertonic
-  Reader/Pocket AI), downloaded on demand from the Sherpa model release.
+  Reader/Edge AI), downloaded on demand from the Sherpa model release.
   Compressed download is about 81 MB; the model is not bundled in the app
   package.
 - Playback uses `LocalNeuralTTSProvider`, which generates WAV clips on-device,
@@ -415,8 +424,8 @@ Local neural voice:
   playback failure. The app suppresses that warning in LogBox and avoids refreshing the
   full model catalog during ordinary status checks.
 - If native support/model download is missing, the provider falls back to the
-  selected device voice and shows a one-time "Local AI voice not ready" message.
-- Treat local AI as unlimited from ReadFlow's billing perspective because it uses
+  selected device voice and shows a one-time "Edge AI not ready" message.
+- Treat Edge AI as unlimited from ReadFlow's billing perspective because it uses
   phone CPU/battery instead of OpenAI. Product can still decide to make it a paid
   perk, but it has no per-character vendor bill.
 - Kokoro/ExecuTorch remains a possible higher-quality future option, but it is
@@ -437,18 +446,24 @@ Recommended manual phone tests after installing a new build:
 - Import a normal PDF and verify reflowed reading.
 - Toggle Sound on/off.
 - Open Voice on the shelf, select a device voice, and verify the reader uses it.
-- Select AI cloud voice under an AI Pro/Power entitlement and verify `/api/tts`
+- In the reader settings menu, switch between Device, Edge AI, and Cloud AI.
+  Cloud AI should upsell cleanly when the plan is not AI Pro/Power.
+- Select Cloud AI under an AI Pro/Power entitlement and verify `/api/tts`
   consumes cloud voice characters, not generic AI actions.
-- Open Voice, download the local AI voice, select it, and verify the first
+- Open Voice, download Edge AI, select it, and verify the first
   paragraph generates locally, then subsequent/repeated paragraphs play from
   cache.
 - Device voice reads in sync.
 - Natural/cloud voice reads the same text, highlights the current line, and does
   not skip final words.
-- Local AI voice reads the same text, highlights the current line, and falls
+- Edge AI reads the same text, highlights the current line, and falls
   back to the selected device voice if the model is missing.
 - Paragraph handoff feels acceptable.
-- Lock screen while paid natural/cloud/local voice is reading.
+- Let playback continue in the foreground and confirm the screen stays awake.
+- Press Home/app-switch/lock while any voice is reading and confirm playback
+  stops promptly.
+- Open a saved book, rotate while reading, use page navigation, and jump to a
+  bookmark; each should land directly without visibly scrolling through pages.
 - Back out to Library and confirm playback stops.
 - AI button opens, summary/explain/Q&A route works under internal paid override.
 - Scanned PDF/OCR path shows correct paid messaging and progress.

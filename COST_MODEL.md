@@ -40,9 +40,9 @@ can change.
 Current cloud voice implementation:
 
 - Free and Reader Plus cannot call `/api/tts`.
-- AI Pro includes `60,000` cloud AI voice characters/month.
-- Power includes `180,000` cloud AI voice characters/month.
-- The mobile reader now gates cloud AI voice from `features.cloudVoice`, not the
+- AI Pro includes `60,000` Cloud AI voice characters/month.
+- Power includes `180,000` Cloud AI voice characters/month.
+- The mobile reader now gates Cloud AI voice from `features.cloudVoice`, not the
   generic AI text feature.
 - The backend gates `/api/tts` with `ensureFeature(req, res, "cloudVoice")` and
   checks `cloudVoiceChars` before generating fresh OpenAI audio.
@@ -51,15 +51,15 @@ Current cloud voice implementation:
 - `backend/src/routes/tts.ts` defaults to `tts-1-hd`, and `render.yaml` also
   sets `TTS_MODEL=tts-1-hd`. This is the more expensive legacy TTS model, so the
   current allowances are deliberately small.
-- Source `1.0.18` adds a real local AI voice path with `react-native-sherpa-onnx`
+- Source `1.0.18` adds a real Edge AI voice path with `react-native-sherpa-onnx`
   and an on-demand Supertonic Reader model. It has no OpenAI per-character bill,
   but it requires a new native/EAS build and consumes the user's phone CPU,
   storage, and battery.
-- The app now presents voice choices as Phone voice, Pocket AI, and Studio AI.
-  Pocket AI is the local Sherpa/Supertonic path and should be marketed as
-  no-cloud, battery/CPU-based reading. Studio AI is the cloud/OpenAI path and
+- The app now presents voice choices as Device voice, Edge AI, and Cloud AI.
+  Edge AI is the local Sherpa/Supertonic path and should be marketed as
+  no-cloud, battery/CPU-based reading. Cloud AI is the OpenAI-backed path and
   must remain paid/capped by `cloudVoiceChars`.
-- Pocket AI currently downloads `sherpa-onnx-supertonic-tts-int8-2026-03-06` on
+- Edge AI currently downloads `sherpa-onnx-supertonic-tts-int8-2026-03-06` on
   demand (about 81 MB) instead of bundling it in the app, so APK/AAB size does
   not grow by the model size until the user chooses to download it. This replaced
   the first 20 MB Piper test voice because the smaller model sounded too robotic
@@ -300,7 +300,7 @@ usage pack.
 
 Current allowance economics with `tts-1-hd`:
 
-| Tier | Included cloud AI voice | Approx listening | OpenAI cost if fully used |
+| Tier | Included Cloud AI voice | Approx listening | OpenAI cost if fully used |
 | --- | ---: | ---: | ---: |
 | AI Pro | 60,000 chars/month | about 1.1 hours / 36 pages | about $1.80 |
 | Power | 180,000 chars/month | about 3.3 hours / 109 pages | about $5.40 |
@@ -313,7 +313,7 @@ nets well above the $3 OpenAI cost on `tts-1-hd`.
 
 Current implementation choice: `react-native-sherpa-onnx` with Supertonic TTS,
 specifically `sherpa-onnx-supertonic-tts-int8-2026-03-06` (Supertonic
-Reader/Pocket AI). The model is downloaded on demand from the Sherpa model
+Reader/Edge AI). The model is downloaded on demand from the Sherpa model
 registry instead of being bundled in every app install.
 
 Why it is useful:
@@ -431,8 +431,8 @@ This is the conservative, profit-protecting plan shape:
 | --- | ---: | --- | --- |
 | Free | $0 | 1 saved book, about 100 pages, device voice, native text only | Render CPU/bandwidth only |
 | Reader Plus | $4.99/mo | Ad-free, bigger library, OCR allowance, device voice | OCR CPU on Render |
-| AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, local AI voice, 60k cloud voice chars | Fine if cloud voice capped |
-| Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, device/local AI voice, 180k cloud voice chars | Must hard-cap cloud voice |
+| AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, Edge AI, 60k cloud voice chars | Fine if cloud voice capped |
+| Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, device voice, Edge AI, 180k cloud voice chars | Must hard-cap cloud voice |
 | Natural Voice Pack | Separate add-on | Extra cloud voice hours or pay-as-you-go credits | Best match to real OpenAI cost |
 
 If cloud voice must be high quality (`tts-1-hd`), keep allowances very small:
@@ -469,10 +469,10 @@ are also weak and can punish shared networks. For public release, send a stable
    generic `ai`.
 4. DONE: backend `/api/tts` is gated by `cloudVoice` and monthly character
    usage.
-5. DONE in source: first local AI voice uses Sherpa-ONNX plus on-demand
+5. DONE in source: first Edge AI voice uses Sherpa-ONNX plus on-demand
    Supertonic Reader, outside cloud voice quota. Needs native phone QA before
    product claims.
-6. Decide whether local AI voice is Free, Reader Plus+, or AI Pro+. It has no
+6. Decide whether Edge AI voice is Free, Reader Plus+, or AI Pro+. It has no
    vendor bill, but it is still a premium-feeling AI feature.
 7. Decide free tier: 1 book and about 100 pages, then update backend and mobile
    to match.
