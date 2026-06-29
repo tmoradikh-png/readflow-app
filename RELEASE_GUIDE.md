@@ -32,8 +32,9 @@ What is already prepared in source:
 - `npm run check:release` now blocks the suspended
   `https://readflow-backend.onrender.com` URL, duplicate Android permissions,
   Android microphone permission, background-audio declarations, missing
-  app-user-id support, stale version numbers, and unsafe public Render
-  dev-override blueprints.
+  app-user-id support, stale version numbers, a generated `mobile/android`
+  directory that would override `app.json`, and unsafe public Render dev-override
+  blueprints.
 - Android permissions are intentionally minimal for Play review: `INTERNET`.
   `expo-audio` is configured with `recordAudioAndroid:false` and
   `microphonePermission:false`.
@@ -108,6 +109,13 @@ cd c:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
 > code that already has a build, that build is wasted and the bundle is rejected by
 > Play ("Version code N has already been used"). **Always pick a code strictly
 > higher than the highest EXISTING EAS build.**
+
+Also make sure there is no generated `mobile/android/` directory before EAS
+release builds. If it exists, EAS treats the app as bare native Android and uses
+native Gradle values instead of `app.json`. On 2026-06-29 a stale local
+`mobile/android/` folder contained versionCode `18` and `RECORD_AUDIO`; the EAS
+build was canceled and the folder was moved to `tmp/android-local-backup-20260629-1`.
+`npm run check:release` now blocks this case.
 
 Check the highest existing build code:
 

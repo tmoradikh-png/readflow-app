@@ -5,6 +5,7 @@ const mobileDir = path.resolve(process.cwd());
 const repoRoot = path.resolve(mobileDir, "..");
 
 const appJsonPath = path.join(mobileDir, "app.json");
+const androidDirPath = path.join(mobileDir, "android");
 const renderYamlPath = path.join(repoRoot, "render.yaml");
 const backendRenderYamlPath = path.join(repoRoot, "backend", "render.yaml");
 
@@ -29,6 +30,15 @@ const extra = expo.extra || {};
 const EXPECTED_VERSION = "1.0.23";
 const EXPECTED_VERSION_CODE = 23;
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
+
+// 0) This repo releases as a managed Expo app. A local generated android/
+// directory makes EAS ignore android.package/versionCode from app.json and can
+// reintroduce stale permissions such as RECORD_AUDIO.
+if (fs.existsSync(androidDirPath)) {
+  fail("mobile/android exists. Move or remove the generated native directory before EAS release builds.");
+} else {
+  pass("No local Android native directory will override app.json");
+}
 
 // 1) applicationId
 if (android.package === "com.urmiaworks.readflow") {
