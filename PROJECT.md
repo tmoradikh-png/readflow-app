@@ -29,17 +29,17 @@ Current shape:
 
 ## Current State
 
-- Active work branch: `codex/local-ai-voice-polish`
+- Active release branch: `main`
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
 - Current source version: `1.0.23`
 - Current source Android `versionCode`: `23`
-- Latest finished EAS build: `1.0.17` / code `17`
-- Latest finished EAS build id: `2900d21c-48f4-42aa-9434-f3bd2dcb06a4`
+- Latest finished EAS build: `1.0.23` / code `23`
+- Latest finished EAS build id: `8c701727-dcc5-403d-9b69-4f4d2e4fc9b2`
 - Latest finished AAB:
-  `https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab`
-- Next Android build should use code `23` unless another EAS build has already
+  `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`
+- Next Android build should use code `24` unless another EAS build has already
   consumed a higher code. Run the EAS `build:list` command in `RELEASE_GUIDE.md`
   immediately before spending build quota.
 
@@ -49,9 +49,19 @@ Changes included in the latest finished EAS build:
   and a shorter tail guard.
 - Highlighting targets the active rendered line while keeping the same TTS audio
   chunk size for natural voice.
+- Production backend points to the converted Render service at
+  `https://readflow-backend-internal.onrender.com`; service name is
+  `readflow-backend`, dev override is off, and `/api/entitlements` returns Free
+  for the current app key.
+- Android release config has no microphone permission and no background audio
+  declaration.
+- `npm run check:release` blocks stale generated `mobile/android/` directories
+  so native Gradle values cannot override `app.json`.
 
-Important: code `17` has been built, but test phones still need that AAB
-uploaded/installed before the source changes can be verified on-device.
+Important: build `178c888f` / `1.0.18` was canceled because a stale generated
+`mobile/android/` folder would have overridden `app.json` with versionCode `18`
+and `RECORD_AUDIO`. The folder was moved to
+`tmp/android-local-backup-20260629-1`, and the release checker now blocks this.
 
 Current Play release prep in source `1.0.23`:
 - `mobile/app.json` now points at the public backend host

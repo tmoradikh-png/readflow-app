@@ -538,11 +538,12 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 15 | 1.0.15 | 34cd381c | finished | finished reader design + AI voice sync/tail fix + exact clean icon |
 | 16 | 1.0.16 | 7b4d5904 | finished | Android adaptive icon safe-zone fix (0.66 foreground scale) |
 | 17 | 1.0.17 | 2900d21c | finished | active line highlight + free audio foreground-only + natural voice lock-screen controls. AAB: https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab |
-| 18-22 | 1.0.18-1.0.22 | local only / no EAS id recorded | phone QA builds | rF AI, multilingual OCR/text repair, OCR controls, scroll/audio fixes installed via local APKs |
-| 23 | 1.0.23 | pending | source release candidate | Play release prep: public backend URL, no mic/background audio, per-install app-user id, Free no Listen, release checker hardened |
+| 18 | 1.0.18 | 178c888f | canceled | stale generated `mobile/android/` would have used native versionCode 18 and `RECORD_AUDIO`; build canceled before release |
+| 18-22 | 1.0.18-1.0.22 | local only / no release AAB | phone QA builds | rF AI, multilingual OCR/text repair, OCR controls, scroll/audio fixes installed via local APKs |
+| 23 | 1.0.23 | 8c701727 | finished | Play/internal AAB release candidate. Converted production backend URL, no mic/background audio, per-install app-user id, Free no Listen, stale native Android guard. AAB: https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab |
 
-**Source candidate versionCode: 23.** Before spending EAS quota, still run
-`eas build:list` and pick a higher code if any account build has consumed 23 or
+**Next source candidate versionCode: 24.** Before spending EAS quota, still run
+`eas build:list` and pick a higher code if any account build has consumed 24 or
 above.
 
 ### Lessons baked into this guide (do not relearn the hard way)
