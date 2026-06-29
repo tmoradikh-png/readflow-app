@@ -46,6 +46,8 @@ Use:
 - "features are actively improving"
 - "some AI, OCR, and voice features use monthly allowances"
 - "scanned or damaged PDFs may require OCR and may not always convert cleanly"
+- "OCR works best on crisp scans and may struggle with blurred, skewed, noisy,
+  or phone-photo pages"
 
 Avoid:
 
@@ -53,6 +55,8 @@ Avoid:
 - "unlimited AI"
 - "works with all languages"
 - "guaranteed OCR"
+- "recovers damaged scans"
+- "reads any scan"
 - "human-quality voice for every language"
 - "no errors"
 - "legal/medical/financial advice"
@@ -117,13 +121,22 @@ Careful claim:
 
 - OCR is for AI Pro and Power.
 - Reader Plus is for full native-text reading, not scanned-book OCR.
+- OCR is strongest on clean scans: flat, sharp, evenly lit pages with normal
+  printed text.
+- Recent QA passed clean native PDFs and good scans across all 21 exposed OCR
+  languages.
+- Medium copier-style scans are supported, but quality and processing time vary
+  by language and page condition.
+- Poor scans and phone-photo pages may route to OCR but should not be promised
+  as reliably readable.
 - OCR progress is saved so a large scanned book can continue later.
 - If OCR allowance runs out, users can continue after reset or upgrade/top up.
 
 Careful claim:
 
-> OCR quality depends heavily on scan quality, language, font, page layout, and
-> source damage. Some scans may need manual checking or a better source file.
+> OCR works best on crisp printed scans. Blurred, skewed, noisy,
+> low-resolution, image-heavy, or phone-photo pages may take longer and may not
+> convert cleanly.
 
 ### Multilingual reading
 
@@ -131,6 +144,8 @@ Careful claim:
   clean.
 - OCR language choices include English, several European languages, Arabic,
   Persian, Russian, Hindi, Chinese, Japanese, Korean, Thai, and others.
+- Internal QA passed clean text PDFs and good-scan OCR across the 21 exposed OCR
+  language choices. Harder degraded scans remain quality-variable.
 - Some non-Latin PDFs can contain a broken text layer even when the page looks
   correct visually. readFlow detects many of these cases and routes them to OCR
   when the user's plan allows it.
@@ -250,8 +265,9 @@ Features:
 Important notes:
 
 - Works best with clean text-based PDFs and Word documents.
-- Scanned, image-heavy, damaged, or unusual PDFs may require OCR and may not
-  convert perfectly.
+- Good-quality printed scans can be converted with OCR on eligible AI plans.
+- Medium, damaged, blurred, skewed, noisy, or phone-photo scans may take longer
+  and may not convert cleanly.
 - OCR, AI answers, and AI voices are assistive features and may be incomplete or
   inaccurate.
 - Voice quality and availability vary by language, device, installed voices, and
@@ -319,8 +335,10 @@ Use this near pricing, OCR, AI, or voice sections:
 Use this for OCR:
 
 > OCR is available on eligible AI plans and is limited by monthly allowance.
-> Scan quality, page layout, handwriting, unusual fonts, and language support can
-> affect results.
+> OCR is best for crisp printed scans. Medium-quality copier scans can work but
+> vary by language and page condition. Blurry, skewed, noisy, low-resolution,
+> phone-photo, handwritten, or heavily compressed scans may need manual checking
+> or a better source file.
 
 Use this for AI voice:
 
@@ -348,4 +366,3 @@ Make sure the website and store assets mention:
 - Multilingual reading support with careful limitations
 - Page-number/header/watermark cleanup where possible
 - Bookmarks and reading progress
-
