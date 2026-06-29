@@ -145,7 +145,7 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
     const hasText = doc.pages.some((p) => p.text.length > 0);
     // Did this doc have scanned pages the user's plan couldn't OCR?
     const needsPaidOcr =
-      isPdf && !features.ocr && doc.pages.some((p) => needsOcr(p.text, ocrLang));
+      isPdf && !features.ocr && documentNeedsPaidOcr(doc.pages, ocrLang);
 
     return res.json({
       ...doc,
@@ -165,6 +165,24 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
     return res.status(500).json({ error: "Failed to read document." });
   }
 });
+
+function documentNeedsPaidOcr(
+  pages: { text: string }[],
+  ocrLang?: string
+): boolean {
+  const checks = pages.map((page) => {
+    const text = (page.text || "").trim();
+    return { textLength: text.length, needs: needsOcr(text, ocrLang) };
+  });
+  const lowQuality = checks.filter((page) => page.needs);
+  if (lowQuality.length === 0) return false;
+
+  const readablePages = checks.filter((page) => !page.needs && page.textLength >= 40).length;
+  if (readablePages === 0) return true;
+
+  const substantiveLowQuality = lowQuality.filter((page) => page.textLength >= 40).length;
+  return substantiveLowQuality >= Math.max(2, Math.ceil(checks.length * 0.2));
+}
 
 const OCR_ONDEMAND_MAX = Number(process.env.OCR_ONDEMAND_MAX || 12);
 

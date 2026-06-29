@@ -95,11 +95,9 @@ function looksCorrupted(text: string, lang: string): boolean {
   const mojibake = (text.match(/[ÂÃÄÅÆØÙÛÜÝÞÐ]/g) || []).length;
   const nonLatin = /[^\u0000-\u024F\s\d.,;:!?'"()[\]{}\-–—/\\]/.test(text);
   const repeatedA = nonLatin ? (text.match(/A{2,}/g) || []).length : 0;
-  const uppercaseRuns = nonLatin ? (text.match(/\b[A-Z]{3,}\b/g) || []).length : 0;
   const hasArabicScript = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
   if ((lang === "ara" || lang === "fas") && hasArabicScript) {
     if (repeatedA > 0) return true;
-    if (uppercaseRuns >= 2) return true;
   }
   const bad = replacement + mojibake + repeatedA * 2;
   return bad / Math.max(1, text.length) > 0.018;

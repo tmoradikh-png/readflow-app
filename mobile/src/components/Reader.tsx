@@ -1119,7 +1119,7 @@ export function Reader({
             rtl={Boolean(readingLanguage.rtl)}
             onTapWord={tapHandler}
             onLineRanges={handleLineRanges}
-            showPageDivider={index === 0 || flat[index - 1].page !== item.page}
+            showPageDivider={index > 0 && flat[index - 1].page !== item.page}
           />
         )}
         style={styles.reader}
@@ -1521,14 +1521,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginVertical: theme.spacing(2),
+    marginVertical: theme.spacing(1.5),
+    opacity: 0.58,
   },
-  pageDividerLine: { flex: 1, height: 1, backgroundColor: theme.colors.border },
+  pageDividerLine: { flex: 1, height: 1, backgroundColor: "#D8D0C0" },
   pageDividerLabel: {
-    color: theme.colors.textDim,
-    fontSize: 12,
+    color: "#9D9382",
+    fontSize: 10.5,
     fontFamily: theme.fonts.mono,
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   activeSentence: {
     backgroundColor: theme.colors.highlight,

@@ -89,6 +89,16 @@ Changes after the latest finished build and included in source `1.0.18`:
   already has meaningful native Chinese/Japanese/Russian/Persian/etc. characters,
   or clearly readable bilingual Latin text, ReadFlow keeps the native text
   instead of wasting OCR quota and risking worse OCR output.
+- 2026-06-29 follow-up: native PDF extraction now rebuilds text from positioned
+  PDF text items by rendered line. Lines with Persian/Arabic script are sorted
+  right-to-left by X coordinate; left-to-right languages stay left-to-right. This
+  fixes the case where Persian words were individually correct but the sentence
+  order was meaningless. Future language QA must inspect readable line order,
+  not only check that the expected script appears.
+- Proper text-layer PDFs should not require OCR for Reader/free-style reading.
+  A Free-tier local endpoint test returned Persian, Arabic, Russian, and Chinese
+  proper PDFs with `ocrPages: 0` and `needsPaidOcr: false`. Paid OCR still worked
+  on a scanned Persian sample (`ocrPages: 3`, no pending pages).
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
 - Edge AI voice now uses `react-native-sherpa-onnx` plus an on-demand
@@ -148,6 +158,12 @@ Changes after the latest finished build and included in source `1.0.18`:
   imported with Cyrillic text and no pending OCR; Chinese Wikibook kept native
   mixed English/Chinese text with no OCR; Japanese content pages imported native
   text, while decorative cover/image pages OCR'd with expected lower quality.
+- Stronger order/readability retest on 2026-06-29: Free-tier/native import
+  confirmed readable line order for Persian, Arabic, Russian, and Chinese with
+  no OCR spend. AI Pro scanned-Persian OCR was retested after the ordering patch.
+- Reader page changes now show a very faded divider line only when moving from
+  one PDF page to the next; it does not add text to the spoken content or AI
+  context.
 - Connected-phone test on 2026-06-29 after the multilingual fix: installed a
   standalone local release APK on Samsung `SM_G975F` (`R58M168KTSZ`) from
   `C:\rf-mobile-test-voice2\android\app\build\outputs\apk\release\app-release.apk`

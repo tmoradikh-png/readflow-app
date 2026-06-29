@@ -131,6 +131,13 @@ Current ReadFlow QA checklist for any build that changes reading/voice:
 - For Persian/Arabic, import both a native-text PDF and a scanned/image PDF.
   Reopen any previously cached broken Persian book after selecting Persian; it
   should re-extract instead of showing stale mojibake text.
+- For multilingual native-text PDFs, verify line/sentence order by reading a few
+  paragraphs aloud visually. Do not accept a test that only proves the letters or
+  words exist; Persian/Arabic can have correct words in the wrong order if PDF
+  item sorting regresses.
+- Proper text-layer PDFs in Reader/free-style testing should not consume OCR and
+  should not show an OCR upsell just because the file has one blank or decorative
+  page.
 - Open the reader settings menu and confirm the quick selector reads Device,
   Edge AI, and Cloud AI. Locked Cloud AI should open a clean upgrade prompt.
 - Download/select Edge AI, play several paragraphs, and check for natural
