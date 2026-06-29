@@ -40,8 +40,8 @@ can change.
 Current cloud voice implementation:
 
 - Free and Reader Plus cannot call `/api/tts`.
-- AI Pro includes `60,000` Cloud AI voice characters/month.
-- Power includes `180,000` Cloud AI voice characters/month.
+- AI Pro includes `45,000` Cloud AI voice characters/month.
+- Power includes `100,000` Cloud AI voice characters/month.
 - The mobile reader now gates Cloud AI voice from `features.cloudVoice`, not the
   generic AI text feature.
 - The backend gates `/api/tts` with `ensureFeature(req, res, "cloudVoice")` and
@@ -50,7 +50,8 @@ Current cloud voice implementation:
   OpenAI TTS bill.
 - `backend/src/routes/tts.ts` defaults to `tts-1-hd`, and `render.yaml` also
   sets `TTS_MODEL=tts-1-hd`. This is the more expensive legacy TTS model, so the
-  current allowances are deliberately small.
+  current allowances are deliberately small and checked against the 20% direct
+  AI vendor COGS guardrail in `backend/src/config/plans.ts`.
 - Source `1.0.18` adds a real rF AI voice path with `react-native-sherpa-onnx`
   and an on-demand Supertonic Reader model. It has no OpenAI per-character bill,
   but it requires a new native/EAS build and consumes the user's phone CPU,
@@ -99,6 +100,37 @@ Not allowed in free:
 
 The only expected free-tier business cost should be shared Render hosting and
 small bandwidth/CPU overhead.
+
+## AI COGS Guardrail
+
+Launch rule: direct AI vendor cost for AI Pro and Power should stay at or below
+20% of the money we receive from the user. This is a conservative software/SaaS
+gross-margin style rule: plan for roughly 80%+ gross margin before shared fixed
+costs, refunds, support, and taxes.
+
+The app now enforces this in `backend/src/config/plans.ts`:
+
+- Net revenue assumption: 84% of list price after roughly 15% Google Play fee
+  and 1% RevenueCat tracking fee.
+- Budget is calculated against the lower effective monthly revenue between the
+  monthly and annual product. Annual is usually the tighter case.
+- Cloud AI voice assumes `tts-1-hd` at $30 / 1M characters.
+- AI text assumes `gpt-5.4-nano` and one fresh action at up to 12k input
+  characters plus about 1k output tokens, estimated at $0.00185.
+- Cache hits are not counted because they do not create a new OpenAI bill.
+- OCR pages are treated separately as Render CPU/capacity, not direct OpenAI
+  vendor cost, but OCR still stays capped because it can force a larger server.
+
+Current direct AI vendor budget:
+
+| Tier | Price | Conservative net/month | 20% max AI vendor spend | Included AI vendor estimate |
+| --- | ---: | ---: | ---: | ---: |
+| AI Pro | $12.99/mo or $119.99/yr | $8.40/mo on annual | $1.68/mo | about $1.63/mo |
+| Power | $29.99/mo or $279.99/yr | $19.60/mo on annual | $3.92/mo | about $3.74/mo |
+
+Implication: if we raise Cloud AI voice, AI actions, or discounts later, the
+code guardrail should fail until prices or limits are adjusted. This keeps paid
+AI users profitable even if they consume their full included allowance.
 
 ## Reader Plus Cost When Users Read A Lot
 
@@ -172,10 +204,11 @@ extra bill from Render. The fixed monthly allocation matters more:
 | 10,000 pages | $0.25 / 100 pages | $0.85 / 100 pages |
 | 30,000 pages | $0.08 / 100 pages | $0.28 / 100 pages |
 
-AI Pro at $9.99/month nets roughly $8.39 after conservative Play + RevenueCat
-fees. If a user consumes the full 1,000 OCR pages, revenue is about $0.84 per
-100 OCR pages before cloud voice/AI text costs. This is acceptable only if OCR is
-shared across a healthy user base, queued/throttled, and measured.
+AI Pro at $12.99/month nets roughly $10.91 after conservative Play + RevenueCat
+fees, or about $8.40/month on the annual plan. If a user consumes the full 750
+OCR pages, annual-plan revenue is about $1.12 per 100 OCR pages before shared
+Render capacity. This is acceptable only if OCR is shared across a healthy user
+base, queued/throttled, and measured.
 
 Recommendation: allow generous normal reading/device listening in Reader Plus,
 but keep OCR out of Reader Plus. Keep AI Pro/Power OCR capped, measured, and
@@ -196,8 +229,8 @@ Current intended flow:
 - After the user's quota resets, reopening the book re-uploads the local source
   file, mints a fresh backend `docToken`, merges already-cached OCR text, and
   continues the remaining pending pages.
-- The upgrade offer is convenience, not a hard wall: AI Pro gives 1,000 OCR
-  pages/month, and Power gives 3,000 OCR pages/month.
+- The upgrade offer is convenience, not a hard wall: AI Pro gives 750 OCR
+  pages/month, and Power gives 2,500 OCR pages/month.
 
 Implementation notes:
 
@@ -274,16 +307,16 @@ OpenAI legacy TTS prices checked on 2026-06-28:
 | `tts-1` | $15 per 1M characters |
 | `tts-1-hd` | $30 per 1M characters |
 
-OpenAI text model sample prices checked on 2026-06-28:
+OpenAI text model sample prices checked on 2026-06-29, standard processing:
 
 | Model | Input / 1M tokens | Output / 1M tokens |
 | --- | ---: | ---: |
-| `gpt-5.4-nano` | $0.10 | $0.625 |
-| `gpt-5.4-mini` | $0.375 | $2.25 |
+| `gpt-5.4-nano` | $0.20 | $1.25 |
+| `gpt-5.4-mini` | $0.75 | $4.50 |
 
-The backend currently defaults AI text to `gpt-4o-mini`. Re-check model choice
-and pricing before launch; a current low-cost model should be selected on
-purpose, not by old defaults.
+The backend now defaults AI text to `gpt-5.4-nano` in source and Render
+blueprints. Re-check model availability/pricing before launch; a current
+low-cost model should be selected on purpose, not by old defaults.
 
 ## Cloud Voice Cost
 
@@ -299,21 +332,23 @@ Estimated OpenAI TTS cost at 54,000 characters per hour:
 | 1 hour/day | 1,620,000 | $24.30 | $48.60 |
 | 12 hours/day | 19,440,000 | $291.60 | $583.20 |
 
-Conclusion: unlimited cloud voice cannot be included in a $9.99 or $19.99 plan.
-At 12 hours/day it would lose hundreds of dollars per user each month. Long
-listening must use device voice, with cloud voice sold as a capped allowance or
-usage pack.
+Conclusion: unlimited cloud voice cannot be included in normal subscription
+plans. At 12 hours/day it would lose hundreds of dollars per user each month.
+Long listening must use device voice or rF AI, with Cloud AI voice sold as a
+capped allowance or usage pack.
 
 Current allowance economics with `tts-1-hd`:
 
 | Tier | Included Cloud AI voice | Approx listening | OpenAI cost if fully used |
 | --- | ---: | ---: | ---: |
-| AI Pro | 60,000 chars/month | about 1.1 hours / 36 pages | about $1.80 |
-| Power | 180,000 chars/month | about 3.3 hours / 109 pages | about $5.40 |
+| AI Pro | 45,000 chars/month | about 50 minutes / 27 pages | about $1.35 |
+| Power | 100,000 chars/month | about 1.85 hours / 61 pages | about $3.00 |
 
 This is intentionally conservative. Extra AI voice should be sold as a top-up
-through Play Billing/RevenueCat, for example 100k characters at a price that
-nets well above the $3 OpenAI cost on `tts-1-hd`.
+through Play Billing/RevenueCat. A cost-safe starter pack is 25k characters for
+about $4.99; it costs about $0.75 on `tts-1-hd` and stays under the 20% direct
+AI vendor COGS target after store fees. A 100k-character pack would cost about
+$3 and must be priced around $17.99+ to keep the same margin.
 
 ## Local Neural Voice Plan
 
@@ -393,17 +428,17 @@ AI text is much cheaper than cloud TTS if context size is controlled.
 Every Ask, Summary, Explain, Simplify, or Key points action goes through the
 backend AI route and can spend OpenAI text-model tokens unless the exact result
 is served from cache. These actions are included in `aiActionsPerMonth`: AI Pro
-currently has 500/month and Power has 2,000/month. Free and Reader Plus should
+currently has 150/month and Power has 400/month. Free and Reader Plus should
 not be able to call this route.
 
-Example costs using current OpenAI text prices checked on 2026-06-28:
+Example costs using current OpenAI text prices checked on 2026-06-29:
 
-| Example action | Model | Cost/action | 500 actions | 2,000 actions |
+| Example action | Model | Cost/action | 150 actions | 400 actions |
 | --- | --- | ---: | ---: | ---: |
-| Light: 2k input, 500 output | `gpt-5.4-nano` | $0.000513 | $0.26 | $1.03 |
-| Heavy: 20k input, 2k output | `gpt-5.4-nano` | $0.003250 | $1.63 | $6.50 |
-| Light: 2k input, 500 output | `gpt-5.4-mini` | $0.001875 | $0.94 | $3.75 |
-| Heavy: 20k input, 2k output | `gpt-5.4-mini` | $0.012000 | $6.00 | $24.00 |
+| Light: 2k input, 500 output | `gpt-5.4-nano` | $0.001025 | $0.15 | $0.41 |
+| Heavy: 20k input, 2k output | `gpt-5.4-nano` | $0.006500 | $0.98 | $2.60 |
+| Light: 2k input, 500 output | `gpt-5.4-mini` | $0.003750 | $0.56 | $1.50 |
+| Heavy: 20k input, 2k output | `gpt-5.4-mini` | $0.024000 | $3.60 | $9.60 |
 
 Conclusion: AI text can fit paid tiers if we cap actions, cap context windows,
 cache repeated work, and choose the model intentionally. The real danger is
@@ -425,8 +460,7 @@ Approximate monthly net before OpenAI/Render:
 | Listed price | After 15% Play fee | After 15% Play + 1% RevenueCat |
 | ---: | ---: | ---: |
 | $4.99 | $4.24 | $4.19 |
-| $9.99 | $8.49 | $8.39 |
-| $19.99 | $16.99 | $16.79 |
+| $12.99 | $11.04 | $10.91 |
 | $29.99 | $25.49 | $25.19 |
 
 Render is a shared fixed cost, not a per-listening-hour cost. As of the current
@@ -444,8 +478,8 @@ OCR, rF AI, Cloud AI, and AI questions as clear upgrade reasons.
 | --- | ---: | --- | --- |
 | Free | $0 | 1 saved book, about 100 pages, native text preview, bookmarks/basic settings, no read-aloud | Render CPU/bandwidth only |
 | Reader Plus | $4.99/mo | Ad-free full native-text reading, larger library, device read-aloud, themes, bookmarks, focus/follow, good multilingual text-layer PDFs | Render import CPU/bandwidth |
-| AI Pro | $11.99-$14.99/mo | Everything in Reader Plus, OCR, rF AI voice, limited AI Q&A/summaries, small Cloud AI voice allowance | Fine if OCR/AI/cloud voice are capped |
-| Power | $24.99-$29.99/mo | Higher OCR/AI/cloud voice limits, larger books, exports/batch tools, priority heavy-reader features | Must hard-cap cloud voice |
+| AI Pro | $12.99/mo, $119.99/yr | Everything in Reader Plus, OCR, rF AI voice, limited AI Q&A/summaries, small Cloud AI voice allowance | Direct AI vendor cost stays under 20% |
+| Power | $29.99/mo, $279.99/yr | Higher OCR/AI/cloud voice limits, larger books, exports/batch tools, priority heavy-reader features | Direct AI vendor cost stays under 20% |
 | AI voice / OCR packs | Separate add-on | Extra Cloud AI voice characters or extra OCR pages after monthly limits | Best match to real marginal cost |
 
 Recommended starting limits:
@@ -454,8 +488,8 @@ Recommended starting limits:
 | --- | ---: | ---: | ---: | --- |
 | Free | 0 | 0 | 0 | No |
 | Reader Plus | 0 | 0 | 0 | No |
-| AI Pro | 1,000 | 100-200 | 30k-60k chars | Yes, initially English |
-| Power | 3,000 | 500-1,000 | 180k chars | Yes, with future language packs |
+| AI Pro | 750 | 150 | 45k chars | Yes, initially English |
+| Power | 2,500 | 400 | 100k chars | Yes, with future language packs |
 
 Upgrade logic:
 
@@ -474,8 +508,8 @@ Upgrade logic:
 
 If cloud voice must be high quality (`tts-1-hd`), keep allowances very small:
 
-- AI Pro: 1 hour/month included, then upsell.
-- Power: 3-5 hours/month included, then upsell.
+- AI Pro: about 50 minutes/month included, then upsell.
+- Power: about 1.85 hours/month included, then upsell.
 
 If using cheaper/lower-latency `tts-1`, allowances can be larger but still need
 hard caps. Do not allow 12 hours/day cloud listening in normal paid tiers.
@@ -519,6 +553,9 @@ are also weak and can punish shared networks. For public release, send a stable
    alerts.
 10. Re-check OpenAI model pricing and choose the AI text model/TTS model
    intentionally.
-11. Add usage logging for AI actions, OCR pages, PDF extractions, and cloud voice
+11. DONE: source has a 20% direct AI vendor COGS guardrail in
+   `backend/src/config/plans.ts`; keep it updated when prices or OpenAI costs
+   change.
+12. Add usage logging for AI actions, OCR pages, PDF extractions, and cloud voice
    characters.
-12. Recalculate margins after real beta telemetry.
+13. Recalculate margins after real beta telemetry.

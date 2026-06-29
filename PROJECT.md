@@ -89,7 +89,9 @@ Current Play release prep in source `1.0.23`:
 
 Changes after the latest finished build and included in source `1.0.18`:
 - Cloud AI voice is gated by `features.cloudVoice`, not generic AI.
-- AI Pro includes 60k cloud voice characters/month; Power includes 180k.
+- AI Pro includes 45k cloud voice characters/month; Power includes 100k.
+- Direct AI vendor spend is capped by source guardrail at 20% of conservative
+  net subscription revenue, calculated against the lower annual-plan revenue.
 - Backend `/api/tts` checks monthly `cloudVoiceChars` before generating fresh
   OpenAI audio.
 - Voice selection uses the public labels `Device voice`, `rF AI`, and
@@ -216,7 +218,7 @@ Changes after the latest finished build and included in source `1.0.18`:
 - 2026-06-29 product boundary update: Free is 1 native-text PDF/month with the
   first 100 pages returned; Reader Plus is full/ad-free native-text reading with
   device voice and no OCR/AI/cloud voice cost. OCR now starts at AI Pro
-  (1,000 pages/month) and Power (3,000 pages/month). Do not put OCR back into
+  (750 pages/month) and Power (2,500 pages/month). Do not put OCR back into
   Reader Plus unless the cost model is intentionally changed.
 - 2026-06-29 Persian book check from the owner's Downloads: `zayesh-tragedy-az-jan`
   is a good Persian text-layer PDF and imports as native text. `Tabar_Shenasiye_Akhlagh`
@@ -612,15 +614,15 @@ Important backend routes:
 Natural voice currently calls backend `/api/tts`, which calls OpenAI TTS using
 server-only `OPENAI_API_KEY`. The mobile app never receives the OpenAI key.
 Cloud AI voice is capped by plan:
-- AI Pro: 60,000 characters/month.
-- Power: 180,000 characters/month.
+- AI Pro: 45,000 characters/month.
+- Power: 100,000 characters/month.
 See `COST_MODEL.md` before changing cloud voice allowances; unlimited cloud
 voice is not economically safe at the current paid prices.
 
 AI text actions:
 - `POST /api/ai` handles Summary, Explain, Simplify, Key points, and Ask.
 - Each non-cached AI action can spend OpenAI text-model tokens.
-- AI Pro includes 500 AI actions/month; Power includes 2,000/month.
+- AI Pro includes 150 AI actions/month; Power includes 400/month.
 - Free and Reader Plus must not call the AI route.
 
 ## Audio and Highlighting Notes

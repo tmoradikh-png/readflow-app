@@ -37,7 +37,7 @@ export class OpenAIProvider implements AIProvider {
   private client: OpenAI;
   private model: string;
 
-  constructor(apiKey: string, model = "gpt-4o-mini") {
+  constructor(apiKey: string, model = "gpt-5.4-nano") {
     this.client = new OpenAI({ apiKey });
     this.model = model;
   }

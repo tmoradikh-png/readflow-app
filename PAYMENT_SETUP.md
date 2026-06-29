@@ -52,8 +52,8 @@ The backend currently defines these product ids:
 | Tier | Monthly product id | Yearly product id | Current code price |
 | --- | --- | --- | --- |
 | Reader Plus | `readflow_reader_plus_monthly` | `readflow_reader_plus_yearly` | $4.99/mo, $39.99/yr |
-| AI Pro | `readflow_ai_pro_monthly` | `readflow_ai_pro_yearly` | $9.99/mo, $79.99/yr |
-| Power | `readflow_power_monthly` | `readflow_power_yearly` | $19.99/mo, $149.99/yr |
+| AI Pro | `readflow_ai_pro_monthly` | `readflow_ai_pro_yearly` | $12.99/mo, $119.99/yr |
+| Power | `readflow_power_monthly` | `readflow_power_yearly` | $29.99/mo, $279.99/yr |
 
 RevenueCat entitlement ids:
 
@@ -63,12 +63,11 @@ RevenueCat entitlement ids:
 | AI Pro | `ai_pro` |
 | Power | `power` |
 
-Important pricing note: `COST_MODEL.md` recommends considering higher launch
-prices for AI Pro and Power, roughly $11.99-$14.99 for AI Pro and
-$24.99-$29.99 for Power, because OCR, AI text, and Cloud AI voice create real
-backend/OpenAI cost. The code still uses the lower prices above. Decide final
-launch prices before creating Play products because changing live subscription
-pricing is slower and more sensitive than changing draft code.
+Important pricing note: source now uses the cost-safe launch prices above.
+`backend/src/config/plans.ts` contains a 20% direct AI vendor COGS guardrail.
+If prices, annual discounts, Cloud AI voice, or AI action allowances change, run
+backend build/checks and confirm the guardrail still passes before creating or
+updating Play products.
 
 ## Suggested Top-Up Product IDs
 
@@ -77,12 +76,18 @@ are live:
 
 | Product id | Purpose | Suggested starting use |
 | --- | --- | --- |
-| `readflow_voice_100k_chars` | Extra Cloud AI voice | Adds 100,000 Cloud AI voice characters |
+| `readflow_voice_25k_chars` | Extra Cloud AI voice | Adds 25,000 Cloud AI voice characters |
 | `readflow_ocr_500_pages` | Extra OCR | Adds 500 OCR pages |
 | `readflow_ai_200_actions` | Extra AI help | Adds 200 AI actions |
 
 Do not make Cloud AI voice unlimited. At heavy listening levels it can cost
 hundreds of dollars per user per month if uncapped.
+
+Top-up pricing should also obey the 20% direct AI vendor COGS rule. With
+`tts-1-hd`, 25k Cloud AI voice characters cost about $0.75 in OpenAI spend, so
+a $4.99 Play Billing top-up nets about $4.19 and keeps direct AI vendor cost
+around 18%. A 100k character top-up costs about $3 in OpenAI spend and would
+need to be priced around $17.99+ to keep the same margin.
 
 ## Google Play Console Setup
 

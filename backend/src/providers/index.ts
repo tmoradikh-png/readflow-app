@@ -15,7 +15,7 @@ export function createAIProvider(): AIProvider {
       if (!key) {
         throw new Error("OPENAI_API_KEY is not set. Copy .env.example to .env and add your key.");
       }
-      return new OpenAIProvider(key, process.env.OPENAI_MODEL || "gpt-4o-mini");
+      return new OpenAIProvider(key, process.env.OPENAI_MODEL || "gpt-5.4-nano");
     }
     // case "claude": return new ClaudeProvider(...);
     // case "ollama": return new LocalOllamaProvider(...);

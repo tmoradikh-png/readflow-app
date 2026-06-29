@@ -972,7 +972,7 @@ function VoiceSettingsSheet({
     onNotice({
       title: "AI voice packs",
       body:
-        "The cost-safe product path is a Play Billing top-up, for example 100k AI voice characters. Purchases are not live in this build yet.",
+        "The cost-safe product path is a Play Billing top-up, for example 25k AI voice characters. Purchases are not live in this build yet.",
     });
   }
 

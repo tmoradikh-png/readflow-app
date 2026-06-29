@@ -143,9 +143,9 @@ Free: Limited manual reading preview. No read-aloud, OCR, AI, rF AI, or Cloud AI
 
 Reader Plus: Full native-text reading for supported PDFs and text-based Word .docx files, bookmarks, saved progress, and Phone voice. OCR and AI are not included.
 
-AI Pro: Reader Plus features, OCR allowance, AI reading help allowance, rF AI where supported, and capped Cloud AI voice for approved languages.
+AI Pro: Reader Plus features, 750 OCR pages/month, 150 AI reading-help actions/month, rF AI where supported, and 45,000 Cloud AI voice characters/month for approved languages.
 
-Power: Higher OCR, AI, Cloud AI voice, file, and page limits for heavy readers and scanned-book workflows.
+Power: Higher limits for heavy readers and scanned-book workflows: 2,500 OCR pages/month, 400 AI actions/month, and 100,000 Cloud AI voice characters/month for approved languages.
 ```
 
 ## App Review Notes

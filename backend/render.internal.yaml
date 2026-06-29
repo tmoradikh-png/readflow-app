@@ -28,7 +28,7 @@ services:
       - key: AI_PROVIDER
         value: openai
       - key: OPENAI_MODEL
-        value: gpt-4o-mini
+        value: gpt-5.4-nano
       - key: TTS_PROVIDER
         value: cloud
       - key: TTS_MODEL

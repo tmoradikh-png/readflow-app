@@ -480,8 +480,8 @@ export function Reader({
   function openOcrLimitOffer() {
     const body =
       entitlement.tier === "ai_pro"
-          ? "AI Pro includes 1,000 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. Power raises OCR to 3,000 pages/month."
-          : "Scanned pages use OCR. AI Pro includes 1,000 OCR pages/month, and Power includes 3,000.";
+          ? "AI Pro includes 750 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. Power raises OCR to 2,500 pages/month."
+          : "Scanned pages use OCR. AI Pro includes 750 OCR pages/month, and Power includes 2,500.";
     openFeatureLock("More OCR pages", body);
   }
 

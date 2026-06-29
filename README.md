@@ -105,8 +105,8 @@ The mobile app never stores the OpenAI key; it sends text to the backend and
 plays the returned MP3. The reader keeps natural audio chunks intact while the
 UI highlights the active rendered line. Cloud voice is not unlimited:
 
-- AI Pro: 60k generated characters/month.
-- Power: 180k generated characters/month.
+- AI Pro: 45k generated characters/month.
+- Power: 100k generated characters/month.
 
 rF AI voice is implemented through `react-native-sherpa-onnx` with the
 on-demand Supertonic Reader model

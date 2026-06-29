@@ -6,9 +6,12 @@
  * copy via `GET /api/config` so pricing/limits can change without an app
  * update (the app keeps a hard-coded fallback in case the network call fails).
  *
- * Business rule: Free and Reader Plus must have no per-use AI/OCR/cloud-voice
- * cost. They read normal text-layer PDFs with device voice. Scanned/image PDFs
- * require AI Pro or Power because OCR consumes backend CPU and must be capped.
+ * Business rules:
+ * - Free and Reader Plus must have no per-use AI/OCR/cloud-voice vendor cost.
+ * - Direct AI vendor COGS for AI Pro/Power must stay under 20% of conservative
+ *   net subscription revenue, calculated against the cheaper annual plan.
+ * - Scanned/image PDFs require AI Pro or Power because OCR consumes backend CPU
+ *   and must be capped even though it has no OpenAI per-page charge.
  */
 
 export type TierKey = "free" | "reader_plus" | "ai_pro" | "power";
@@ -80,6 +83,21 @@ export const TIER_RANK: Record<TierKey, number> = {
   power: 3,
 };
 
+export const AI_ECONOMICS = {
+  /** Conservative net after roughly 15% Google Play + 1% RevenueCat. */
+  netRevenueRatio: 0.84,
+  /** Direct AI vendor spend should not exceed 20% of the money we receive. */
+  maxAiVendorCogsRatio: 0.2,
+  /** Current production-safe assumption: OpenAI TTS-1 HD is $30 / 1M chars. */
+  cloudVoiceUsdPerChar: 30 / 1_000_000,
+  /**
+   * Conservative text-AI estimate for one fresh action:
+   * 12k chars input (~3k tokens) plus up to ~1k output tokens on gpt-5.4-nano.
+   * Real usage should be lower with shorter selections and cache hits.
+   */
+  aiActionUsd: 0.00185,
+};
+
 export const TIERS: Tier[] = [
   {
     key: "free",
@@ -141,13 +159,13 @@ export const TIERS: Tier[] = [
     entitlementId: "ai_pro",
     recommended: true,
     products: {
-      monthly: { productId: "readflow_ai_pro_monthly", priceUsd: 9.99 },
-      yearly: { productId: "readflow_ai_pro_yearly", priceUsd: 79.99 },
+      monthly: { productId: "readflow_ai_pro_monthly", priceUsd: 12.99 },
+      yearly: { productId: "readflow_ai_pro_yearly", priceUsd: 119.99 },
     },
     limits: {
-      ocrPagesPerMonth: 1000,
-      aiActionsPerMonth: 500,
-      cloudVoiceCharsPerMonth: 60000,
+      ocrPagesPerMonth: 750,
+      aiActionsPerMonth: 150,
+      cloudVoiceCharsPerMonth: 45000,
       pdfsPerMonth: 300,
       maxFileSizeMb: 100,
       maxPages: 1500,
@@ -169,13 +187,13 @@ export const TIERS: Tier[] = [
     tagline: "High limits, export and batch tools for heavy users.",
     entitlementId: "power",
     products: {
-      monthly: { productId: "readflow_power_monthly", priceUsd: 19.99 },
-      yearly: { productId: "readflow_power_yearly", priceUsd: 149.99 },
+      monthly: { productId: "readflow_power_monthly", priceUsd: 29.99 },
+      yearly: { productId: "readflow_power_yearly", priceUsd: 279.99 },
     },
     limits: {
-      ocrPagesPerMonth: 3000,
-      aiActionsPerMonth: 2000,
-      cloudVoiceCharsPerMonth: 180000,
+      ocrPagesPerMonth: 2500,
+      aiActionsPerMonth: 400,
+      cloudVoiceCharsPerMonth: 100000,
       pdfsPerMonth: 1000,
       maxFileSizeMb: 200,
       maxPages: 5000,
@@ -194,6 +212,44 @@ export const TIERS: Tier[] = [
 ];
 
 export const FREE_TIER = TIERS[0];
+
+function conservativeMonthlyNetRevenue(tier: Tier): number {
+  const monthly = tier.products.monthly?.priceUsd;
+  const yearly = tier.products.yearly ? tier.products.yearly.priceUsd / 12 : undefined;
+  const listedMonthly = Math.min(
+    monthly ?? Number.POSITIVE_INFINITY,
+    yearly ?? Number.POSITIVE_INFINITY
+  );
+  return Number.isFinite(listedMonthly) ? listedMonthly * AI_ECONOMICS.netRevenueRatio : 0;
+}
+
+export function estimatedMonthlyAiVendorCostUsd(tier: Tier): number {
+  return (
+    tier.limits.cloudVoiceCharsPerMonth * AI_ECONOMICS.cloudVoiceUsdPerChar +
+    tier.limits.aiActionsPerMonth * AI_ECONOMICS.aiActionUsd
+  );
+}
+
+export function aiVendorBudgetUsd(tier: Tier): number {
+  return conservativeMonthlyNetRevenue(tier) * AI_ECONOMICS.maxAiVendorCogsRatio;
+}
+
+function assertAiPlanEconomics() {
+  for (const tier of TIERS) {
+    if (!tier.features.ai && !tier.features.cloudVoice) continue;
+    const estimated = estimatedMonthlyAiVendorCostUsd(tier);
+    const budget = aiVendorBudgetUsd(tier);
+    if (estimated > budget + 0.005) {
+      throw new Error(
+        `Plan ${tier.key} exceeds AI vendor budget: estimated $${estimated.toFixed(
+          2
+        )} > budget $${budget.toFixed(2)}`
+      );
+    }
+  }
+}
+
+assertAiPlanEconomics();
 
 const TIER_BY_KEY = new Map<TierKey, Tier>(TIERS.map((t) => [t.key, t]));
 const TIER_BY_ENTITLEMENT = new Map<string, Tier>(
