@@ -28,7 +28,7 @@ export interface CachedDoc {
 }
 
 const DIR = (FileSystem.documentDirectory || "") + "doccache/";
-const CACHE_SCHEMA_VERSION = 2;
+const CACHE_SCHEMA_VERSION = 3;
 
 function fileFor(docId: string): string {
   const safe = docId.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 80);

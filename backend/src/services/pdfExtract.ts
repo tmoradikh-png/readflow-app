@@ -33,8 +33,9 @@ interface TextLine {
   items: PositionedTextItem[];
 }
 
-const RTL_SCRIPT_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g;
-const RTL_CHAR_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/;
+const RTL_SCRIPT_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+const RTL_CHAR_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+const RTL_WORD_RUN = "\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF";
 const CJK_CHAR_RE = /[\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]/;
 const NO_SPACE_BEFORE_RE = /^[,.;:!?،؛؟)\]}”’"»٪%]/;
 const NO_SPACE_AFTER_RE = /[(\[{“‘"«]$/;
@@ -142,7 +143,23 @@ function renderLine(line: TextLine): string {
     }
     previous = item;
   }
-  return out.replace(/[ \t]+/g, " ").trim();
+  return cleanExtractedLine(out, rtl);
+}
+
+function cleanExtractedLine(line: string, rtl: boolean): string {
+  let out = line
+    .normalize("NFKC")
+    // Some old Distiller Persian PDFs emit U+0467 where the visual PDF only
+    // has glyph shaping/spacing. Android renders it as odd A-like noise.
+    .replace(/[\u0466\u0467]/g, "")
+    .replace(/\(cid:\d+\)/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
+  if (rtl) {
+    out = out.replace(new RegExp(`([${RTL_WORD_RUN}]{3,})\\1`, "g"), "$1");
+  }
+  return out;
 }
 
 function isRtlLine(line: TextLine): boolean {

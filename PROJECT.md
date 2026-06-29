@@ -189,6 +189,14 @@ Changes after the latest finished build and included in source `1.0.18`:
   pushed to OCR for AI Pro/Power. Reader/free tiers should surface the
   OCR-required path rather than showing the broken native text. Persian is the
   first owner-reported example, not a special-case-only fix.
+- 2026-06-29 exact Persian sample `G:\My Drive\Studies\Philosophy\book\____ _____._.pdf`:
+  this is an old Word/Acrobat Distiller 5.0 PDF (`usul.doc`, 29 pages) whose
+  hidden text layer uses Arabic Presentation Forms plus a bogus U+0467 glyph
+  that Android displays as A-like noise. The page image is readable, but the
+  text layer needs normalization/cleanup. Source now normalizes Arabic
+  presentation forms, removes the U+0467 filler, strips footnote-star markers
+  and page-bottom footnote blocks from reader flow, and bumps mobile parsed-text
+  cache to version 3.
 - Reader text cleanup now removes page-number-only lines, common URL/watermark
   lines, and repeated short headers/footers before building reader sentences.
   This affects display, TTS, and AI context so the app does not read page

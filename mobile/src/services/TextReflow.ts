@@ -168,11 +168,34 @@ function stripNonReadingLines(
   pageNumber?: number,
   skipLines?: Set<string>
 ): string {
-  return (raw || "")
+  const lines = (raw || "")
     .replace(/\r/g, "")
-    .split("\n")
-    .filter((line) => !shouldSkipReaderLine(line, pageNumber, skipLines))
-    .join("\n");
+    .split("\n");
+  const kept: string[] = [];
+  let inFootnoteBlock = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (inFootnoteBlock) {
+      if (isFootnoteBlockStop(trimmed)) {
+        inFootnoteBlock = false;
+      } else {
+        continue;
+      }
+    }
+
+    if (isFootnoteBlockStart(trimmed, i, lines.length)) {
+      inFootnoteBlock = true;
+      continue;
+    }
+
+    if (shouldSkipReaderLine(line, pageNumber, skipLines)) continue;
+    kept.push(line);
+  }
+
+  return kept.join("\n");
 }
 
 function shouldSkipReaderLine(
@@ -182,6 +205,7 @@ function shouldSkipReaderLine(
 ): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
+  if (isStandaloneFootnoteMarkerLine(trimmed)) return true;
   const normalized = normalizeReaderLine(trimmed);
   if (!normalized) return false;
   if (skipLines?.has(normalized)) return true;
@@ -189,6 +213,35 @@ function shouldSkipReaderLine(
   if (isUrlOrWatermarkLine(normalized)) return true;
   if (/^[._=\-*~•·\s]{4,}$/.test(trimmed)) return true;
   return false;
+}
+
+function isStandaloneFootnoteMarkerLine(trimmed: string): boolean {
+  return /^[∗*＊﹡]{1,4}$/.test(trimmed);
+}
+
+function isFootnoteBlockStart(trimmed: string, lineIndex: number, lineCount: number): boolean {
+  if (!trimmed) return false;
+  const position = lineIndex / Math.max(1, lineCount);
+  const markerStart = trimmed.match(/^[∗*＊﹡]{1,4}\s*(.+)$/);
+  if (markerStart) {
+    const rest = markerStart[1].trim();
+    if (!rest) return false;
+    return position > 0.45 || rest.length > 80;
+  }
+
+  if (position <= 0.45 || !/[∗*＊﹡]\s*$/.test(trimmed)) return false;
+  return isMostlyLatin(trimmed);
+}
+
+function isFootnoteBlockStop(trimmed: string): boolean {
+  return /^(سوال|جواب)[\s-]/.test(trimmed) || /^(question|answer)\b/i.test(trimmed);
+}
+
+function isMostlyLatin(value: string): boolean {
+  const letters = value.match(/[A-Za-z\u00C0-\u024F]/g)?.length ?? 0;
+  if (letters < 6) return false;
+  const script = value.match(new RegExp(`[${NON_LATIN_SCRIPT_RANGES}]`, "g"))?.length ?? 0;
+  return letters > script * 2;
 }
 
 function buildRepeatedSkipLines(pages: PdfPage[]): Set<string> {
@@ -255,13 +308,13 @@ function normalizeDigits(value: string): string {
 
 const NON_LATIN_SCRIPT_RANGES =
   "\\u0400-\\u04FF" + // Cyrillic
-  "\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF" + // Arabic/Persian
+  "\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF\\uFB50-\\uFDFF\\uFE70-\\uFEFF" + // Arabic/Persian
   "\\u0900-\\u097F" + // Devanagari
   "\\u0E00-\\u0E7F" + // Thai
   "\\u3040-\\u30FF\\u3400-\\u9FFF" + // Japanese/Chinese
   "\\uAC00-\\uD7AF\\u1100-\\u11FF"; // Korean
 const NON_LATIN_SCRIPT_RE = new RegExp(`[${NON_LATIN_SCRIPT_RANGES}]`);
-const ARTIFACT_CLASS = "AÂÃÄÅÆØÙÚÛÜÝÞÐÑ�";
+const ARTIFACT_CLASS = "AÂÃÄÅÆØÙÚÛÜÝÞÐÑ�Ѧѧ";
 const ARTIFACT_BETWEEN_SCRIPT_RE = new RegExp(
   `([${NON_LATIN_SCRIPT_RANGES}])[${ARTIFACT_CLASS}]{1,4}(?=[${NON_LATIN_SCRIPT_RANGES}])`,
   "g"
@@ -280,11 +333,19 @@ function cleanCorruptScriptArtifacts(raw: string): string {
     .split("\n")
     .map((line) => {
       if (!NON_LATIN_SCRIPT_RE.test(line)) return line;
-      return line
-        .replace(/[*＊¥￥]{2,}/g, " ")
-        .replace(ARTIFACT_BETWEEN_SCRIPT_RE, "$1")
-        .replace(ARTIFACT_AFTER_SCRIPT_RE, "$1")
-        .replace(ARTIFACT_BEFORE_SCRIPT_RE, "$1");
+      return collapseDuplicateScriptRuns(
+        line
+          .normalize("NFKC")
+          .replace(/\(cid:\d+\)/g, "")
+          .replace(/[∗*＊﹡¥￥]{1,4}/g, " ")
+          .replace(ARTIFACT_BETWEEN_SCRIPT_RE, "$1")
+          .replace(ARTIFACT_AFTER_SCRIPT_RE, "$1")
+          .replace(ARTIFACT_BEFORE_SCRIPT_RE, "$1")
+      );
     })
     .join("\n");
+}
+
+function collapseDuplicateScriptRuns(line: string): string {
+  return line.replace(new RegExp(`([${NON_LATIN_SCRIPT_RANGES}]{3,})\\1`, "g"), "$1");
 }
