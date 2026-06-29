@@ -801,13 +801,19 @@ Later multilingual backlog:
 
 ## Known Risks / Follow-ups
 
-- `mobile/app.json` currently contains duplicate Android permission strings for
-  `INTERNET`, `RECORD_AUDIO`, and `MODIFY_AUDIO_SETTINGS`; cleanup is safe but
-  should be tested in the next native build.
+- Free-limit and file-limit errors currently can read like a hard stop, for
+  example "quota used" or "file too long". Next UX pass should route these
+  states to a themed upgrade/paywall prompt with a short explanation, plan
+  comparison, and retry action after purchase/restore.
+- The release app now requests only `INTERNET`, but keep `npm run check:release`
+  as a hard gate because a generated native `mobile/android/` folder can
+  reintroduce stale permissions or version codes.
 - Public paid subscriptions are not fully wired until RevenueCat production
   setup and mobile RevenueCat SDK/user id headers are complete.
-- The internal backend uses paid-feature dev override. Do not point a public app
-  build at that service unless intentionally doing internal testing.
+- The current production Render service is named `readflow-backend`, but its
+  legacy URL still contains `readflow-backend-internal`. Dev override is off and
+  Free entitlements were verified; prefer moving to a custom API domain before
+  broad public launch to avoid confusion.
 - `APP_KEY` in mobile config is visible to anyone who decompiles the app. It is a
   basic app gate, not strong user authentication.
 - OCR can be memory-heavy. If using public production traffic, prefer Render
