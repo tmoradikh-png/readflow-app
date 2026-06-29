@@ -131,6 +131,11 @@ Current ReadFlow QA checklist for any build that changes reading/voice:
 - For Persian/Arabic, import both a native-text PDF and a scanned/image PDF.
   Reopen any previously cached broken Persian book after selecting Persian; it
   should re-extract instead of showing stale mojibake text.
+- For Persian/Arabic and at least one other non-Latin script (Russian, Hindi,
+  Thai, Korean, Japanese, or Chinese), also test a PDF whose extracted text
+  contains mojibake or Latin artifacts inside non-Latin words. It should be
+  classified as OCR-needed, not as a good text-layer book. Persian is only the
+  example that exposed the bug.
 - For multilingual native-text PDFs, verify line/sentence order by reading a few
   paragraphs aloud visually. Do not accept a test that only proves the letters or
   words exist; Persian/Arabic can have correct words in the wrong order if PDF

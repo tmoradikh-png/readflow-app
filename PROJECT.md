@@ -76,15 +76,23 @@ Changes after the latest finished build and included in source `1.0.18`:
   Korean, Chinese (Simplified), Hindi, Russian, Arabic, and Persian. Backend
   Tesseract allow-list includes matching codes, including `fas` for Persian.
 - Backend OCR quality detection is language-aware for non-Latin scripts. When
-  the user selects Persian/Arabic/etc., corrupted native PDF text layers (for
-  example repeated `AA`/mojibake mixed into Persian) are treated as OCR
-  candidates instead of being accepted as readable text.
+  the user selects Arabic/Persian, Russian/Cyrillic, Hindi/Devanagari, Thai,
+  Korean, Japanese, or Chinese, corrupted native PDF text layers (for example
+  repeated `AA`, Latin fragments embedded inside non-Latin words, Unicode
+  replacement characters, or common mojibake sequences) are treated as OCR
+  candidates instead of being accepted as readable text. CJK still allows normal
+  adjacent Latin product names/titles to avoid wasting OCR on good bilingual
+  PDFs.
 - 2026-06-29 multilingual import fix: OCR now replaces pages that were explicitly
   marked low-quality even when the OCR text is shorter than the broken native
   text. This matters for Persian/Arabic PDFs where the corrupt text layer can be
   long but unreadable. The mobile parsed-text cache now stores `ocrLang`; a book
   cached under English/old extraction will be re-extracted when reopened with
   Persian/Arabic/etc. instead of silently showing stale corrupted text.
+- 2026-06-29 cache invalidation follow-up: mobile parsed-document cache schema is
+  now versioned (`cacheVersion: 2`). Existing caches without that version are
+  discarded and re-parsed from the stored source file, so pre-fix Persian imports
+  do not survive app updates.
 - OCR detection was also relaxed for mixed-language non-Latin books. If a page
   already has meaningful native Chinese/Japanese/Russian/Persian/etc. characters,
   or clearly readable bilingual Latin text, ReadFlow keeps the native text
@@ -175,6 +183,11 @@ Changes after the latest finished build and included in source `1.0.18`:
   OCR-required path for Free/Reader Plus and run background OCR only for AI
   Pro/Power. Pending OCR pages are returned blank instead of showing watermark
   or garbage placeholder text.
+- Non-Latin text-layer PDFs that visually look correct but extract with stray
+  Latin artifacts inside words must be treated as low-quality native text and
+  pushed to OCR for AI Pro/Power. Reader/free tiers should surface the
+  OCR-required path rather than showing the broken native text. Persian is the
+  first owner-reported example, not a special-case-only fix.
 - Reader text cleanup now removes page-number-only lines, common URL/watermark
   lines, and repeated short headers/footers before building reader sentences.
   This affects display, TTS, and AI context so the app does not read page

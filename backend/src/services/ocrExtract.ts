@@ -92,15 +92,71 @@ export function needsOcr(text: string, lang?: string): boolean {
 
 function looksCorrupted(text: string, lang: string): boolean {
   const replacement = (text.match(/\uFFFD/g) || []).length;
-  const mojibake = (text.match(/[ÂÃÄÅÆØÙÛÜÝÞÐ]/g) || []).length;
+  const mojibake = (text.match(/[ÂÃÄÅÆØÙÛÜÝÞÐÑâãäåæðñøùûüýþÿ]/g) || []).length;
+  const mojibakePairs = (
+    text.match(/(?:Ã.|Â.|Ð.|Ñ.|Ø.|Ù.|Ú.|Û.|à[^\s]|á[^\s]|â[^\s]|ã[^\s]|ä[^\s]|å[^\s]|æ[^\s])/g) || []
+  ).length;
   const nonLatin = /[^\u0000-\u024F\s\d.,;:!?'"()[\]{}\-–—/\\]/.test(text);
   const repeatedA = nonLatin ? (text.match(/A{2,}/g) || []).length : 0;
-  const hasArabicScript = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
-  if ((lang === "ara" || lang === "fas") && hasArabicScript) {
+  const profile = scriptProfile(lang);
+  const scriptRange = scriptRangeForLang(lang);
+  const scriptChars =
+    profile && scriptRange ? (text.match(profile.re) || []).length : 0;
+  const latinA = (text.match(/A/g) || []).length;
+  const latinStuckToScript = scriptRange ? countLatinStuckToScript(text, scriptRange) : 0;
+  if (profile && scriptChars > 0) {
     if (repeatedA > 0) return true;
+    if (shouldTreatEmbeddedLatinAsCorrupt(lang) && latinStuckToScript >= 2) return true;
+    if (
+      (lang === "ara" || lang === "fas") &&
+      scriptChars >= 40 &&
+      latinA >= 3 &&
+      latinA / scriptChars > 0.015
+    ) {
+      return true;
+    }
+    if ((replacement + mojibake + mojibakePairs) / Math.max(1, text.length) > 0.012) {
+      return true;
+    }
   }
-  const bad = replacement + mojibake + repeatedA * 2;
+  const bad = replacement + mojibake + mojibakePairs * 2 + repeatedA * 2;
   return bad / Math.max(1, text.length) > 0.018;
+}
+
+function shouldTreatEmbeddedLatinAsCorrupt(lang: string): boolean {
+  // CJK books often mix Latin product names directly into text. For scripts
+  // below, glued Latin fragments usually indicate a broken PDF text layer.
+  return ["ara", "fas", "rus", "hin", "tha", "kor"].includes(lang);
+}
+
+function countLatinStuckToScript(text: string, scriptRange: string): number {
+  const re = new RegExp(
+    `(?:[${scriptRange}][A-Za-z]+|[A-Za-z]+[${scriptRange}])`,
+    "g"
+  );
+  return (text.match(re) || []).length;
+}
+
+function scriptRangeForLang(lang: string): string | null {
+  switch (lang) {
+    case "ara":
+    case "fas":
+      return "\\u0600-\\u06FF\\u0750-\\u077F\\u08A0-\\u08FF";
+    case "rus":
+      return "\\u0400-\\u04FF";
+    case "hin":
+      return "\\u0900-\\u097F";
+    case "jpn":
+      return "\\u3040-\\u30FF\\u4E00-\\u9FFF";
+    case "kor":
+      return "\\uAC00-\\uD7AF\\u1100-\\u11FF";
+    case "chi_sim":
+      return "\\u4E00-\\u9FFF";
+    case "tha":
+      return "\\u0E00-\\u0E7F";
+    default:
+      return null;
+  }
 }
 
 function scriptProfile(lang: string): { re: RegExp; minRatio: number; minChars: number } | null {
@@ -118,6 +174,8 @@ function scriptProfile(lang: string): { re: RegExp; minRatio: number; minChars: 
       return { re: /[\uAC00-\uD7AF\u1100-\u11FF]/g, minRatio: 0.45, minChars: 12 };
     case "chi_sim":
       return { re: /[\u4E00-\u9FFF]/g, minRatio: 0.35, minChars: 12 };
+    case "tha":
+      return { re: /[\u0E00-\u0E7F]/g, minRatio: 0.45, minChars: 12 };
     default:
       return null;
   }

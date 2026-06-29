@@ -10,6 +10,7 @@ import { ParsedPdf, PdfPage } from "./PDFParser";
  * extracted/​OCR'd page text that powers reading + device voice with no network.
  */
 export interface CachedDoc {
+  cacheVersion?: number;
   docId: string;
   fileName: string;
   kind: "pdf" | "docx";
@@ -27,6 +28,7 @@ export interface CachedDoc {
 }
 
 const DIR = (FileSystem.documentDirectory || "") + "doccache/";
+const CACHE_SCHEMA_VERSION = 2;
 
 function fileFor(docId: string): string {
   const safe = docId.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 80);
@@ -51,6 +53,10 @@ export const DocCache = {
       if (!info.exists) return null;
       const raw = await FileSystem.readAsStringAsync(f);
       const data = JSON.parse(raw) as CachedDoc;
+      if (data?.cacheVersion !== CACHE_SCHEMA_VERSION) {
+        FileSystem.deleteAsync(f, { idempotent: true }).catch(() => {});
+        return null;
+      }
       return data && Array.isArray(data.pages) ? data : null;
     } catch {
       return null;
@@ -62,6 +68,7 @@ export const DocCache = {
     try {
       await ensureDir();
       const c: CachedDoc = {
+        cacheVersion: CACHE_SCHEMA_VERSION,
         docId: doc.docId,
         fileName: doc.fileName,
         kind: doc.kind,
