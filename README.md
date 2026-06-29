@@ -29,11 +29,14 @@ ReadFlow/
 Start with **[PROJECT.md](PROJECT.md)** when taking over the project. It records
 the service accounts, public URLs/IDs, current build state, icon process,
 backend deployment notes, paid-feature enforcement, pricing/cost notes, and
-release habits. Use **[PAYMENT_SETUP.md](PAYMENT_SETUP.md)** before wiring
-Play Billing/RevenueCat, **[PLAY_RELEASE_PACKET.md](PLAY_RELEASE_PACKET.md)**
-for Play submission text, and **[COST_MODEL.md](COST_MODEL.md)** before
+release habits. Use **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** for Android,
+**[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** for iOS/TestFlight,
+**[PAYMENT_SETUP.md](PAYMENT_SETUP.md)** before wiring store billing and
+RevenueCat, **[PLAY_RELEASE_PACKET.md](PLAY_RELEASE_PACKET.md)** for Play
+submission text, **[APP_STORE_RELEASE_PACKET.md](APP_STORE_RELEASE_PACKET.md)**
+for App Store submission text, and **[COST_MODEL.md](COST_MODEL.md)** before
 changing paid tiers, free limits, AI features, or cloud voice allowances. Legal
-and Play App Content drafts live in **[PRIVACY_POLICY_DRAFT.md](PRIVACY_POLICY_DRAFT.md)**,
+and app-content drafts live in **[PRIVACY_POLICY_DRAFT.md](PRIVACY_POLICY_DRAFT.md)**,
 **[TERMS_OF_USE_DRAFT.md](TERMS_OF_USE_DRAFT.md)**, and
 **[PLAY_DATA_SAFETY_DRAFT.md](PLAY_DATA_SAFETY_DRAFT.md)**. Keep the docs
 updated whenever accounts, build codes, backend URLs, costs, or production
@@ -79,7 +82,7 @@ workflow.
 > **rF AI** in a native build. Cloud AI requires the backend and OpenAI key;
 > rF AI uses phone CPU/battery instead.
 
-## Shipping a new Android build
+## Shipping builds
 See **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** → the **"TL;DR — Cut a NEW build"** section
 at the top is the step‑by‑step routine (bump `versionCode`, regenerate the icon, run
 `npm run check:release`, build the `.aab`, upload to Play **Internal testing**). A
@@ -87,6 +90,10 @@ at the top is the step‑by‑step routine (bump `versionCode`, regenerate the i
 
 > 🛑 Never reuse a `versionCode` — a code is consumed the moment a build is made, and
 > reusing one wastes a paid EAS build. Always pick the next free code (see the guide).
+
+For iOS/TestFlight, use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)**. The
+current iOS source candidate is `1.0.23` / buildNumber `23`, and EAS returned
+no prior iOS builds on 2026-06-29.
 
 ## Voice
 

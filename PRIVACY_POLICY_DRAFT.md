@@ -40,8 +40,9 @@ Usage and entitlement information:
   for document imports, OCR pages, AI actions, and Cloud AI voice characters.
 - We use an app user id to associate usage and subscription entitlement with the
   app installation or purchase account.
-- If subscriptions are enabled, Google Play and RevenueCat may provide purchase,
-  subscription, entitlement, renewal, cancellation, and restore information.
+- If subscriptions are enabled, Google Play, Apple App Store, and RevenueCat may
+  provide purchase, subscription, entitlement, renewal, cancellation, and
+  restore information.
 
 Technical information:
 
@@ -80,7 +81,8 @@ We may use service providers to operate readFlow, including:
 - Render or similar hosting providers for backend services.
 - OpenAI or similar AI providers for AI answers and Cloud AI voice when you use
   those features.
-- RevenueCat and Google Play for subscriptions, purchases, and entitlements.
+- RevenueCat, Google Play, and Apple App Store for subscriptions, purchases, and
+  entitlements.
 - Email/support tools if you contact support.
 
 We do not sell your personal information. We do not use your private documents
@@ -113,7 +115,8 @@ You can:
 - Use manual reading instead of AI or voice features.
 - Use Phone voice or rF AI where available instead of Cloud AI voice.
 - Delete books from your local library.
-- Cancel subscriptions through Google Play.
+- Cancel subscriptions through the app store account settings for the platform
+  where you purchased them.
 - Contact us to request access, correction, or deletion where applicable.
 
 Some cloud features cannot work without sending document text or related data to

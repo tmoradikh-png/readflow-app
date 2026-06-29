@@ -5,7 +5,9 @@ const mobileDir = path.resolve(process.cwd());
 const repoRoot = path.resolve(mobileDir, "..");
 
 const appJsonPath = path.join(mobileDir, "app.json");
+const easJsonPath = path.join(mobileDir, "eas.json");
 const androidDirPath = path.join(mobileDir, "android");
+const iosDirPath = path.join(mobileDir, "ios");
 const renderYamlPath = path.join(repoRoot, "render.yaml");
 const backendRenderYamlPath = path.join(repoRoot, "backend", "render.yaml");
 
@@ -27,8 +29,10 @@ const expo = appJson.expo || {};
 const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
+const easJson = JSON.parse(readUtf8(easJsonPath));
 const EXPECTED_VERSION = "1.0.23";
-const EXPECTED_VERSION_CODE = 23;
+const EXPECTED_ANDROID_VERSION_CODE = 23;
+const EXPECTED_IOS_BUILD_NUMBER = "23";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
 // 0) This repo releases as a managed Expo app. A local generated android/
@@ -39,6 +43,11 @@ if (fs.existsSync(androidDirPath)) {
 } else {
   pass("No local Android native directory will override app.json");
 }
+if (fs.existsSync(iosDirPath)) {
+  fail("mobile/ios exists. Move or remove the generated native directory before EAS iOS release builds.");
+} else {
+  pass("No local iOS native directory will override app.json");
+}
 
 // 1) applicationId
 if (android.package === "com.urmiaworks.readflow") {
@@ -47,11 +56,23 @@ if (android.package === "com.urmiaworks.readflow") {
   fail(`applicationId expected com.urmiaworks.readflow but got ${android.package || "(missing)"}`);
 }
 
-// 2) versionCode
-if (android.versionCode === EXPECTED_VERSION_CODE) {
-  pass(`versionCode is ${EXPECTED_VERSION_CODE}`);
+// 2) Android/iOS store identifiers and build numbers
+if (android.versionCode === EXPECTED_ANDROID_VERSION_CODE) {
+  pass(`Android versionCode is ${EXPECTED_ANDROID_VERSION_CODE}`);
 } else {
-  fail(`versionCode expected ${EXPECTED_VERSION_CODE} but got ${String(android.versionCode)}`);
+  fail(`Android versionCode expected ${EXPECTED_ANDROID_VERSION_CODE} but got ${String(android.versionCode)}`);
+}
+
+if (ios.bundleIdentifier === "com.urmiaworks.readflow") {
+  pass("iOS bundleIdentifier is com.urmiaworks.readflow");
+} else {
+  fail(`iOS bundleIdentifier expected com.urmiaworks.readflow but got ${ios.bundleIdentifier || "(missing)"}`);
+}
+
+if (String(ios.buildNumber || "") === EXPECTED_IOS_BUILD_NUMBER) {
+  pass(`iOS buildNumber is ${EXPECTED_IOS_BUILD_NUMBER}`);
+} else {
+  fail(`iOS buildNumber expected ${EXPECTED_IOS_BUILD_NUMBER} but got ${String(ios.buildNumber || "(missing)")}`);
 }
 
 // 3) versionName
@@ -122,8 +143,32 @@ if (Array.isArray(backgroundModes) && backgroundModes.includes("audio")) {
 } else {
   pass("No background-audio mode declared");
 }
+if (ios.infoPlist?.NSMicrophoneUsageDescription) {
+  fail("iOS microphone usage description is present but readFlow does not record audio");
+} else {
+  pass("No iOS microphone usage description declared");
+}
+if (ios.infoPlist?.ITSAppUsesNonExemptEncryption === false) {
+  pass("iOS export compliance declares no non-exempt encryption");
+} else {
+  fail("iOS infoPlist must set ITSAppUsesNonExemptEncryption:false for App Store export compliance");
+}
 
-// 7) OpenAI key not inside mobile app
+// 7) EAS profiles should be explicit for both stores.
+const internalProfile = easJson.build?.internal || {};
+const productionProfile = easJson.build?.production || {};
+if (internalProfile.distribution === "store" && internalProfile.ios?.simulator === false) {
+  pass("EAS internal profile is configured for an iOS device App Store/TestFlight archive");
+} else {
+  fail("EAS internal profile must set distribution:store and ios.simulator:false for iOS TestFlight builds");
+}
+if (productionProfile.distribution === "store" && productionProfile.ios?.simulator === false) {
+  pass("EAS production profile is configured for an iOS device App Store archive");
+} else {
+  fail("EAS production profile must set distribution:store and ios.simulator:false for iOS App Store builds");
+}
+
+// 8) OpenAI key not inside mobile app
 const mobileSource = readUtf8(path.join(mobileDir, "src", "config.ts"));
 if (/OPENAI_API_KEY|sk-[A-Za-z0-9]/.test(mobileSource)) {
   fail("Possible OpenAI key reference found in mobile source");
@@ -131,7 +176,7 @@ if (/OPENAI_API_KEY|sk-[A-Za-z0-9]/.test(mobileSource)) {
   pass("No OpenAI key reference in mobile config source");
 }
 
-// 8) Mobile sends an app-user id so public users do not share one anonymous quota bucket.
+// 9) Mobile sends an app-user id so public users do not share one anonymous quota bucket.
 const identitySource = readUtf8(path.join(mobileDir, "src", "services", "AppIdentity.ts"));
 if (/readflow:appUserId/.test(identitySource) && /x-app-user-id/.test(mobileSource)) {
   pass("Mobile sends a stable app-user id header for backend quotas");
@@ -139,7 +184,7 @@ if (/readflow:appUserId/.test(identitySource) && /x-app-user-id/.test(mobileSour
   fail("Mobile must send x-app-user-id from a stable install identity before public release");
 }
 
-// 9) Public release config has ENTITLEMENTS_DEV_OVERRIDE=false
+// 10) Public release config has ENTITLEMENTS_DEV_OVERRIDE=false
 function hasDevOverrideFalse(content) {
   return /-\s*key:\s*ENTITLEMENTS_DEV_OVERRIDE[\s\S]{0,120}?value:\s*"?false"?/m.test(content);
 }

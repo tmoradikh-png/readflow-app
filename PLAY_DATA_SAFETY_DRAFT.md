@@ -8,6 +8,9 @@ retention, and legal policy are finalized. Google says developers are
 responsible for accurate Data safety labels and keeping them consistent with the
 privacy policy.
 
+For iOS App Store App Privacy answers, use
+`APP_STORE_RELEASE_PACKET.md` as the starting worksheet.
+
 Policy sources checked on 2026-06-29:
 
 - Data Safety form guidance:

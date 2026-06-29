@@ -7,6 +7,9 @@ it in sync with `PAYMENT_SETUP.md`, `PRIVACY_POLICY_DRAFT.md`,
 `TERMS_OF_USE_DRAFT.md`, `PLAY_DATA_SAFETY_DRAFT.md`, `MARKETING_PLAY_STORE.md`,
 and `COST_MODEL.md`.
 
+For iOS App Store submission text and App Privacy notes, use
+`APP_STORE_RELEASE_PACKET.md`.
+
 ## Release Readiness
 
 Current source status:

@@ -5,8 +5,10 @@ Updated: 2026-06-29
 Read this file first when taking over the project. It is the high-level map of
 accounts, services, release status, and operational habits. Then use
 `README.md` for local setup, `RELEASE_GUIDE.md` for Android builds,
-`PAYMENT_SETUP.md` for Play Billing/RevenueCat, `PLAY_RELEASE_PACKET.md` for
-Play submission text, `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
+`IOS_RELEASE_GUIDE.md` for iOS/TestFlight builds, `PAYMENT_SETUP.md` for
+store billing/RevenueCat, `PLAY_RELEASE_PACKET.md` for Play submission text,
+`APP_STORE_RELEASE_PACKET.md` for App Store submission text,
+`PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
 `PLAY_DATA_SAFETY_DRAFT.md` for legal/app-content drafts,
 `BACKEND_FEATURE_ENFORCEMENT.md` for paid-feature enforcement, and
 `MARKETING_PLAY_STORE.md` for website/Play Store messaging. Use
@@ -24,8 +26,8 @@ Current shape:
 - `mobile/`: Expo React Native app, TypeScript.
 - `backend/`: Node + Express + TypeScript backend for PDF extraction, OCR, AI,
   cloud TTS, entitlement checks, and cost-bearing API protection.
-- Android is the active release target. iOS identifiers/config exist but iOS has
-  not been the main tested release path yet.
+- Android is the active release target. iOS release prep now exists, but no iOS
+  EAS build has been started/tested yet.
 
 ## Current State
 
@@ -35,13 +37,19 @@ Current shape:
   owner explicitly changes the repository owner.
 - Current source version: `1.0.23`
 - Current source Android `versionCode`: `23`
+- Current source iOS `buildNumber`: `23`
 - Latest finished EAS build: `1.0.23` / code `23`
 - Latest finished EAS build id: `8c701727-dcc5-403d-9b69-4f4d2e4fc9b2`
 - Latest finished AAB:
   `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`
+- Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
+  --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
 - Next Android build should use code `24` unless another EAS build has already
   consumed a higher code. Run the EAS `build:list` command in `RELEASE_GUIDE.md`
   immediately before spending build quota.
+- Next iOS build can use buildNumber `23` unless an iOS EAS build has already
+  consumed it. Run the EAS `build:list --platform ios` command in
+  `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 
 Changes included in the latest finished EAS build:
 - Active line highlighting and the foreground-only reading policy were added.
@@ -102,6 +110,24 @@ Current Play release prep in source `1.0.23`:
     before going live.
   - The old local-AI label has been removed from tracked app source; the public
     customer-facing name is `rF AI`.
+
+Current iOS release prep in source `1.0.23`:
+- `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
+  `23`, and `ITSAppUsesNonExemptEncryption=false`.
+- `mobile/eas.json` now has explicit iOS settings for development/preview
+  device builds and App Store/TestFlight archive builds.
+- `npm run check:release` now checks iOS bundle id, build number, no generated
+  `mobile/ios/` directory, no iOS microphone usage string, no background-audio
+  mode, iOS export compliance, and EAS iOS archive profile settings.
+- `IOS_RELEASE_GUIDE.md` records the iOS EAS build routine and TestFlight QA
+  checklist. `APP_STORE_RELEASE_PACKET.md` records App Store listing text,
+  review notes, subscription disclosure, and App Privacy worksheet notes.
+- EAS had no iOS build history on 2026-06-29, so buildNumber `23` is currently
+  free unless a later iOS build consumes it.
+- Paid iOS subscriptions are not ready to sell until Apple in-app purchase /
+  RevenueCat is wired in the mobile app and production Render has
+  `RC_SECRET_KEY` set. Until then, iOS is a free-preview/TestFlight path with
+  locked paid features and no live purchase flow.
 
 Current backend note:
 - Production Render service name: `readflow-backend`.
@@ -356,16 +382,17 @@ Changes after the latest finished build and included in source `1.0.18`:
 
 ## Account Map
 
-Do not commit passwords, API keys, private tokens, Play signing keys, RevenueCat
-secrets, or OpenAI keys. This repo may contain public identifiers and service
-names only. Secrets live in the service dashboards or the owner's password
-manager.
+Do not commit passwords, API keys, private tokens, Play signing keys, Apple
+certificates/profiles/API keys, RevenueCat secrets, or OpenAI keys. This repo
+may contain public identifiers and service names only. Secrets live in the
+service dashboards or the owner's password manager.
 
 | Area | Account / owner | What it is used for | Notes |
 | --- | --- | --- | --- |
 | GitHub | `tmoradikh-png` | Source repository | Always use this account/repo owner for readFlow. Remote is `readflow-app`. User email given for account work: `t.moradi.kh@gmail.com`. |
 | Expo / EAS | `tohid123` | Android builds and project ownership | Project is `tohid123/readflow`, projectId `097b0b5a-db90-46b4-b434-60836687b429`. User email given: `t.moradi.kh@gmail.com`. |
 | Google Play Console | Urmia Works developer account | Internal testing and later production release | Android package is permanent: `com.urmiaworks.readflow`. Verify exact login email before release. |
+| Apple Developer / App Store Connect | Urmia Works developer account (verify) | TestFlight and later App Store release | iOS bundle id is `com.urmiaworks.readflow`. App Store Connect app record and signing credentials still need owner verification before the first iOS build/submit. |
 | Render | `support@urmiaworks.com` | Hosted backend | Production service name is `readflow-backend`; current reachable URL is the legacy subdomain `readflow-backend-internal.onrender.com`. |
 | OpenAI | Owner-held account | AI, OCR assistance where applicable, and natural TTS | `OPENAI_API_KEY` must be set only in Render/local `.env`, never in mobile code. |
 | RevenueCat | Planned / verify account | Production subscription entitlement source | Backend code supports `RC_SECRET_KEY`, but public subscription flow still needs final setup. |
@@ -397,8 +424,9 @@ Secrets and where they belong:
   gate, not a user secret. Rotate before public release if it has been exposed.
 - `RC_SECRET_KEY`: Render environment variable only, when RevenueCat production
   entitlements are enabled.
-- Play service-account JSON, signing keys, EAS credentials: dashboards/secure
-  storage only. EAS currently manages Android signing credentials remotely.
+- Play service-account JSON, Apple certificates/profiles/API keys, signing
+  keys, EAS credentials: dashboards/secure storage only. EAS currently manages
+  Android signing credentials remotely; iOS credentials are not verified yet.
 
 If a developer needs access, invite them to the account/dashboard or give them
 credentials through a password manager, not through Git.
@@ -485,7 +513,8 @@ Mobile:
   between library and reader.
 - `mobile/app.json`: app version, package ids, icon/splash config, backend URL,
   EAS project id.
-- `mobile/eas.json`: EAS build profiles. Internal Android builds create `.aab`.
+- `mobile/eas.json`: EAS build profiles. Internal Android builds create `.aab`;
+  internal iOS builds create App Store/TestFlight archives.
 - `mobile/src/components/Reader.tsx`: main reader, highlighting, controls,
   navigation, playback sequencing, OCR progress, AI entry point.
   It also controls screen keep-awake during playback, rotation re-anchoring,
@@ -549,6 +578,29 @@ Short version:
    Google Service Account JSON configured for Play upload.
 9. On the phone, uninstall the old app before reinstalling. Android launchers and
    Play cache icons/version metadata aggressively.
+
+iOS/TestFlight release prep is in `IOS_RELEASE_GUIDE.md`. Short version:
+1. Check latest consumed iOS build number:
+   ```powershell
+   cd C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
+   npx --yes eas-cli build:list --platform ios --limit 5 --json --non-interactive
+   ```
+2. If buildNumber `23` is still unused, keep `mobile/app.json` as
+   `1.0.23` / `ios.buildNumber` `23`; otherwise bump only the iOS build number
+   and `EXPECTED_IOS_BUILD_NUMBER`.
+3. Run:
+   ```powershell
+   npm run check:release
+   npx tsc --noEmit
+   ```
+4. Commit and push the exact source to GitHub.
+5. Start one EAS iOS archive build only after Apple Developer/App Store Connect
+   access is verified:
+   ```powershell
+   npx --yes eas-cli build -p ios --profile internal --non-interactive --no-wait
+   ```
+6. Add a row to the iOS build ledger in `IOS_RELEASE_GUIDE.md` and submit the
+   finished build to App Store Connect/TestFlight when credentials are ready.
 
 Local native smoke test without spending EAS quota:
 1. Copy `mobile/` to a short physical path such as `C:\rf-mobile-test`, excluding
@@ -810,6 +862,9 @@ Later multilingual backlog:
   reintroduce stale permissions or version codes.
 - Public paid subscriptions are not fully wired until RevenueCat production
   setup and mobile RevenueCat SDK/user id headers are complete.
+- iOS/TestFlight is prepared in config/docs but not built or device-tested yet.
+  Verify Apple Developer/App Store Connect access, EAS iOS credentials, and
+  rF AI/Sherpa behavior on a real iPhone before any public App Store submission.
 - The current production Render service is named `readflow-backend`, but its
   legacy URL still contains `readflow-backend-internal`. Dev override is off and
   Free entitlements were verified; prefer moving to a custom API domain before
@@ -820,9 +875,9 @@ Later multilingual backlog:
   Starter/Standard over Free.
 - OpenAI usage costs money. Monitor backend logs and rate limits when broadening
   testing.
-- AI voice packs/top-ups are only a product path today. Play Billing/RevenueCat
-  purchases are not wired in this build, so the app must not present a fake
-  paid purchase button.
+- AI voice packs/top-ups are only a product path today. Store billing/RevenueCat
+  purchases are not wired in this build, so the app must not present a fake paid
+  purchase button.
 - Current free-tier code/config does not yet match the latest product intent of
   1 free book and about 100 pages. See `COST_MODEL.md`.
 - UI exposes OCR languages beyond the `.traineddata` packs committed into the
@@ -848,5 +903,5 @@ readFlow X.Y.Z
 When a developer changes accounts, service URLs, build codes, entitlement
 behavior, pricing/cost assumptions, icon process, release process, or any
 production-impacting workflow, update this file and any specialized guide
-(`RELEASE_GUIDE.md`, `BACKEND_FEATURE_ENFORCEMENT.md`, or `COST_MODEL.md`) in
-the same commit.
+(`RELEASE_GUIDE.md`, `IOS_RELEASE_GUIDE.md`,
+`BACKEND_FEATURE_ENFORCEMENT.md`, or `COST_MODEL.md`) in the same commit.

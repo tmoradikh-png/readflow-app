@@ -10,9 +10,10 @@
 > `ai`.
 >
 > Payment note: read `PAYMENT_SETUP.md` before enabling public purchases.
-> RevenueCat/Play Billing must be wired in mobile and production Render must
-> have `ENTITLEMENTS_DEV_OVERRIDE=false` plus `RC_SECRET_KEY` before paid
-> entitlements are trusted.
+> RevenueCat plus the relevant app-store billing flow (Google Play Billing on
+> Android, Apple in-app purchase on iOS) must be wired in mobile, and production
+> Render must have `ENTITLEMENTS_DEV_OVERRIDE=false` plus `RC_SECRET_KEY` before
+> paid entitlements are trusted.
 
 ---
 

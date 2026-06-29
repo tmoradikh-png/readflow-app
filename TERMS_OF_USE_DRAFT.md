@@ -27,13 +27,14 @@ explanations, key points, simplified text, and AI Q&A.
 ## Accounts and Purchases
 
 Some features are free and some require a paid subscription or top-up. If you
-buy a subscription or in-app product through the Android app distributed by
-Google Play, the purchase is handled through Google Play Billing. Subscriptions
-renew automatically unless cancelled before the end of the current billing
-period. You can manage or cancel subscriptions in Google Play.
+buy a subscription or in-app product through a mobile app store, the purchase is
+handled by that store, such as Google Play Billing on Android or Apple in-app
+purchase on iOS. Subscriptions renew automatically unless cancelled before the
+end of the current billing period. You can manage or cancel subscriptions in
+the store account settings for the platform where you purchased them.
 
-Refunds are handled by Google Play policies and applicable law. readFlow does
-not control Google Play's payment processing.
+Refunds are handled by the relevant app store policies and applicable law.
+readFlow does not control app store payment processing.
 
 Monthly allowances, such as OCR pages, AI actions, and Cloud AI voice
 characters, reset according to the plan rules shown in the app. Unused allowance
@@ -105,7 +106,8 @@ features you choose to use.
 You may stop using readFlow at any time. We may suspend or terminate access if
 you violate these Terms, create security or legal risk, or abuse the service.
 Deleting the app may remove local files, but it may not cancel subscriptions.
-Subscriptions must be cancelled through Google Play.
+Subscriptions must be cancelled through the app store account settings for the
+platform where they were purchased.
 
 ## Disclaimers
 

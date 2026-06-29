@@ -2,10 +2,10 @@
 
 Updated: 2026-06-29
 
-This is the payment handoff for Google Play, RevenueCat, the backend, and the
-mobile app. It is intentionally operational: another developer should be able to
-open this file and know what still has to be done before readFlow can sell paid
-plans.
+This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
+backend, and the mobile app. It is intentionally operational: another developer
+should be able to open this file and know what still has to be done before
+readFlow can sell paid plans.
 
 Policy sources checked on 2026-06-29:
 
@@ -15,10 +15,18 @@ Policy sources checked on 2026-06-29:
   https://developer.android.com/google/play/billing
 - Subscription lifecycle and purchase acknowledgement:
   https://developer.android.com/google/play/billing/lifecycle/subscriptions
+- Apple In-App Purchase:
+  https://developer.apple.com/in-app-purchase/
+- Apple App Review Guidelines:
+  https://developer.apple.com/app-store/review/guidelines/
 - RevenueCat Android product setup:
   https://www.revenuecat.com/docs/getting-started/entitlements/android-products
+- RevenueCat iOS product setup:
+  https://www.revenuecat.com/docs/getting-started/entitlements/ios-products
 - RevenueCat Google Play service credentials:
   https://www.revenuecat.com/docs/service-credentials/creating-play-service-credentials
+- RevenueCat App Store Connect API key setup:
+  https://www.revenuecat.com/docs/service-credentials/itunesconnect-app-specific-shared-secret/app-store-connect-api-key-configuration
 
 ## Current Status
 
@@ -36,9 +44,13 @@ Missing before paid launch:
 
 - RevenueCat SDK is not wired in the mobile app.
 - Google Play subscription products are not created/tested.
+- Apple App Store in-app purchase products are not created/tested.
 - RevenueCat offerings are not configured.
-- The mobile app does not yet open the native Play Billing purchase flow.
+- The mobile app does not yet open the native Google Play Billing or Apple
+  in-app purchase flow.
 - The backend still needs the production RevenueCat secret key in Render.
+- Platform-specific RevenueCat public SDK keys for Android and iOS are not in
+  mobile config yet.
 - The production backend service has been converted from the old internal
   service. Current reachable URL:
   `https://readflow-backend-internal.onrender.com`. The service name is
@@ -46,8 +58,8 @@ Missing before paid launch:
   `https://readflow-backend.onrender.com` URL returned Render's
   `Service Suspended` page on 2026-06-29 and must not be used by Play builds.
 
-Until these are complete, the app can be released only as a free preview with
-paid features locked and purchase buttons unavailable.
+Until these are complete, the Android and iOS apps can be released only as free
+previews with paid features locked and purchase buttons unavailable.
 
 ## Product IDs
 
@@ -73,6 +85,11 @@ If prices, annual discounts, Cloud AI voice, or AI action allowances change, run
 backend build/checks and confirm the guardrail still passes before creating or
 updating Play products.
 
+For App Store products, prefer mirroring the same product ids so RevenueCat
+offerings and backend product mapping stay symmetric across stores. If App
+Store product ids differ, update this file, RevenueCat mappings, and any
+backend/mobile product-id assumptions in the same change.
+
 ## Suggested Top-Up Product IDs
 
 Use one-time consumable products for cost-bearing overages after subscriptions
@@ -89,9 +106,10 @@ hundreds of dollars per user per month if uncapped.
 
 Top-up pricing should also obey the 20% direct AI vendor COGS rule. With
 `tts-1-hd`, 25k Cloud AI voice characters cost about $0.75 in OpenAI spend, so
-a $4.99 Play Billing top-up nets about $4.19 and keeps direct AI vendor cost
-around 18%. A 100k character top-up costs about $3 in OpenAI spend and would
-need to be priced around $17.99+ to keep the same margin.
+a $4.99 store-billing top-up nets about $4.19 after an assumed 15% store fee
+plus 1% RevenueCat and keeps direct AI vendor cost around 18%. A 100k character
+top-up costs about $3 in OpenAI spend and would need to be priced around
+$17.99+ to keep the same margin.
 
 ## Google Play Console Setup
 
@@ -111,22 +129,46 @@ Google Play requires Play Billing for in-app purchases of digital goods and
 services distributed through Google Play. Do not send users from the app to a
 website to buy Reader Plus, AI Pro, Power, OCR pages, or voice packs.
 
+## App Store Connect Setup
+
+1. Create or verify the App Store Connect app for bundle id
+   `com.urmiaworks.readflow`.
+2. Complete Agreements, Tax, and Banking before testing paid in-app purchases.
+3. Create an auto-renewable subscription group for readFlow plans.
+4. Create subscription products for the six subscription ids, preferably using
+   the same ids listed above.
+5. Set prices, countries/regions, subscription durations, and localization.
+6. Configure sandbox testers.
+7. Create an App Store Connect API key and store the `.p8` file securely.
+8. Add App Store credentials to RevenueCat according to RevenueCat's iOS setup.
+9. Complete App Privacy, age rating, review notes, support URLs, privacy URL,
+   and terms URL before submission.
+
+Apple in-app purchase must be used for digital subscriptions and in-app digital
+top-ups sold inside the iOS app. Do not send users from the iOS app to a website
+to buy Reader Plus, AI Pro, Power, OCR pages, or voice packs.
+
 ## RevenueCat Setup
 
 1. Create a RevenueCat project for readFlow.
 2. Add the Android app package `com.urmiaworks.readflow`.
-3. Add Google Play service credentials according to RevenueCat's guide.
-4. Import or create the Play subscription products.
-5. Create entitlements:
+3. Add the iOS app bundle id `com.urmiaworks.readflow`.
+4. Add Google Play service credentials according to RevenueCat's guide.
+5. Add App Store Connect API key / App Store credentials according to
+   RevenueCat's iOS guide.
+6. Import or create the Play and App Store subscription products.
+7. Create entitlements:
    - `reader_plus`
    - `ai_pro`
    - `power`
-6. Attach the correct products to the correct entitlements.
-7. Create an offering named `default`.
-8. Add monthly and yearly packages for each paid tier.
-9. Copy the RevenueCat public SDK key for Android into mobile config.
-10. Copy the RevenueCat secret/server key into Render as `RC_SECRET_KEY`.
-11. Test purchase, restore, cancellation, grace period, and expired subscription.
+8. Attach the correct products from both stores to the correct entitlements.
+9. Create an offering named `default`.
+10. Add monthly and yearly packages for each paid tier.
+11. Copy the RevenueCat public SDK key for Android into mobile config.
+12. Copy the RevenueCat public SDK key for iOS into mobile config.
+13. Copy the RevenueCat secret/server key into Render as `RC_SECRET_KEY`.
+14. Test purchase, restore, cancellation, grace period, billing retry, and
+    expired subscription on both Android and iOS.
 
 RevenueCat normally handles purchase acknowledgement, but verify this in sandbox.
 Google Play can refund and revoke purchases that are not acknowledged within the
@@ -160,7 +202,7 @@ but it must not be used in public builds because it grants paid access.
 Add the RevenueCat SDK and connect it to the existing entitlement flow:
 
 1. Add the SDK dependency, likely `react-native-purchases`.
-2. Configure the Android public SDK key at app startup.
+2. Configure platform-specific Android and iOS public SDK keys at app startup.
 3. Use RevenueCat's app user id as the stable `x-app-user-id` sent to the
    backend. The current local `rf_...` id is useful for free quotas but is not a
    purchase identity.
@@ -171,7 +213,8 @@ Add the RevenueCat SDK and connect it to the existing entitlement flow:
 8. After purchase/restore, refresh backend entitlements and usage.
 9. Add graceful error UI for cancelled, pending, failed, and already-owned
    purchases.
-10. Make sure Free still cannot call OCR, AI text, Cloud AI voice, or read-aloud.
+10. Make sure Free still cannot call OCR, AI text, Cloud AI voice, rF AI, or
+    read-aloud.
 
 ## Sandbox Test Matrix
 
@@ -189,17 +232,22 @@ Before paid production:
 - Restore purchase on reinstall: paid tier returns.
 - License tester purchase is acknowledged. Watch Play Console orders; sandbox
   purchases can be refunded quickly if acknowledgement fails.
+- iOS sandbox/TestFlight purchase and restore work with the App Store sandbox
+  account.
 - Backend quota uses the RevenueCat app-user id, not `anonymous`.
-- Public build cannot accidentally use the internal Render service.
+- Public builds cannot accidentally use internal/dev Render entitlement override.
 
 ## Release Decision
 
 Do not submit a paid Play release until all of these are true:
 
 - Production backend health is green.
-- RevenueCat SDK purchase and restore flows work on the connected phone.
+- RevenueCat SDK purchase and restore flows work on connected Android and iOS
+  devices.
 - RevenueCat secret is set on production Render.
-- Play products are active and mapped to the correct entitlements.
-- Privacy Policy, Terms, and Data Safety answers match the final SDK/data flow.
+- Play and App Store products are active and mapped to the correct entitlements.
+- Privacy Policy, Terms, Play Data Safety, and App Store App Privacy answers
+  match the final SDK/data flow.
 - `npm run check:release` passes.
-- A fresh internal-testing install passes the subscription test matrix.
+- A fresh Play internal-testing install and TestFlight install pass the
+  subscription test matrix.

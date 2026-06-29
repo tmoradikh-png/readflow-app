@@ -15,6 +15,10 @@ are in **[PRIVACY_POLICY_DRAFT.md](PRIVACY_POLICY_DRAFT.md)**,
 **[TERMS_OF_USE_DRAFT.md](TERMS_OF_USE_DRAFT.md)**, and
 **[PLAY_DATA_SAFETY_DRAFT.md](PLAY_DATA_SAFETY_DRAFT.md)**.
 
+This file is the Android/Google Play guide. For iOS/TestFlight/App Store work,
+use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
+**[APP_STORE_RELEASE_PACKET.md](APP_STORE_RELEASE_PACKET.md)**.
+
 > **Sections 0–5 below are the original first‑time setup guide.**
 > **If you just want to ship a new version, read [TL;DR — Cut a NEW build](#tldr--cut-a-new-build-do-this-every-release) first.**
 

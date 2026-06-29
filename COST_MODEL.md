@@ -1,11 +1,11 @@
 # readFlow Pricing and Cost Model
 
-Updated: 2026-06-28
+Updated: 2026-06-29
 
 This file records the business model assumptions for readFlow so another
 developer can continue without guessing. Re-check vendor prices before launch
-or whenever plans change; OpenAI, Google Play, Render, and RevenueCat pricing
-can change.
+or whenever plans change; OpenAI, Google Play, Apple App Store, Render, and
+RevenueCat pricing can change.
 
 ## Sources Checked
 
@@ -22,6 +22,12 @@ can change.
   https://support.google.com/googleplay/android-developer/answer/10632485
 - Google Play lower service fee rollout:
   https://support.google.com/googleplay/android-developer/answer/16954621
+- Apple Developer Program pricing and fees:
+  https://developer.apple.com/programs/whats-included/
+- Apple App Store Small Business Program:
+  https://developer.apple.com/app-store/small-business-program/
+- Apple auto-renewable subscription revenue:
+  https://developer.apple.com/app-store/subscriptions/
 - React Native ExecuTorch TTS docs:
   https://docs.swmansion.com/react-native-executorch/docs/hooks/natural-language-processing/useTextToSpeech
 - React Native ExecuTorch / Kokoro cost article:
@@ -77,10 +83,11 @@ Current cloud voice implementation:
   passes; the app falls back to Phone voice instead of letting paid users hear a
   bad cloud result.
 
-Do not launch public subscriptions until RevenueCat/Play Billing identity is
-wired. Source `1.0.23` adds a local install id for `x-app-user-id`, which is good
-enough to avoid one shared anonymous quota bucket, but it is not a purchase
-identity and can be reset by reinstalling.
+Do not launch public subscriptions until RevenueCat plus store billing identity
+is wired. On Android that means Google Play Billing; on iOS that means Apple
+in-app purchase. Source `1.0.23` adds a local install id for `x-app-user-id`,
+which is good enough to avoid one shared anonymous quota bucket, but it is not a
+purchase identity and can be reset by reinstalling.
 
 ## Key Principle
 
@@ -110,8 +117,8 @@ costs, refunds, support, and taxes.
 
 The app now enforces this in `backend/src/config/plans.ts`:
 
-- Net revenue assumption: 84% of list price after roughly 15% Google Play fee
-  and 1% RevenueCat tracking fee.
+- Net revenue assumption: 84% of list price after roughly 15% app-store fee and
+  1% RevenueCat tracking fee.
 - Budget is calculated against the lower effective monthly revenue between the
   monthly and annual product. Annual is usually the tighter case.
 - Cloud AI voice assumes `tts-1-hd` at $30 / 1M characters.
@@ -158,7 +165,7 @@ Current Reader Plus config:
 
 Rough margin:
 
-- $4.99/month nets about $4.19 after a conservative 15% Play fee plus 1%
+- $4.99/month nets about $4.19 after a conservative 15% store fee plus 1%
   RevenueCat.
 - $39.99/year nets about $2.80/month on the same conservative basis.
 - Render Standard web service compute is currently listed at $25/month. If using
@@ -204,7 +211,7 @@ extra bill from Render. The fixed monthly allocation matters more:
 | 10,000 pages | $0.25 / 100 pages | $0.85 / 100 pages |
 | 30,000 pages | $0.08 / 100 pages | $0.28 / 100 pages |
 
-AI Pro at $12.99/month nets roughly $10.91 after conservative Play + RevenueCat
+AI Pro at $12.99/month nets roughly $10.91 after conservative store + RevenueCat
 fees, or about $8.40/month on the annual plan. If a user consumes the full 750
 OCR pages, annual-plan revenue is about $1.12 per 100 OCR pages before shared
 Render capacity. This is acceptable only if OCR is shared across a healthy user
@@ -345,7 +352,7 @@ Current allowance economics with `tts-1-hd`:
 | Power | 100,000 chars/month | about 1.85 hours / 61 pages | about $3.00 |
 
 This is intentionally conservative. Extra AI voice should be sold as a top-up
-through Play Billing/RevenueCat. A cost-safe starter pack is 25k characters for
+through app-store billing/RevenueCat. A cost-safe starter pack is 25k characters for
 about $4.99; it costs about $0.75 on `tts-1-hd` and stays under the 20% direct
 AI vendor COGS target after store fees. A 100k-character pack would cost about
 $3 and must be priced around $17.99+ to keep the same margin.
@@ -452,12 +459,20 @@ rate. Google is rolling out a newer lower-fee model starting June 30, 2026 for
 the US/UK/EEA; for first-$1M recurring transactions the service fee is 10%, but
 transactions that use Google Play Billing in the US/UK/EEA add a 5% billing fee,
 so the practical planning number can still be about 15%. Re-check Play Console
-before changing prices. RevenueCat is free up to $2,500 monthly tracked revenue,
-then 1% of tracked revenue.
+before changing prices.
+
+For Apple App Store, use 15% only if the account qualifies for the App Store
+Small Business Program or qualifying subscription terms. Otherwise, first-year
+subscription proceeds can be lower. Verify the exact App Store commission,
+country/tax treatment, and program enrollment before changing prices or
+allowances.
+
+RevenueCat is free up to $2,500 monthly tracked revenue, then 1% of tracked
+revenue.
 
 Approximate monthly net before OpenAI/Render:
 
-| Listed price | After 15% Play fee | After 15% Play + 1% RevenueCat |
+| Listed price | After 15% store fee | After 15% store + 1% RevenueCat |
 | ---: | ---: | ---: |
 | $4.99 | $4.24 | $4.19 |
 | $12.99 | $11.04 | $10.91 |
@@ -521,8 +536,8 @@ The desired free limit of 1 book / about 100 pages needs a stable user identity.
 Options:
 
 - RevenueCat anonymous app user id for every install, including free users.
-- Google Play account-backed purchase/entitlement identity once subscriptions
-  are live.
+- Google Play or App Store account-backed purchase/entitlement identity once
+  subscriptions are live.
 - Google Sign-In if we need account portability.
 - Play Integrity / App Set ID as an additional abuse signal, not the only user
   identity.
@@ -547,8 +562,8 @@ are also weak and can punish shared networks. For public release, send a stable
    no vendor bill, but it is a premium-feeling feature and a strong upgrade
    reason.
 7. DONE in source: Free is 1 book/about 100 pages with no read-aloud.
-8. Wire RevenueCat production SDK/user id so paid limits follow the Play account
-   / RevenueCat customer, not only a local device install id.
+8. Wire RevenueCat production SDK/user id so paid limits follow the store
+   account / RevenueCat customer, not only a local device install id.
 9. Move OpenAI production billing to a dedicated readFlow project/key with spend
    alerts.
 10. Re-check OpenAI model pricing and choose the AI text model/TTS model

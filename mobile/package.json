@@ -8,7 +8,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "check:release": "node ./scripts/check-release-config.mjs",
-    "build:android:internal": "npm run check:release && eas build -p android --profile internal"
+    "build:android:internal": "npm run check:release && eas build -p android --profile internal",
+    "build:ios:internal": "npm run check:release && eas build -p ios --profile internal"
   },
   "dependencies": {
     "@dr.pogodin/react-native-fs": "^2.39.1",
