@@ -9,6 +9,12 @@ EAS account: **tohid123** · Project: **tohid123/readflow**
 For the full account map, service ownership, current build state, and takeover
 notes, start with **[PROJECT.md](PROJECT.md)**.
 
+For paid launch prep, also read **[PAYMENT_SETUP.md](PAYMENT_SETUP.md)** and
+**[PLAY_RELEASE_PACKET.md](PLAY_RELEASE_PACKET.md)**. Legal/app-content drafts
+are in **[PRIVACY_POLICY_DRAFT.md](PRIVACY_POLICY_DRAFT.md)**,
+**[TERMS_OF_USE_DRAFT.md](TERMS_OF_USE_DRAFT.md)**, and
+**[PLAY_DATA_SAFETY_DRAFT.md](PLAY_DATA_SAFETY_DRAFT.md)**.
+
 > **Sections 0–5 below are the original first‑time setup guide.**
 > **If you just want to ship a new version, read [TL;DR — Cut a NEW build](#tldr--cut-a-new-build-do-this-every-release) first.**
 
@@ -54,6 +60,10 @@ are complete:
   deletion/contact flow.
 - Play Console App content must be complete: Data safety, privacy policy,
   target audience, ads declaration, content rating, and review access notes.
+- Play Store listing, review notes, subscription disclosure, privacy/terms
+  drafts, and Data Safety worksheet are now prepared in the release packet files
+  linked at the top of this guide. Review them before submitting anything to
+  Play.
 
 For a real paid launch, the order is:
 1. Deploy/fix production Render backend.
@@ -389,11 +399,14 @@ service‑account key in Play Console → Setup → API access.)
 ## 3) Fill out the required Play Console sections
 
 ### Store listing  (Main store listing)
+- Use the current copy in **[PLAY_RELEASE_PACKET.md](PLAY_RELEASE_PACKET.md)**.
 - **App name:** readFlow
-- **Short description (≤80 chars):** "Turn any PDF into a natural‑voice audiobook. Read along, hands‑free."
-- **Full description:** Describe: import PDFs, read‑aloud with natural or device voice,
-  OCR for scanned PDFs, follows along and remembers your place, adjustable font/spacing/speed.
-  Do **not** promise "free AI forever" or unlimited anything (avoid misleading claims).
+- **Short description:** keep under 80 characters and mention PDFs/Word,
+  phone reading, voice, and AI without promising perfection.
+- **Full description:** mention supported PDFs, text-based Word `.docx`, Phone
+  voice, rF AI, capped Cloud AI, OCR on AI plans, bookmarks, and AI help.
+  Do **not** promise "free AI forever", unlimited cloud voice, perfect OCR, or
+  every language/document.
 - **App icon:** 512×512 PNG (export from `assets/icon.png`).
 - **Feature graphic:** 1024×500 PNG.
 - **Phone screenshots:** 2–8, 16:9 or 9:16 (use the app on your S10).
@@ -438,6 +451,10 @@ service‑account key in Play Console → Setup → API access.)
 ---
 
 ## 4) Policy‑safe checklist for v1 (intentionally minimal)
+
+For a paid release, this older minimal checklist is superseded by
+`PAYMENT_SETUP.md` and `PLAY_RELEASE_PACKET.md`. Keep this section only for a
+free/internal preview build where purchases are not live.
 
 - ✅ No subscriptions / no in‑app purchases yet.
 - ✅ No AI paid limits / paywall (paywall code is inert; `ENFORCE_FREE_LIMIT=false`).

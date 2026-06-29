@@ -799,7 +799,7 @@ function LanguageSettingsSheet({
       bookLanguage: language.code,
       deviceVoiceId: undefined,
       voiceEngine:
-        (preferences.voiceEngine === "local_ai" && !language.edgeAi) ||
+        (preferences.voiceEngine === "local_ai" && !language.rfAi) ||
         (preferences.voiceEngine === "cloud" && !language.cloudAiVoice)
           ? "device"
           : preferences.voiceEngine,
@@ -841,7 +841,7 @@ function LanguageSettingsSheet({
                     </Text>
                     <Text style={[styles.languageChoiceMeta, active && styles.languageChoiceMetaOn]}>
                       OCR {language.ocrLang}
-                      {language.edgeAi ? " · rF AI" : ""}
+                      {language.rfAi ? " · rF AI" : ""}
                     </Text>
                   </Pressable>
                 );
@@ -942,7 +942,7 @@ function VoiceSettingsSheet({
       });
       return;
     }
-    if (engine === "local_ai" && !readingLanguage.edgeAi) {
+    if (engine === "local_ai" && !readingLanguage.rfAi) {
       onNotice({
         title: "rF AI language pack",
         body: `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`,
@@ -1001,15 +1001,15 @@ function VoiceSettingsSheet({
                 title="rF AI"
                 detail={
                   localStatus.engineInstalled
-                    ? readingLanguage.edgeAi
+                    ? readingLanguage.rfAi
                       ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
                       : "English voice pack only for now. More rF AI languages can be added later."
                     : localStatus.detail
                 }
                 active={preferences.voiceEngine === "local_ai"}
-                locked={!localStatus.engineInstalled || !readingLanguage.edgeAi}
+                locked={!localStatus.engineInstalled || !readingLanguage.rfAi}
                 stateLabel={
-                  !readingLanguage.edgeAi
+                  !readingLanguage.rfAi
                     ? "English"
                     : localStatus.engineInstalled
                     ? undefined

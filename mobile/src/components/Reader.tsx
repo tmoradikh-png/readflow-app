@@ -97,7 +97,7 @@ function preferredVoiceMode(
   if (
     preferences.voiceEngine === "local_ai" &&
     entitlement.features.ai &&
-    readingLanguage.edgeAi &&
+    readingLanguage.rfAi &&
     localVoiceReady !== false
   ) {
     return "local";
@@ -207,7 +207,7 @@ export function Reader({
       entitlement.limits.cloudVoiceCharsPerMonth > 0
   );
   const localVoiceReady = localVoiceStatus?.engineInstalled;
-  const canUseEdgeVoice = Boolean(entitlement.features.ai && readingLanguage.edgeAi && localVoiceReady);
+  const canUseRfVoice = Boolean(entitlement.features.ai && readingLanguage.rfAi && localVoiceReady);
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement, localVoiceReady);
   const readerVoiceOptions = useMemo(
     () => [
@@ -222,14 +222,14 @@ export function Reader({
         label: "rF AI",
         detail: !entitlement.features.ai
           ? "AI Pro"
-          : !readingLanguage.edgeAi
+          : !readingLanguage.rfAi
           ? "English"
           : localVoiceStatus == null
             ? "Checking"
             : localVoiceReady
               ? "On phone"
               : "Download",
-        locked: !canUseEdgeVoice,
+        locked: !canUseRfVoice,
       },
       {
         engine: "cloud" as const,
@@ -240,13 +240,13 @@ export function Reader({
     ],
     [
       canUseCloudVoice,
-      canUseEdgeVoice,
+      canUseRfVoice,
       canUseReadAloud,
       entitlement.features.ai,
       localVoiceReady,
       localVoiceStatus,
       readingLanguage.cloudAiVoice,
-      readingLanguage.edgeAi,
+      readingLanguage.rfAi,
     ]
   );
 
@@ -397,7 +397,7 @@ export function Reader({
       );
       return;
     }
-    if (engine === "local_ai" && !readingLanguage.edgeAi) {
+    if (engine === "local_ai" && !readingLanguage.rfAi) {
       openFeatureLock(
         "rF AI language pack",
         `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`
@@ -451,7 +451,7 @@ export function Reader({
       );
       return true;
     }
-    if (!readingLanguage.edgeAi) {
+    if (!readingLanguage.rfAi) {
       openFeatureLock(
         "rF AI language pack",
         `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} on eligible plans until we add this language pack.`

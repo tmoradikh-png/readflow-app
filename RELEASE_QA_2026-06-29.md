@@ -136,7 +136,7 @@ PDF inside the app before a public release.
 - UI exposes more OCR languages than are currently bundled in the Docker image.
   Missing packs can download at runtime through Tesseract.js, but first use may
   be slower and depends on network access from Render.
-- Edge AI voice is still English-only in this build. Other Edge AI voice packs
+- rF AI voice is still English-only in this build. Other rF AI voice packs
   should be added as downloadable language packs after quality/size review.
 - Public subscription enforcement still depends on final RevenueCat production
   setup. Internal Render uses dev override and must not be treated as public

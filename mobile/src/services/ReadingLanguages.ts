@@ -6,7 +6,7 @@ export interface ReadingLanguage {
   ocrLang: string;
   aiLanguage: string;
   voicePrefixes: string[];
-  edgeAi: boolean;
+  rfAi: boolean;
   /** Cloud AI voice should only be selectable after language quality QA. */
   cloudAiVoice: boolean;
   rtl?: boolean;
@@ -21,7 +21,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "eng",
     aiLanguage: "English",
     voicePrefixes: ["en"],
-    edgeAi: true,
+    rfAi: true,
     cloudAiVoice: true,
   },
   {
@@ -32,7 +32,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "spa",
     aiLanguage: "Spanish",
     voicePrefixes: ["es"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -43,7 +43,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "fra",
     aiLanguage: "French",
     voicePrefixes: ["fr"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -54,7 +54,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "deu",
     aiLanguage: "German",
     voicePrefixes: ["de"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -65,7 +65,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "ita",
     aiLanguage: "Italian",
     voicePrefixes: ["it"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -76,7 +76,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "por",
     aiLanguage: "Portuguese",
     voicePrefixes: ["pt"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -87,7 +87,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "nld",
     aiLanguage: "Dutch",
     voicePrefixes: ["nl"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -98,7 +98,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "swe",
     aiLanguage: "Swedish",
     voicePrefixes: ["sv"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -109,7 +109,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "nor",
     aiLanguage: "Norwegian",
     voicePrefixes: ["no", "nb", "nn"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -120,7 +120,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "dan",
     aiLanguage: "Danish",
     voicePrefixes: ["da"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -131,7 +131,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "fin",
     aiLanguage: "Finnish",
     voicePrefixes: ["fi"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -142,7 +142,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "tur",
     aiLanguage: "Turkish",
     voicePrefixes: ["tr"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -153,7 +153,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "ind",
     aiLanguage: "Indonesian",
     voicePrefixes: ["id", "in"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -164,7 +164,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "vie",
     aiLanguage: "Vietnamese",
     voicePrefixes: ["vi"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: true,
   },
   {
@@ -175,7 +175,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "jpn",
     aiLanguage: "Japanese",
     voicePrefixes: ["ja"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: false,
   },
   {
@@ -186,7 +186,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "kor",
     aiLanguage: "Korean",
     voicePrefixes: ["ko"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: false,
   },
   {
@@ -197,7 +197,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "chi_sim",
     aiLanguage: "Chinese",
     voicePrefixes: ["zh"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: false,
   },
   {
@@ -208,7 +208,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "hin",
     aiLanguage: "Hindi",
     voicePrefixes: ["hi"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: false,
   },
   {
@@ -219,7 +219,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "rus",
     aiLanguage: "Russian",
     voicePrefixes: ["ru"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: false,
   },
   {
@@ -230,7 +230,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "ara",
     aiLanguage: "Arabic",
     voicePrefixes: ["ar"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: false,
     rtl: true,
   },
@@ -242,7 +242,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     ocrLang: "fas",
     aiLanguage: "Persian",
     voicePrefixes: ["fa", "fas"],
-    edgeAi: false,
+    rfAi: false,
     cloudAiVoice: false,
     rtl: true,
   },

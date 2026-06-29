@@ -5,10 +5,13 @@ Updated: 2026-06-29
 Read this file first when taking over the project. It is the high-level map of
 accounts, services, release status, and operational habits. Then use
 `README.md` for local setup, `RELEASE_GUIDE.md` for Android builds,
+`PAYMENT_SETUP.md` for Play Billing/RevenueCat, `PLAY_RELEASE_PACKET.md` for
+Play submission text, `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
+`PLAY_DATA_SAFETY_DRAFT.md` for legal/app-content drafts,
 `BACKEND_FEATURE_ENFORCEMENT.md` for paid-feature enforcement, and
-`MARKETING_PLAY_STORE.md` for website/Play Store messaging. Use `COST_MODEL.md`
-for pricing, OpenAI cost, free-tier limits, AI action limits, and cloud voice
-allowance decisions.
+`MARKETING_PLAY_STORE.md` for website/Play Store messaging. Use
+`COST_MODEL.md` for pricing, OpenAI cost, free-tier limits, AI action limits,
+and cloud voice allowance decisions.
 
 ## Product
 
@@ -73,6 +76,16 @@ Current Play release prep in source `1.0.23`:
   wired in the mobile app and the production Render backend has `RC_SECRET_KEY`
   set. Until then, a public build is a free-preview release with locked paid
   features and plan UI marked as not purchasable.
+- Payment/legal release prep added on 2026-06-29:
+  - `PAYMENT_SETUP.md` records product ids, RevenueCat/Play setup, backend env,
+    and sandbox tests.
+  - `PLAY_RELEASE_PACKET.md` records Play listing copy, review notes,
+    subscription disclosure, and release gates.
+  - `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
+    `PLAY_DATA_SAFETY_DRAFT.md` are publication drafts that must be reviewed
+    before going live.
+  - The old local-AI label has been removed from tracked app source; the public
+    customer-facing name is `rF AI`.
 
 Changes after the latest finished build and included in source `1.0.18`:
 - Cloud AI voice is gated by `features.cloudVoice`, not generic AI.

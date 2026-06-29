@@ -6,6 +6,11 @@ This file is for the marketing/web/Play Store team. It describes what readFlow
 does, how to present each tier, and how to word claims carefully while the app,
 OCR, AI voice, and multilingual reading are still improving.
 
+For Play submission operations, use `PLAY_RELEASE_PACKET.md`. For subscriptions
+and product ids, use `PAYMENT_SETUP.md`. For legal pages and Data Safety, start
+from `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
+`PLAY_DATA_SAFETY_DRAFT.md`.
+
 ## Brand
 
 - Product name: `readFlow`

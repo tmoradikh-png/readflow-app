@@ -8,6 +8,11 @@
 > Unlimited cloud TTS is not economically safe. Natural voice is gated behind
 > the explicit `cloudVoice` feature and a monthly character cap, not generic
 > `ai`.
+>
+> Payment note: read `PAYMENT_SETUP.md` before enabling public purchases.
+> RevenueCat/Play Billing must be wired in mobile and production Render must
+> have `ENTITLEMENTS_DEV_OVERRIDE=false` plus `RC_SECRET_KEY` before paid
+> entitlements are trusted.
 
 ---
 

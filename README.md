@@ -29,10 +29,15 @@ ReadFlow/
 Start with **[PROJECT.md](PROJECT.md)** when taking over the project. It records
 the service accounts, public URLs/IDs, current build state, icon process,
 backend deployment notes, paid-feature enforcement, pricing/cost notes, and
-release habits. Use **[COST_MODEL.md](COST_MODEL.md)** before changing paid
-tiers, free limits, AI features, or cloud voice allowances. Keep the docs updated
-whenever accounts, build codes, backend URLs, costs, or production workflows
-change.
+release habits. Use **[PAYMENT_SETUP.md](PAYMENT_SETUP.md)** before wiring
+Play Billing/RevenueCat, **[PLAY_RELEASE_PACKET.md](PLAY_RELEASE_PACKET.md)**
+for Play submission text, and **[COST_MODEL.md](COST_MODEL.md)** before
+changing paid tiers, free limits, AI features, or cloud voice allowances. Legal
+and Play App Content drafts live in **[PRIVACY_POLICY_DRAFT.md](PRIVACY_POLICY_DRAFT.md)**,
+**[TERMS_OF_USE_DRAFT.md](TERMS_OF_USE_DRAFT.md)**, and
+**[PLAY_DATA_SAFETY_DRAFT.md](PLAY_DATA_SAFETY_DRAFT.md)**. Keep the docs
+updated whenever accounts, build codes, backend URLs, costs, or production
+workflows change.
 
 **Why a backend?** The OpenAI key must never ship inside the phone app. The app
 talks only to our backend; the backend talks to OpenAI. The backend also caches
