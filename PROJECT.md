@@ -261,6 +261,17 @@ Changes after the latest finished build and included in source `1.0.18`:
   app `1.0.18` / code `18` without fatal startup logcat lines. The phone was
   intentionally kept awake while plugged in for long QA with ADB stay-awake
   settings.
+- 2026-06-29 owner-reported failed Persian PDF
+  `G:\My Drive\Studies\Philosophy\book\__ ___ ____ ______ - ________ ____ ____ ____.pdf`:
+  this is an encrypted/copy-disabled old Word/Ghostscript 7.04 PDF (`jafar.doc`,
+  234 pages) whose pages are effectively scanned images. Native extraction is
+  not a reliable path. Backend Persian OCR now uses `fas+ara` so Tesseract can
+  borrow Arabic glyph statistics, normalizes Arabic `ك/ي/ى/ة` back toward
+  Persian forms, thresholds Persian/Arabic OCR images for cleaner black text,
+  strips standalone OCR page-number lines, and bumps the OCR cache version so
+  old bad OCR pages are not reused. Local API test returned improved OCR for
+  eager page 2 and on-demand page 5, but quality is still limited by the source
+  scan; this is an AI Pro/Power OCR book, not a Reader Plus native-text book.
 
 ## Account Map
 

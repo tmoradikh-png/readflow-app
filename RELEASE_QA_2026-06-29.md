@@ -70,6 +70,7 @@ issues with Google Drive/Downloads files.
 | `Dayeratol_Maaref_Sotoon_Panjom[ebook.VeyQ.ir].pdf` | Scanned/image Persian book | Pass as AI Pro behavior. First 4 pages OCR'd, remaining 198 pending for on-demand OCR. |
 | `Why am I not a Christian.pdf` | Scanned/image English book | Correctly behaves like OCR-needed content, not cheap native text. |
 | `learn-german-with-stories_-cafe-in-berlin.pdf` | German text-layer PDF | Pass. Native German text returned with no mojibake. |
+| `__ ___ ____ ______ - ________ ____ ____ ____.pdf` | Encrypted/copy-disabled old Ghostscript Persian scan | Requires OCR. Native extraction is unreliable; Persian OCR was improved with `fas+ara`, Persian letter normalization, thresholding, cache-version bump, and OCR page-number cleanup. Local API test confirmed eager page 2 and on-demand page 5 return readable but imperfect OCR. |
 
 Reader Plus guardrail was tested locally with `DEV_DEFAULT_TIER=reader_plus`:
 
@@ -114,4 +115,3 @@ PDF inside the app before a public release.
   entitlement configuration.
 - Manual phone import/delete/playback/rotation checks are still required before
   store rollout, especially after any fresh native build.
-

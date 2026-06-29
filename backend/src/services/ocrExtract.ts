@@ -25,6 +25,7 @@ const OCR_PREPROCESS = (process.env.OCR_PREPROCESS ?? "true").toLowerCase() !== 
 const OCR_LANG_PATH = process.env.OCR_LANG_PATH || "";
 const OCR_TESSDATA_CACHE_PATH =
   process.env.OCR_TESSDATA_CACHE_PATH || "/tmp/readflow-tessdata";
+const OCR_ENGINE_VERSION = "2026-06-29-fas-ara-v4";
 
 export interface OcrPageResult {
   text: string;
@@ -255,12 +256,16 @@ async function renderPageToPng(pdfDoc: any, pageNumber: number): Promise<Buffer 
  * Clean an image for OCR: grayscale, stretch contrast, denoise and sharpen.
  * Tesseract is far more accurate on crisp black-on-white than on raw scans.
  */
-async function preprocess(png: Buffer): Promise<Buffer> {
+async function preprocess(png: Buffer, lang: string): Promise<Buffer> {
   if (!sharpLib) return png;
   try {
-    return await sharpLib(png)
+    let image = sharpLib(png)
       .grayscale()
-      .normalize() // stretch contrast to full range
+      .normalize(); // stretch contrast to full range
+    if (lang === "fas" || lang === "ara") {
+      image = image.threshold(175);
+    }
+    return await image
       .median(1) // remove speckle noise
       .sharpen()
       .png()
@@ -321,7 +326,8 @@ function findLocalLangPath(fs: any, path: any, lang: string): string | null {
     process.cwd(),
   ].filter(Boolean);
   for (const candidate of candidates) {
-    if (fs.existsSync(path.join(candidate, `${lang}.traineddata`))) {
+    const parts = lang.split("+").filter(Boolean);
+    if (parts.every((part) => fs.existsSync(path.join(candidate, `${part}.traineddata`)))) {
       return candidate;
     }
   }
@@ -329,14 +335,34 @@ function findLocalLangPath(fs: any, path: any, lang: string): string | null {
 }
 
 /** Normalize OCR text: trim line ends, collapse big gaps, keep real line breaks. */
-function tidy(text: string): string {
-  return (text || "")
+function tidy(text: string, lang: string): string {
+  return normalizeOcrText(text || "", lang)
     .replace(/\r/g, "")
     .split("\n")
-    .map((l) => l.trimEnd())
+    .map((l, index) => cleanOcrLine(l.trimEnd(), lang, index))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n") // collapse big gaps to a single paragraph break
     .trim();
+}
+
+function normalizeOcrText(text: string, lang: string): string {
+  let out = text.replace(/\u0640/g, "");
+  if (lang === "fas") {
+    out = out
+      .replace(/ك/g, "ک")
+      .replace(/[يى]/g, "ی")
+      .replace(/ة/g, "ه");
+  }
+  return out;
+}
+
+function cleanOcrLine(line: string, lang: string, index: number): string {
+  void index;
+  if (lang === "fas" || lang === "ara") {
+    if (/^[\s\d۰-۹٠-٩]{1,8}$/.test(line)) return "";
+    return line.replace(/^[\s\d۰-۹٠-٩]{1,8}(?=[\u0600-\u06FF])/, "");
+  }
+  return line;
 }
 
 /**
@@ -356,8 +382,9 @@ export async function ocrPdfPages(
   if (!OCR_ENABLED || pageNumbers.length === 0) return results;
 
   const ocrLang = resolveOcrLang(lang);
+  const workerLang = workerLangForOcr(ocrLang);
   // Cache is keyed by document AND language (same scan can be OCR'd per-lang).
-  const docHash = `${hashBuffer(buffer)}.${ocrLang}`;
+  const docHash = `${hashBuffer(buffer)}.${ocrLang}.${workerLang}.${OCR_ENGINE_VERSION}`;
 
   // 1) Serve whatever we already have cached (instant on re-upload).
   const misses: number[] = [];
@@ -369,7 +396,7 @@ export async function ocrPdfPages(
   if (misses.length === 0) return results;
 
   if (!(await loadRenderDeps())) return results;
-  const worker = await getWorker(ocrLang);
+  const worker = await getWorker(workerLang);
   if (!worker) return results;
 
   const targets = misses.slice(0, OCR_MAX_PAGES);
@@ -385,10 +412,10 @@ export async function ocrPdfPages(
     for (const pageNumber of targets) {
       const raw = await renderPageToPng(pdfDoc, pageNumber);
       if (!raw) continue;
-      const img = await preprocess(raw);
+      const img = await preprocess(raw, ocrLang);
       try {
         const { data } = await worker.recognize(img);
-        const text = tidy(data?.text || "");
+        const text = tidy(data?.text || "", ocrLang);
         if (text) {
           const result: OcrPageResult = {
             text,
@@ -413,5 +440,13 @@ export async function ocrPdfPages(
   }
 
   return results;
+}
+
+function workerLangForOcr(lang: string): string {
+  // Persian pages in old scanned books are recognized more reliably when
+  // Tesseract can borrow Arabic glyph statistics too. We normalize back to
+  // Persian codepoints after recognition.
+  if (lang === "fas") return "fas+ara";
+  return lang;
 }
 
