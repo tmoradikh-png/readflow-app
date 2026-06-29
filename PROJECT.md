@@ -30,14 +30,14 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.18`
-- Current source Android `versionCode`: `18`
+- Current source version: `1.0.20`
+- Current source Android `versionCode`: `20`
 - Latest finished EAS build: `1.0.17` / code `17`
 - Latest finished EAS build id: `2900d21c-48f4-42aa-9434-f3bd2dcb06a4`
 - Latest finished AAB:
   `https://expo.dev/artifacts/eas/ePqSk5_ZdeSGG11pZ56jU91CZ0DgWpXb3fe6PuTaDJI.aab`
-- Next Android build should use code `18` unless another EAS build has already
-  consumed a higher code. Source is prepared for code `18`; latest finished
+- Next Android build should use code `20` unless another EAS build has already
+  consumed a higher code. Source is prepared for code `20`; latest finished
   build is still code `17`.
 
 Changes included in the latest finished build:
@@ -159,6 +159,9 @@ Changes after the latest finished build and included in source `1.0.18`:
   - Library remove is visible on document cards and the Continue card, removes
     cached parsed text/bookmarks, and updates metadata before deleting the
     physical file so deletion does not feel stuck.
+- 2026-06-29 local phone build `1.0.20` cleaned the shelf UI by removing the
+  repeated voice status strip/card. Edge AI/Phone/Cloud details now live in the
+  Voice sheet instead of crowding the first screen.
 - Multilingual PDF endpoint test on 2026-06-29 used downloaded public samples
   for Persian text, Persian scanned/image, Arabic, Russian, Japanese, and
   Chinese. Results against local backend `http://127.0.0.1:4000`: Persian text
@@ -612,11 +615,12 @@ Leaving the app/reader:
   original file in local library storage, caches OCR'd pages, saves pending OCR
   pages, pauses with an explanation when monthly OCR quota is reached, and can
   re-upload the local file later to mint a fresh OCR token after quota reset.
-- Background OCR can now be paused/resumed by the user. `OcrLoader.pause()` stops
-  new OCR page requests after the current batch, keeps completed pages saved in
-  `DocCache`, and `OcrLoader.resume()` continues from the remaining pending
-  pages. Reader and Library both expose Pause/Resume OCR controls while a job is
-  active.
+- Background OCR can now be paused/resumed/stopped by the user.
+  `OcrLoader.pause()` stops new OCR page requests after the current batch, keeps
+  completed pages saved in `DocCache`, and `OcrLoader.resume()` continues from
+  the remaining pending pages. `OcrLoader.stop()` cancels the background job,
+  keeps completed cached pages, and lets the user start `Fix text` again later.
+  Reader and Library both expose OCR controls while a job is active.
 - React Native cannot always distinguish phone lock from Home/app switch in JS.
   If exact "paid lock continues, Home/app switch stops" behavior becomes
   mandatory for natural voice too, add a small native Android signal/module

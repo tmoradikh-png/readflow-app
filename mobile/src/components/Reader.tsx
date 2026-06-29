@@ -364,6 +364,11 @@ export function Reader({
     if (next) setOcrProgress(next);
   }
 
+  function stopOcr() {
+    OcrLoader.stop(doc.docId);
+    setOcrProgress(null);
+  }
+
   useEffect(() => {
     return () => {
       // Hard-stop on unmount so the voice never keeps reading after you leave.
@@ -1130,24 +1135,32 @@ export function Reader({
                   </Pressable>
                 </View>
               ) : null}
-              {ocrProgress.pausedReason === "user" || !ocrProgress.pausedReason ? (
-                <Pressable
-                  style={[
-                    styles.progressButton,
-                    ocrProgress.pausedReason === "user" && styles.progressButtonSecondary,
-                  ]}
-                  onPress={toggleOcrPause}
-                >
-                  <Text
+              <View style={styles.progressActionRow}>
+                {ocrProgress.pausedReason === "user" || !ocrProgress.pausedReason ? (
+                  <Pressable
                     style={[
-                      styles.progressButtonText,
-                      ocrProgress.pausedReason === "user" && styles.progressButtonSecondaryText,
+                      styles.progressButton,
+                      ocrProgress.pausedReason === "user" && styles.progressButtonSecondary,
                     ]}
+                    onPress={toggleOcrPause}
                   >
-                    {ocrProgress.pausedReason === "user" ? "Resume OCR" : "Pause OCR"}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.progressButtonText,
+                        ocrProgress.pausedReason === "user" && styles.progressButtonSecondaryText,
+                      ]}
+                    >
+                      {ocrProgress.pausedReason === "user" ? "Resume OCR" : "Pause OCR"}
+                    </Text>
+                  </Pressable>
+                ) : null}
+                <Pressable
+                  style={[styles.progressButton, styles.progressButtonDanger]}
+                  onPress={stopOcr}
+                >
+                  <Text style={styles.progressButtonText}>Stop OCR</Text>
                 </Pressable>
-              ) : null}
+              </View>
             </View>
           ) : null}
         </>
@@ -1521,6 +1534,12 @@ const styles = StyleSheet.create({
   progressActions: {
     gap: 8,
   },
+  progressActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   progressHint: {
     color: theme.colors.textDim,
     fontSize: 12,
@@ -1546,6 +1565,9 @@ const styles = StyleSheet.create({
   },
   progressButtonSecondaryText: {
     color: theme.colors.text,
+  },
+  progressButtonDanger: {
+    backgroundColor: theme.colors.danger,
   },
   progressTrack: {
     height: 6,

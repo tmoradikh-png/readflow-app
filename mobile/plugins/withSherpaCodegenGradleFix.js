@@ -37,7 +37,7 @@ param([string]$root)
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path -LiteralPath $root)) { return }
 $count = 0
-Get-ChildItem -LiteralPath $root -Recurse -Force -Filter "*.so" | Where-Object {
+Get-ChildItem -LiteralPath $root -Recurse -Force -Filter "*.so" -ErrorAction SilentlyContinue | Where-Object {
     -not $_.PSIsContainer -and (($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
 } | ForEach-Object {
     $path = $_.FullName

@@ -465,17 +465,22 @@ export function LibraryScreen({
     confirmRebuildWithOcr(item);
   }
 
+  function stopOcrAction(item: LibraryItem) {
+    OcrLoader.stop(item.id);
+    setRebuildStarting(item.id, false);
+    setRebuildProgress((current) => {
+      const next = { ...current };
+      delete next[item.id];
+      return next;
+    });
+  }
+
   const recent = items[0];
   const rest = items.slice(1);
   const isPaid = Boolean(
     entitlement.features.ai || entitlement.features.ocr || entitlement.features.unlimitedLibrary
   );
   const planLabel = isPaid ? entitlement.name : "Free";
-  const cloudVoiceRemaining =
-    usage?.remaining.cloudVoiceChars ?? entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
-  const cloudVoiceLimit = entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
-  const cloudVoiceReady = readingLanguage.cloudAiVoice;
-
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
       <View
@@ -525,34 +530,6 @@ export function LibraryScreen({
 
       {error && <Text style={styles.error}>{error}</Text>}
 
-      <View style={styles.statusStrip}>
-        <View style={styles.statusDot} />
-        <Text style={styles.statusText}>
-          {preferences.voiceEngine === "cloud"
-            ? !cloudVoiceReady
-              ? `Cloud AI voice is not ready for ${readingLanguage.label} yet - use Phone voice.`
-              : cloudVoiceLimit > 0
-              ? `Cloud AI selected - ${formatChars(cloudVoiceRemaining)} left this month.`
-              : "Cloud AI selected - upgrade or use device voice before reading."
-            : preferences.voiceEngine === "local_ai"
-              ? localStatus.engineInstalled
-                ? "Edge AI selected - ready on this phone with no cloud voice cost."
-                : localStatus.nativeAvailable
-                  ? "Edge AI selected - download the voice model before reading."
-                  : "Edge AI selected - install the new native build first."
-              : "Device voice selected - unlimited reading with no readFlow voice cost."}
-        </Text>
-      </View>
-
-      <VoiceOverview
-        preferences={preferences}
-        cloudVoiceRemaining={cloudVoiceRemaining}
-        cloudVoiceLimit={cloudVoiceLimit}
-        localStatus={localStatus}
-        readingLanguage={readingLanguage}
-        onPress={() => setShowVoice(true)}
-      />
-
       {items.length === 0 ? (
         <Empty onAdd={importNew} loading={loading} isPaid={isPaid} />
       ) : (
@@ -571,6 +548,7 @@ export function LibraryScreen({
               onPress={() => openItem(recent)}
               onRemove={() => confirmRemove(recent)}
               onRebuildOcr={() => handleOcrAction(recent)}
+              onStopOcr={() => stopOcrAction(recent)}
             />
           )}
 
@@ -592,6 +570,7 @@ export function LibraryScreen({
                 onPress={() => openItem(item)}
                 onRemove={() => confirmRemove(item)}
                 onRebuildOcr={() => handleOcrAction(item)}
+                onStopOcr={() => stopOcrAction(item)}
               />
             ))}
             {rest.length === 0 && (
@@ -654,10 +633,6 @@ function formatChars(n: number): string {
   if (n <= 0) return "0 chars";
   if (n >= 1000) return `${Math.round(n / 1000)}k chars`;
   return `${n} chars`;
-}
-
-function estimatePages(chars: number): number {
-  return Math.max(0, Math.floor(chars / 1650));
 }
 
 function importConnectionMessage(): string {
@@ -786,46 +761,6 @@ function regionRank(regionKey: string, readingLanguage: ReadingLanguage): number
     PT: 9,
   };
   return ranks[regionKey] ?? 9;
-}
-
-function VoiceOverview({
-  preferences,
-  cloudVoiceRemaining,
-  cloudVoiceLimit,
-  localStatus,
-  readingLanguage,
-  onPress,
-}: {
-  preferences: ReadingPreferences;
-  cloudVoiceRemaining: number;
-  cloudVoiceLimit: number;
-  localStatus: LocalNeuralVoiceStatus;
-  readingLanguage: ReadingLanguage;
-  onPress: () => void;
-}) {
-  const isCloud = preferences.voiceEngine === "cloud";
-  const isLocal = preferences.voiceEngine === "local_ai";
-  return (
-    <Pressable style={styles.voiceOverview} onPress={onPress}>
-      <View style={styles.voiceOverviewTop}>
-        <Text style={styles.voiceOverviewTitle}>Reading voice</Text>
-        <Text style={styles.voiceOverviewAction}>Change</Text>
-      </View>
-      <Text style={styles.voiceOverviewBody}>
-        {isCloud
-          ? !readingLanguage.cloudAiVoice
-            ? `Cloud AI voice is not quality-approved for ${readingLanguage.label} yet. Use Phone voice until this language passes QA.`
-            : cloudVoiceLimit > 0
-            ? `Cloud AI: ${formatChars(cloudVoiceRemaining)} left, about ${estimatePages(cloudVoiceRemaining)} pages.`
-            : "Cloud AI needs AI Pro or Power. Device voice remains unlimited."
-          : isLocal
-            ? localStatus.engineInstalled
-              ? "Edge AI: ready on this phone. It uses battery and CPU, with no cloud cost."
-              : `${localStatus.title}. ${localStatus.detail}`
-            : "Phone voice: unlimited, offline after import, and no readFlow AI voice cost."}
-      </Text>
-    </Pressable>
-  );
 }
 
 function LanguageSettingsSheet({
@@ -1393,6 +1328,7 @@ function ContinueCard({
   onPress,
   onRemove,
   onRebuildOcr,
+  onStopOcr,
 }: {
   item: LibraryItem;
   busy: boolean;
@@ -1403,6 +1339,7 @@ function ContinueCard({
   onPress: () => void;
   onRemove: () => void;
   onRebuildOcr: () => void;
+  onStopOcr: () => void;
 }) {
   const pct = Math.round((item.progress || 0) * 100);
   return (
@@ -1428,6 +1365,12 @@ function ContinueCard({
                 ]}
               />
             </View>
+            <OcrJobControls
+              progress={rebuildProgress}
+              actionLabel={rebuildActionLabel}
+              onAction={onRebuildOcr}
+              onStop={onStopOcr}
+            />
           </View>
         ) : null}
       </View>
@@ -1441,7 +1384,7 @@ function ContinueCard({
       >
         <Text style={styles.cardRemoveText}>Remove</Text>
       </Pressable>
-      {item.kind === "pdf" ? (
+      {item.kind === "pdf" && !rebuildActive ? (
         <Pressable
           style={styles.cardOcrBtn}
           onPress={(event) => {
@@ -1468,6 +1411,7 @@ function DocCard({
   onPress,
   onRemove,
   onRebuildOcr,
+  onStopOcr,
 }: {
   item: LibraryItem;
   busy: boolean;
@@ -1478,6 +1422,7 @@ function DocCard({
   onPress: () => void;
   onRemove: () => void;
   onRebuildOcr: () => void;
+  onStopOcr: () => void;
 }) {
   return (
     <Pressable
@@ -1506,7 +1451,7 @@ function DocCard({
       >
         <Text style={styles.docRemoveText}>Remove</Text>
       </Pressable>
-      {item.kind === "pdf" ? (
+      {item.kind === "pdf" && !rebuildActive ? (
         <Pressable
           style={styles.docOcrBtn}
           onPress={(event) => {
@@ -1533,8 +1478,66 @@ function DocCard({
           />
         </View>
       ) : null}
+      {rebuildActive && rebuildProgress ? (
+        <OcrJobControls
+          compact
+          progress={rebuildProgress}
+          actionLabel={rebuildActionLabel}
+          onAction={onRebuildOcr}
+          onStop={onStopOcr}
+        />
+      ) : null}
       {busy && <ActivityIndicator style={styles.cardSpinner} color={theme.colors.accent} />}
     </Pressable>
+  );
+}
+
+function OcrJobControls({
+  progress,
+  actionLabel,
+  compact,
+  onAction,
+  onStop,
+}: {
+  progress: OcrProgress;
+  actionLabel: string;
+  compact?: boolean;
+  onAction: () => void;
+  onStop: () => void;
+}) {
+  const canPauseResume = progress.pausedReason === "user" || !progress.pausedReason;
+  return (
+    <View style={[styles.ocrControlRow, compact && styles.ocrControlRowCompact]}>
+      {canPauseResume ? (
+        <Pressable
+          style={[styles.ocrControlBtn, progress.pausedReason === "user" && styles.ocrControlBtnLight]}
+          onPress={(event) => {
+            event.stopPropagation();
+            onAction();
+          }}
+          hitSlop={6}
+        >
+          <Text
+            style={[
+              styles.ocrControlText,
+              progress.pausedReason === "user" && styles.ocrControlTextLight,
+            ]}
+          >
+            {actionLabel}
+          </Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        style={[styles.ocrControlBtn, styles.ocrControlBtnDanger]}
+        onPress={(event) => {
+          event.stopPropagation();
+          onStop();
+        }}
+        hitSlop={6}
+      >
+        <Text style={styles.ocrControlText}>Stop OCR</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -1689,64 +1692,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing(3),
     paddingBottom: theme.spacing(1),
   },
-  statusStrip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: theme.spacing(3),
-    marginBottom: theme.spacing(1.5),
-    paddingHorizontal: theme.spacing(1.25),
-    paddingVertical: theme.spacing(0.9),
-    borderRadius: 8,
-    backgroundColor: theme.colors.tealSoft,
-    borderWidth: 1,
-    borderColor: "#C7DED8",
-  },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: theme.colors.teal,
-  },
-  statusText: {
-    flex: 1,
-    color: theme.colors.textMute,
-    fontFamily: theme.fonts.sansMedium,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  voiceOverview: {
-    marginHorizontal: theme.spacing(3),
-    marginBottom: theme.spacing(2),
-    paddingHorizontal: theme.spacing(1.5),
-    paddingVertical: theme.spacing(1.25),
-    borderRadius: 8,
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  voiceOverviewTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 3,
-  },
-  voiceOverviewTitle: {
-    color: theme.colors.text,
-    fontFamily: theme.fonts.sansSemiBold,
-    fontSize: 14,
-  },
-  voiceOverviewAction: {
-    color: theme.colors.accent,
-    fontFamily: theme.fonts.sansSemiBold,
-    fontSize: 12,
-  },
-  voiceOverviewBody: {
-    color: theme.colors.textMute,
-    fontFamily: theme.fonts.sans,
-    fontSize: 12.5,
-    lineHeight: 17,
-  },
   scroll: { paddingHorizontal: theme.spacing(3), paddingBottom: theme.spacing(6) },
 
   /* continue card */
@@ -1834,6 +1779,37 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   rebuildFill: { height: "100%", backgroundColor: theme.colors.teal, borderRadius: 3 },
+  ocrControlRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7,
+    marginTop: 7,
+  },
+  ocrControlRowCompact: {
+    marginTop: 6,
+  },
+  ocrControlBtn: {
+    borderRadius: 8,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  ocrControlBtnLight: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+  },
+  ocrControlBtnDanger: {
+    backgroundColor: theme.colors.danger,
+  },
+  ocrControlText: {
+    color: theme.colors.onAccent,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 11,
+  },
+  ocrControlTextLight: {
+    color: theme.colors.text,
+  },
   ocrBtnDisabled: {
     opacity: 0.78,
   },

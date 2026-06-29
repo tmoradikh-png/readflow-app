@@ -31,6 +31,7 @@ export interface OcrProgress {
   pausedReason?: "offline" | "quota" | "expired" | "error" | "user";
   message?: string;
   complete: boolean; // nothing left to OCR
+  stopped?: boolean; // user cancelled this background OCR job
 }
 
 type Listener = (pages: PdfPage[], progress: OcrProgress) => void;
@@ -45,6 +46,7 @@ interface Job {
   priority: number | null;
   running: boolean;
   pausedByUser: boolean;
+  stopped: boolean;
   offline: boolean;
   pausedReason?: OcrProgress["pausedReason"];
   message?: string;
@@ -66,7 +68,7 @@ function bindAppState() {
     if (s !== "active") return;
     // Resume anything that paused while we were backgrounded/offline.
     for (const job of jobs.values()) {
-      if (job.pending.size > 0 && !job.running && !job.pausedByUser) {
+      if (job.pending.size > 0 && !job.running && !job.pausedByUser && !job.stopped) {
         job.offline = false;
         void runLoop(job);
       }
@@ -84,10 +86,13 @@ function progressOf(job: Job): OcrProgress {
     percent: job.total > 0 ? Math.round((done / job.total) * 100) : 100,
     offline: job.offline,
     pausedReason: job.pausedByUser ? "user" : job.pausedReason,
-    message: job.pausedByUser
+    message: job.stopped
+      ? "OCR stopped. Finished pages are saved; start Fix text again when you want to continue."
+      : job.pausedByUser
       ? "OCR paused. Resume when you want readFlow to continue loading scanned pages."
       : job.message,
-    complete: job.pending.size === 0,
+    complete: job.stopped || job.pending.size === 0,
+    stopped: job.stopped,
   };
 }
 
@@ -122,10 +127,10 @@ function mergePages(
 }
 
 function scheduleRetry(job: Job) {
-  if (job.retryTimer) return;
+    if (job.retryTimer) return;
   job.retryTimer = setTimeout(() => {
     job.retryTimer = null;
-    if (job.pending.size > 0 && !job.running && !job.pausedByUser) {
+    if (job.pending.size > 0 && !job.running && !job.pausedByUser && !job.stopped) {
       void runLoop(job);
     }
   }, RETRY_MS);
@@ -137,6 +142,7 @@ async function runLoop(job: Job) {
   bindAppState();
   try {
     while (job.pending.size > 0) {
+      if (job.stopped) break;
       if (job.pausedByUser) {
         job.pausedReason = "user";
         job.message = "OCR paused. Resume when you want readFlow to continue loading scanned pages.";
@@ -185,6 +191,7 @@ async function runLoop(job: Job) {
         scheduleRetry(job);
         break;
       }
+      if (job.stopped) break;
 
       for (const p of want) job.pending.delete(p);
       const improved = (results || []).filter((r) => r.text && r.text.trim().length > 0);
@@ -201,7 +208,7 @@ async function runLoop(job: Job) {
     }
   } finally {
     job.running = false;
-    if (job.pending.size === 0) notify(job);
+    if (!job.stopped && job.pending.size === 0) notify(job);
   }
 }
 
@@ -226,6 +233,7 @@ export const OcrLoader = {
         priority: null,
         running: false,
         pausedByUser: false,
+        stopped: false,
         offline: false,
         pausedReason: undefined,
         message: undefined,
@@ -236,6 +244,7 @@ export const OcrLoader = {
     } else {
       // Reopening mints a fresh server token; keep accumulated pages/progress.
       job.token = opts.token;
+      job.stopped = false;
       if (opts.ocrLang) job.ocrLang = opts.ocrLang;
       job.pages = [...opts.pages];
       job.pending = new Set(opts.pending);
@@ -252,6 +261,25 @@ export const OcrLoader = {
     }
     if (job.pending.size > 0 && !job.pausedByUser) void runLoop(job);
     return progressOf(job);
+  },
+
+  stop(docId: string): OcrProgress | null {
+    const job = jobs.get(docId);
+    if (!job) return null;
+    if (job.retryTimer) {
+      clearTimeout(job.retryTimer);
+      job.retryTimer = null;
+    }
+    job.stopped = true;
+    job.pausedByUser = false;
+    job.offline = false;
+    job.pausedReason = undefined;
+    job.message =
+      "OCR stopped. Finished pages are saved; start Fix text again when you want to continue.";
+    const progress = progressOf(job);
+    notify(job);
+    jobs.delete(docId);
+    return progress;
   },
 
   pause(docId: string): OcrProgress | null {
