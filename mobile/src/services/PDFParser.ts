@@ -104,6 +104,11 @@ export const PDFParser = {
       args.onProgress,
       args.onUploaded
     );
+    if (args.forceOcr && !data.forceOcr) {
+      throw new Error(
+        "OCR rebuild is not active on the document server yet. Deploy the latest readFlow backend, then try Fix text again."
+      );
+    }
     const fileName = args.fileName || "document";
     return {
       pageCount: data.pageCount,

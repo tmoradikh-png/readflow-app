@@ -204,12 +204,18 @@ Changes after the latest finished build and included in source `1.0.18`:
   stored PDF with `forceOcr=true`, uses the paid monthly OCR allowance, saves the
   OCR cache, and opens the rebuilt document while remaining pages continue via
   background OCR.
+- Rebuilt books are visibly labeled `OCR rebuild` on the shelf and in the reader
+  header. If that label is missing, the user is still looking at a native-text
+  import, or an older backend ignored the rebuild request.
 - Forced OCR documents must keep `forceOcr=true` in the parsed-text cache. If a
   rebuilt document is reopened while OCR is still pending, reopen must request a
   new forced-OCR server token and merge cached OCR pages into that forced result;
   otherwise the book silently falls back to the broken native text layer. The
   shelf also shows per-book rebuild progress and disables `Fix text` while a
   rebuild job is already active.
+- Mobile refuses to save a `Fix text` result if the backend response does not
+  echo `forceOcr=true`. This prevents false-positive OCR rebuilds when the phone
+  has a new APK but Render is still serving an older backend deploy.
 - Reader text cleanup now removes page-number-only lines, common URL/watermark
   lines, and repeated short headers/footers before building reader sentences.
   This affects display, TTS, and AI context so the app does not read page

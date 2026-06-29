@@ -663,6 +663,14 @@ function rebuildOcrErrorMessage(e: unknown): string {
   return message || "Could not rebuild this PDF with OCR.";
 }
 
+function libraryMeta(item: LibraryItem, progressPct?: number): string {
+  const parts = [`${item.pageCount} pages`];
+  if (item.forceOcr) parts.push("OCR rebuild");
+  else if (item.ocrPages > 0) parts.push(`OCR ${item.ocrPages}p`);
+  if (typeof progressPct === "number" && progressPct > 0) parts.push(`${progressPct}% read`);
+  return parts.join(" · ");
+}
+
 interface DeviceVoiceOption {
   id: string;
   name: string;
@@ -1367,9 +1375,7 @@ function ContinueCard({
         <Text style={styles.continueTitle} numberOfLines={2}>
           {item.title}
         </Text>
-        <Text style={styles.continueMeta}>
-          {item.pageCount} pages{pct > 0 ? ` · ${pct}% read` : ""}
-        </Text>
+        <Text style={styles.continueMeta}>{libraryMeta(item, pct)}</Text>
         <View style={styles.progressTrack}>
           <View style={[styles.progressFill, { width: `${Math.max(4, pct)}%` }]} />
         </View>
@@ -1449,6 +1455,11 @@ function DocCard({
       <Text style={styles.docTitle} numberOfLines={2}>
         {item.title}
       </Text>
+      {item.forceOcr || item.ocrPages > 0 ? (
+        <Text style={styles.docMeta} numberOfLines={1}>
+          {item.forceOcr ? "OCR rebuild" : `OCR ${item.ocrPages}p`}
+        </Text>
+      ) : null}
       <Pressable
         style={styles.docRemoveBtn}
         onPress={(event) => {
@@ -1812,6 +1823,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginTop: 7,
     lineHeight: 15,
+  },
+  docMeta: {
+    color: theme.colors.teal,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 10.5,
+    marginTop: 3,
   },
   docRemoveBtn: {
     alignSelf: "flex-start",

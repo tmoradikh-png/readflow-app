@@ -15,6 +15,8 @@ export interface LibraryItem {
   pageCount: number;
   ocrPages: number;
   scanned: boolean;
+  /** True when the saved reading text came from a full OCR rebuild. */
+  forceOcr?: boolean;
   /** Persistent copy of the source file in app storage (null if copy failed). */
   storedUri: string | null;
   mimeType: string | null;
@@ -105,6 +107,7 @@ export const Library = {
       pageCount: doc.pageCount,
       ocrPages: doc.ocrPages,
       scanned: doc.scanned,
+      forceOcr: Boolean(doc.forceOcr),
       storedUri,
       mimeType: mimeType ?? existing?.mimeType ?? null,
       lastPage: existing?.lastPage ?? 1,

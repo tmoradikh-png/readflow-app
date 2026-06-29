@@ -1049,7 +1049,11 @@ export function Reader({
               </Text>
               <Text style={styles.pageRange}>
                 Page {currentPage} of {totalPages}
-                {doc.ocrPages > 0 ? `  ·  OCR ${doc.ocrPages}p` : ""}
+                {doc.forceOcr
+                  ? "  ·  OCR rebuild"
+                  : doc.ocrPages > 0
+                    ? `  ·  OCR ${doc.ocrPages}p`
+                    : ""}
               </Text>
             </View>
             <Pressable

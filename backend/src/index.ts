@@ -21,6 +21,9 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     aiProvider: process.env.AI_PROVIDER || "openai",
     ttsProvider: process.env.TTS_PROVIDER || "device",
+    capabilities: {
+      forceOcr: true,
+    },
   });
 });
 
