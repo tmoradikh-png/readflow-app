@@ -83,12 +83,12 @@ free limits are explicit and enforced by the backend/mobile app.
 The free tier must have no marginal API cost to us.
 
 Allowed in free:
-- Device/on-phone TTS only.
-- Native text extraction for a small number of pages/books.
+- Native text preview for a small number of pages/books.
 - Local reading, bookmarks, and basic settings.
 - Ads if the product uses ads later.
 
 Not allowed in free:
+- Read-aloud / Listen mode.
 - OpenAI AI calls.
 - OpenAI cloud TTS.
 - OCR for scanned PDFs unless it is fully local and proven cheap enough.
@@ -433,15 +433,41 @@ force a larger instance if public usage grows.
 
 ## Recommended Plan Shape
 
-This is the conservative, profit-protecting plan shape:
+This is the conservative, profit-protecting plan shape as of 2026-06-29.
+It intentionally makes Reader Plus a strong non-AI reading product while keeping
+OCR, Edge AI, Cloud AI, and AI questions as clear upgrade reasons.
 
 | Tier | Suggested price | What should be included | Cost risk |
 | --- | ---: | --- | --- |
-| Free | $0 | 1 saved book, about 100 pages, device voice, native text only | Render CPU/bandwidth only |
-| Reader Plus | $4.99/mo | Ad-free, bigger native-text library, device voice | Render import CPU/bandwidth |
-| AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, Edge AI, 60k cloud voice chars | Fine if cloud voice capped |
-| Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, device voice, Edge AI, 180k cloud voice chars | Must hard-cap cloud voice |
-| Natural Voice Pack | Separate add-on | Extra cloud voice hours or pay-as-you-go credits | Best match to real OpenAI cost |
+| Free | $0 | 1 saved book, about 100 pages, native text preview, bookmarks/basic settings, no read-aloud | Render CPU/bandwidth only |
+| Reader Plus | $4.99/mo | Ad-free full native-text reading, larger library, device read-aloud, themes, bookmarks, focus/follow, good multilingual text-layer PDFs | Render import CPU/bandwidth |
+| AI Pro | $11.99-$14.99/mo | Everything in Reader Plus, OCR, Edge AI voice, limited AI Q&A/summaries, small Cloud AI voice allowance | Fine if OCR/AI/cloud voice are capped |
+| Power | $24.99-$29.99/mo | Higher OCR/AI/cloud voice limits, larger books, exports/batch tools, priority heavy-reader features | Must hard-cap cloud voice |
+| AI voice / OCR packs | Separate add-on | Extra Cloud AI voice characters or extra OCR pages after monthly limits | Best match to real marginal cost |
+
+Recommended starting limits:
+
+| Tier | OCR pages / month | AI actions / month | Cloud AI voice / month | Edge AI |
+| --- | ---: | ---: | ---: | --- |
+| Free | 0 | 0 | 0 | No |
+| Reader Plus | 0 | 0 | 0 | No |
+| AI Pro | 1,000 | 100-200 | 30k-60k chars | Yes, initially English |
+| Power | 3,000 | 500-1,000 | 180k chars | Yes, with future language packs |
+
+Upgrade logic:
+
+- Free users should understand the app value through the reading layout, but
+  Listen, OCR, Edge AI, Cloud AI, and Ask AI should show a clean upgrade prompt.
+- Reader Plus should be excellent for real readers of proper PDFs and Word
+  files. It should not include OCR or AI; scanned/image PDFs should clearly say
+  AI Pro can unlock them with OCR.
+- AI Pro should feel like the main paid plan: OCR for scanned books, Edge AI
+  with no cloud voice cost, and enough AI help to taste the value without making
+  unlimited OpenAI spend possible.
+- Power is for heavy scanned books, study/research use, exports, and higher
+  monthly limits.
+- Extra Cloud AI voice and extra OCR should be sold as top-ups, not silently
+  included, because those are the features with real marginal cost.
 
 If cloud voice must be high quality (`tts-1-hd`), keep allowances very small:
 
@@ -480,10 +506,11 @@ are also weak and can punish shared networks. For public release, send a stable
 5. DONE in source: first Edge AI voice uses Sherpa-ONNX plus on-demand
    Supertonic Reader, outside cloud voice quota. Needs native phone QA before
    product claims.
-6. Decide whether Edge AI voice is Free, Reader Plus+, or AI Pro+. It has no
-   vendor bill, but it is still a premium-feeling AI feature.
-7. Decide free tier: 1 book and about 100 pages, then update backend and mobile
-   to match.
+6. Product recommendation: Edge AI starts at AI Pro, not Free/Reader Plus. It has
+   no vendor bill, but it is a premium-feeling feature and a strong upgrade
+   reason.
+7. Product recommendation: Free is 1 book/about 100 pages with no read-aloud.
+   Backend/mobile currently need to be updated if this decision is approved.
 8. Wire RevenueCat production SDK/user id so limits follow a user/install, not
    only a local device state.
 9. Move OpenAI production billing to a dedicated readFlow project/key with spend
