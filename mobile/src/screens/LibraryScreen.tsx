@@ -159,9 +159,12 @@ export function LibraryScreen({
     setBusyId(item.id);
     try {
       const cached = await DocCache.load(item.id);
+      const cacheMatchesLanguage = cached
+        ? DocCache.isForLanguage(cached, readingLanguage.ocrLang)
+        : false;
       let doc: ParsedPdf;
 
-      if (cached && DocCache.isComplete(cached)) {
+      if (cached && cacheMatchesLanguage && DocCache.isComplete(cached)) {
         // Fully saved for offline — open instantly, no network needed.
         doc = DocCache.toParsed(cached);
       } else {
@@ -173,10 +176,10 @@ export function LibraryScreen({
             mimeType: item.mimeType || undefined,
             ocrLang: readingLanguage.ocrLang,
           });
-          doc = cached ? DocCache.mergeCachedOcr(fresh, cached) : fresh;
+          doc = cached && cacheMatchesLanguage ? DocCache.mergeCachedOcr(fresh, cached) : fresh;
           await DocCache.save(doc);
         } catch (netErr) {
-          if (cached && isNetworkError(netErr)) {
+          if (cached && cacheMatchesLanguage && isNetworkError(netErr)) {
             // Offline: open whatever text we already saved.
             doc = DocCache.toParsed(cached);
             setError(
@@ -184,7 +187,9 @@ export function LibraryScreen({
             );
           } else if (isNetworkError(netErr)) {
             setError(
-              "You're offline and this book isn't saved for offline reading yet. Open it once with internet, then it'll work in airplane mode."
+              cached
+                ? `Connect once to reopen this book with ${readingLanguage.label} extraction.`
+                : "You're offline and this book isn't saved for offline reading yet. Open it once with internet, then it'll work in airplane mode."
             );
             return;
           } else {

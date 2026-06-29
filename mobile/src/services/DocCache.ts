@@ -17,6 +17,7 @@ export interface CachedDoc {
   scanned: boolean;
   ocrPages: number;
   needsPaidOcr: boolean;
+  ocrLang?: string;
   pages: PdfPage[];
   /** Pages still needing OCR (empty = fully saved for offline). */
   pendingOcr: number[];
@@ -66,6 +67,7 @@ export const DocCache = {
         scanned: doc.scanned,
         ocrPages: doc.ocrPages,
         needsPaidOcr: Boolean(doc.needsPaidOcr),
+        ocrLang: doc.ocrLang,
         pages: doc.pages,
         pendingOcr: doc.pendingOcr ?? [],
         savedAt: Date.now(),
@@ -115,9 +117,15 @@ export const DocCache = {
       kind: c.kind,
       ocrPages: c.ocrPages,
       docId: c.docId,
+      ocrLang: c.ocrLang,
       pendingOcr: c.pendingOcr ?? [],
       needsPaidOcr: c.needsPaidOcr,
     };
+  },
+
+  /** True when cached OCR/native extraction was created for the active book language. */
+  isForLanguage(c: CachedDoc, ocrLang?: string): boolean {
+    return (c.ocrLang || "eng") === (ocrLang || "eng");
   },
 
   /**
@@ -126,6 +134,7 @@ export const DocCache = {
    * already recovered — and the pending list shrinks accordingly.
    */
   mergeCachedOcr(fresh: ParsedPdf, cached: CachedDoc): ParsedPdf {
+    if (!this.isForLanguage(cached, fresh.ocrLang)) return fresh;
     const map = new Map<number, PdfPage>(fresh.pages.map((p) => [p.page, { ...p }] as const));
     for (const cp of cached.pages) {
       if (cp.source !== "ocr" || !cp.text) continue;

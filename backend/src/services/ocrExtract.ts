@@ -70,11 +70,15 @@ export function resolveOcrLang(requested?: string): string {
 export function needsOcr(text: string, lang?: string): boolean {
   const t = (text || "").trim();
   if (t.length < 16) return true; // essentially empty → scanned image
-  if (looksCorrupted(t)) return true;
+  const ocrLang = resolveOcrLang(lang);
+  if (looksCorrupted(t, ocrLang)) return true;
 
-  const profile = scriptProfile(resolveOcrLang(lang));
+  const profile = scriptProfile(ocrLang);
   if (profile) {
     const scriptChars = (t.match(profile.re) || []).length;
+    if (scriptChars >= profile.minChars) return false;
+    const latinChars = (t.match(/[A-Za-z\u00C0-\u024F]/g) || []).length;
+    if ((scriptChars + latinChars) / t.length > 0.45 && t.length >= 80) return false;
     const ratio = scriptChars / t.length;
     if (ratio < profile.minRatio) return true;
     return false;
@@ -86,30 +90,36 @@ export function needsOcr(text: string, lang?: string): boolean {
   return ratio < 0.35 && t.length < 200;
 }
 
-function looksCorrupted(text: string): boolean {
+function looksCorrupted(text: string, lang: string): boolean {
   const replacement = (text.match(/\uFFFD/g) || []).length;
   const mojibake = (text.match(/[ÂÃÄÅÆØÙÛÜÝÞÐ]/g) || []).length;
   const nonLatin = /[^\u0000-\u024F\s\d.,;:!?'"()[\]{}\-–—/\\]/.test(text);
   const repeatedA = nonLatin ? (text.match(/A{2,}/g) || []).length : 0;
+  const uppercaseRuns = nonLatin ? (text.match(/\b[A-Z]{3,}\b/g) || []).length : 0;
+  const hasArabicScript = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/.test(text);
+  if ((lang === "ara" || lang === "fas") && hasArabicScript) {
+    if (repeatedA > 0) return true;
+    if (uppercaseRuns >= 2) return true;
+  }
   const bad = replacement + mojibake + repeatedA * 2;
   return bad / Math.max(1, text.length) > 0.018;
 }
 
-function scriptProfile(lang: string): { re: RegExp; minRatio: number } | null {
+function scriptProfile(lang: string): { re: RegExp; minRatio: number; minChars: number } | null {
   switch (lang) {
     case "ara":
     case "fas":
-      return { re: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g, minRatio: 0.45 };
+      return { re: /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g, minRatio: 0.45, minChars: 12 };
     case "rus":
-      return { re: /[\u0400-\u04FF]/g, minRatio: 0.45 };
+      return { re: /[\u0400-\u04FF]/g, minRatio: 0.45, minChars: 12 };
     case "hin":
-      return { re: /[\u0900-\u097F]/g, minRatio: 0.45 };
+      return { re: /[\u0900-\u097F]/g, minRatio: 0.45, minChars: 12 };
     case "jpn":
-      return { re: /[\u3040-\u30FF\u4E00-\u9FFF]/g, minRatio: 0.35 };
+      return { re: /[\u3040-\u30FF\u4E00-\u9FFF]/g, minRatio: 0.35, minChars: 12 };
     case "kor":
-      return { re: /[\uAC00-\uD7AF\u1100-\u11FF]/g, minRatio: 0.45 };
+      return { re: /[\uAC00-\uD7AF\u1100-\u11FF]/g, minRatio: 0.45, minChars: 12 };
     case "chi_sim":
-      return { re: /[\u4E00-\u9FFF]/g, minRatio: 0.35 };
+      return { re: /[\u4E00-\u9FFF]/g, minRatio: 0.35, minChars: 12 };
     default:
       return null;
   }

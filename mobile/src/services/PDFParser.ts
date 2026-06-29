@@ -24,6 +24,8 @@ export interface ParsedPdf {
   sourceUri?: string;
   /** MIME type of the source file, if known. */
   mimeType?: string;
+  /** OCR language used when extracting this cached document. */
+  ocrLang?: string;
   /** Short-lived server token for on-demand OCR of remaining pages. */
   docToken?: string;
   /** Page numbers still needing OCR (fetched lazily as the reader views them). */
@@ -104,6 +106,7 @@ export const PDFParser = {
       docId: `${fileName}:${data.pageCount}`,
       sourceUri: args.uri,
       mimeType: args.mimeType,
+      ocrLang: args.ocrLang,
       docToken: typeof data.docToken === "string" ? data.docToken : undefined,
       pendingOcr: Array.isArray(data.pendingOcr) ? data.pendingOcr : [],
       needsPaidOcr: Boolean(data.needsPaidOcr),

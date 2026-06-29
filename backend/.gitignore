@@ -4,3 +4,5 @@ dist/
 *.log
 .ocr-cache/
 .usage/
+*.traineddata
+!eng.traineddata

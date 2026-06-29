@@ -101,33 +101,41 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
     // Keep the original bytes briefly so the client can OCR more pages on
     // demand (only for PDFs whose plan allows OCR).
     let docToken: string | null = null;
-    const pendingOcr: number[] = [];
+    const pendingOcr = new Set<number>();
 
     let ocrPages = 0;
     // OCR is a PAID feature. Free users never trigger server OCR cost.
     if (isPdf && features.ocr) {
       docToken = putDoc(req.file.buffer);
       const lowQuality = doc.pages.filter((p) => needsOcr(p.text, ocrLang)).map((p) => p.page);
+      const lowQualitySet = new Set(lowQuality);
       if (lowQuality.length > 0) {
         // Only OCR the first few pages now; the rest are pending (on demand).
         const eager = lowQuality.slice(0, Math.max(0, OCR_EAGER_PAGES));
-        for (const p of lowQuality.slice(eager.length)) pendingOcr.push(p);
+        for (const p of lowQuality.slice(eager.length)) pendingOcr.add(p);
 
         // Cap eager OCR work to the user's remaining monthly OCR-page quota.
         const ocrQuota = checkQuota(ent.appUserId, "ocrPages", limits.ocrPagesPerMonth, 0);
         const allowed = eager.slice(0, Math.max(0, ocrQuota.remaining));
         // Pages we couldn't OCR now (quota) are also pending.
-        for (const p of eager.slice(allowed.length)) pendingOcr.push(p);
+        for (const p of eager.slice(allowed.length)) pendingOcr.add(p);
         if (allowed.length > 0) {
           const ocr = await ocrPdfPages(req.file.buffer, allowed, ocrLang);
+          const replaced = new Set<number>();
           for (const p of doc.pages) {
             const r = ocr.get(p.page);
-            if (r && r.text.length > p.text.length) {
+            const shouldReplace =
+              r && r.text.trim() && (lowQualitySet.has(p.page) || r.text.length > p.text.length);
+            if (shouldReplace) {
               p.text = r.text;
               p.source = "ocr";
               p.confidence = r.confidence;
               ocrPages++;
+              replaced.add(p.page);
             }
+          }
+          for (const page of allowed) {
+            if (!replaced.has(page)) pendingOcr.add(page);
           }
           if (ocrPages > 0) addUsage(ent.appUserId, "ocrPages", ocrPages);
         }
@@ -144,7 +152,7 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
       kind: isPdf ? "pdf" : "docx",
       ocrPages,
       docToken, // used for on-demand OCR of the remaining pages
-      pendingOcr, // pages still needing OCR (fetched as the reader views them)
+      pendingOcr: Array.from(pendingOcr).sort((a, b) => a - b), // pages still needing OCR
       truncated, // client shows paywall when more pages exist beyond the cap
       pageCap,
       needsPaidOcr, // client shows "upgrade to read scanned PDFs"

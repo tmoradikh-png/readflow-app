@@ -79,6 +79,16 @@ Changes after the latest finished build and included in source `1.0.18`:
   the user selects Persian/Arabic/etc., corrupted native PDF text layers (for
   example repeated `AA`/mojibake mixed into Persian) are treated as OCR
   candidates instead of being accepted as readable text.
+- 2026-06-29 multilingual import fix: OCR now replaces pages that were explicitly
+  marked low-quality even when the OCR text is shorter than the broken native
+  text. This matters for Persian/Arabic PDFs where the corrupt text layer can be
+  long but unreadable. The mobile parsed-text cache now stores `ocrLang`; a book
+  cached under English/old extraction will be re-extracted when reopened with
+  Persian/Arabic/etc. instead of silently showing stale corrupted text.
+- OCR detection was also relaxed for mixed-language non-Latin books. If a page
+  already has meaningful native Chinese/Japanese/Russian/Persian/etc. characters,
+  or clearly readable bilingual Latin text, ReadFlow keeps the native text
+  instead of wasting OCR quota and risking worse OCR output.
 - Device voice selector uses installed phone voices when available.
 - Help/About sheet shows version, support contact, website, and button meanings.
 - Edge AI voice now uses `react-native-sherpa-onnx` plus an on-demand
@@ -130,6 +140,21 @@ Changes after the latest finished build and included in source `1.0.18`:
   - Library remove is visible on document cards and the Continue card, removes
     cached parsed text/bookmarks, and updates metadata before deleting the
     physical file so deletion does not feel stuck.
+- Multilingual PDF endpoint test on 2026-06-29 used downloaded public samples
+  for Persian text, Persian scanned/image, Arabic, Russian, Japanese, and
+  Chinese. Results against local backend `http://127.0.0.1:4000`: Persian text
+  imported native with no mojibake; Persian scanned returned OCR text for all 3
+  pages; Arabic returned usable Arabic with OCR only where needed; Russian
+  imported with Cyrillic text and no pending OCR; Chinese Wikibook kept native
+  mixed English/Chinese text with no OCR; Japanese content pages imported native
+  text, while decorative cover/image pages OCR'd with expected lower quality.
+- Connected-phone test on 2026-06-29 after the multilingual fix: installed a
+  standalone local release APK on Samsung `SM_G975F` (`R58M168KTSZ`) from
+  `C:\rf-mobile-test-voice2\android\app\build\outputs\apk\release\app-release.apk`
+  (about 212 MB). It points to the local backend through
+  `EXPO_PUBLIC_API_URL=http://127.0.0.1:4000` plus
+  `adb reverse tcp:4000 tcp:4000`, and launched without fatal startup logcat
+  errors. This APK is for USB-connected QA only, not Play/internal distribution.
 
 ## Account Map
 
@@ -218,17 +243,23 @@ Local Android tooling installed during the 2026-06-29 phone test:
 ```powershell
 C:\Users\Greencom\android-sdk
 C:\Users\Greencom\android-sdk\platform-tools\adb.exe
-C:\Program Files\Zulu\zulu-17
+C:\Users\Greencom\android-platform-tools\platform-tools\adb.exe
+C:\Users\Greencom\.cache\readflow-jdk17\jdk-17.0.19+10
 ```
 
 Use these env vars for local native Android commands on this machine:
 
 ```powershell
-$env:JAVA_HOME='C:\Program Files\Zulu\zulu-17'
+$env:JAVA_HOME='C:\Users\Greencom\.cache\readflow-jdk17\jdk-17.0.19+10'
 $env:ANDROID_HOME='C:\Users\Greencom\android-sdk'
 $env:ANDROID_SDK_ROOT='C:\Users\Greencom\android-sdk'
 $env:PATH="$env:JAVA_HOME\bin;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
 ```
+
+If Java disappears from PATH, use the portable JDK above. It was downloaded from
+Adoptium's official API because Android Gradle Plugin requires Java 17; the
+older bundled `Common Files\i4j_jres` runtime is Java 11 and will fail native
+builds.
 
 Windows path warning: native builds from the OneDrive path hit long-path/CMake
 problems. For local phone testing, use a short physical temp copy such as
@@ -494,6 +525,10 @@ Recommended manual phone tests after installing a new build:
   new imports send the matching OCR language, the Voice sheet filters phone
   voices for that language, AI answers use that language, and Edge AI explains
   that only English is available for now.
+- For Persian/Arabic specifically, select the language before import/reopen.
+  If a book was cached from an older broken extraction, reopening with Persian
+  should re-extract instead of using the old English/unknown cache. If the
+  source file itself has been deleted, remove and reimport the book.
 - In the reader settings menu, switch between Device, Edge AI, and Cloud AI.
   Cloud AI should upsell cleanly when the plan is not AI Pro/Power.
 - Select Cloud AI under an AI Pro/Power entitlement and verify `/api/tts`

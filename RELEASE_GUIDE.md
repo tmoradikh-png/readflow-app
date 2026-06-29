@@ -128,6 +128,9 @@ Current ReadFlow QA checklist for any build that changes reading/voice:
 - Open Book language, choose a non-English language, then reopen Voice. Phone
   voices should filter to that language, Edge AI should say English-only for
   now, and new scanned imports should use the matching OCR language.
+- For Persian/Arabic, import both a native-text PDF and a scanned/image PDF.
+  Reopen any previously cached broken Persian book after selecting Persian; it
+  should re-extract instead of showing stale mojibake text.
 - Open the reader settings menu and confirm the quick selector reads Device,
   Edge AI, and Cloud AI. Locked Cloud AI should open a clean upgrade prompt.
 - Download/select Edge AI, play several paragraphs, and check for natural
@@ -157,6 +160,11 @@ path on Windows:
 
 ```powershell
 # example temp workflow
+$env:JAVA_HOME='C:\Users\Greencom\.cache\readflow-jdk17\jdk-17.0.19+10'
+$env:ANDROID_HOME='C:\Users\Greencom\android-sdk'
+$env:ANDROID_SDK_ROOT='C:\Users\Greencom\android-sdk'
+$env:PATH="$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
+
 robocopy C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile C:\rf-mobile-test /E /XD node_modules android .expo
 cd C:\rf-mobile-test
 npm ci
