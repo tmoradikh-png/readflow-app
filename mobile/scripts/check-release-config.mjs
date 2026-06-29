@@ -28,6 +28,7 @@ const ios = expo.ios || {};
 const extra = expo.extra || {};
 const EXPECTED_VERSION = "1.0.23";
 const EXPECTED_VERSION_CODE = 23;
+const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
 // 1) applicationId
 if (android.package === "com.urmiaworks.readflow") {
@@ -50,17 +51,21 @@ if (expo.version === EXPECTED_VERSION) {
   fail(`versionName expected ${EXPECTED_VERSION} but got ${expo.version || "(missing)"}`);
 }
 
-// 4) apiUrl points to the public Render HTTPS URL (env can override app.json)
+// 4) apiUrl points to the converted production Render service.
+// Render kept the original onrender.com subdomain after the service was renamed
+// from readflow-backend-internal to readflow-backend. Do not point public builds
+// at readflow-backend.onrender.com unless that suspended legacy service is
+// recovered or replaced.
 const apiUrl = String(process.env.EXPO_PUBLIC_API_URL || extra.apiUrl || "").trim();
 if (/^https:\/\/.+\.onrender\.com\/?$/i.test(apiUrl)) {
   pass("apiUrl points to Render HTTPS URL");
 } else {
   fail("apiUrl must be a non-empty Render HTTPS URL like https://<service>.onrender.com");
 }
-if (/internal/i.test(apiUrl)) {
-  fail("apiUrl points to an internal/dev backend. Use the public production Render service for Play release.");
+if (apiUrl.replace(/\/$/, "") === EXPECTED_API_URL) {
+  pass("apiUrl points to the converted production Render service");
 } else {
-  pass("apiUrl is not an internal/dev backend");
+  fail(`apiUrl expected ${EXPECTED_API_URL}; do not use the suspended readflow-backend.onrender.com URL`);
 }
 
 // 5) appKey present (must match Render APP_KEY manually)

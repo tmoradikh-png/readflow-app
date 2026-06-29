@@ -26,10 +26,13 @@ Current source release candidate: **1.0.23 / Android versionCode 23**.
 
 What is already prepared in source:
 - `mobile/app.json` points at the public backend host
-  `https://readflow-backend.onrender.com`.
-- `npm run check:release` now blocks internal Render URLs, duplicate Android
-  permissions, Android microphone permission, background-audio declarations,
-  missing app-user-id support, stale version numbers, and unsafe public Render
+  `https://readflow-backend-internal.onrender.com`. The Render service is named
+  `readflow-backend`; Render kept the old `readflow-backend-internal`
+  subdomain when the internal service was converted to production.
+- `npm run check:release` now blocks the suspended
+  `https://readflow-backend.onrender.com` URL, duplicate Android permissions,
+  Android microphone permission, background-audio declarations, missing
+  app-user-id support, stale version numbers, and unsafe public Render
   dev-override blueprints.
 - Android permissions are intentionally minimal for Play review: `INTERNET`.
   `expo-audio` is configured with `recordAudioAndroid:false` and
@@ -42,12 +45,12 @@ What is already prepared in source:
 
 Do **not** upload a public production release until these account/server items
 are complete:
-- Production Render service `readflow-backend` is deployed and
-  `https://readflow-backend.onrender.com/api/health` returns `200`.
-  On 2026-06-29 it returned Render's owner-state message
-  `Service Suspended`; the internal service `readflow-backend-internal` was
-  healthy and accepted the current app key, but must not be used for public
-  release because it grants dev paid access.
+- Production Render service `readflow-backend` is deployed and its current
+  reachable URL `https://readflow-backend-internal.onrender.com/api/health`
+  returns `200`.
+  On 2026-06-29 the old `https://readflow-backend.onrender.com` URL still
+  returned Render's owner-state message `Service Suspended`; do not point Play
+  builds at that URL unless the old service is recovered or replaced.
 - Render production env has `ENTITLEMENTS_DEV_OVERRIDE=false`,
   production `APP_KEY`, production `OPENAI_API_KEY`, and production
   `RC_SECRET_KEY` if subscriptions are sold.
@@ -76,10 +79,14 @@ For a real paid launch, the order is:
 Immediate Render action when `Service Suspended` appears:
 1. Sign in to Render with `support@urmiaworks.com`.
 2. Open the `readflow-backend` service.
-3. Unsuspend/reactivate the service, or upgrade/restore billing if Render asks.
-4. Trigger **Manual Deploy -> Deploy latest commit** from `main`.
-5. Re-check `https://readflow-backend.onrender.com/api/health`; it must return
-   JSON with `"ok":true` before any public Play build is submitted.
+3. Confirm the banner URL. If it is
+   `https://readflow-backend-internal.onrender.com`, the converted production
+   service is active; verify its health URL.
+4. If Render still shows `https://readflow-backend.onrender.com`, unsuspend or
+   reactivate that old service, or update the app to whatever production URL is
+   actually live.
+5. Trigger **Manual Deploy -> Deploy latest commit** from `main` after env
+   changes.
 
 ---
 

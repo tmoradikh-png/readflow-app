@@ -55,13 +55,14 @@ uploaded/installed before the source changes can be verified on-device.
 
 Current Play release prep in source `1.0.23`:
 - `mobile/app.json` now points at the public backend host
-  `https://readflow-backend.onrender.com`, not the internal dev-override backend.
-  As of the release-prep check on 2026-06-29, that public service returned
-  Render's `Service Suspended` owner-state page. This requires Render dashboard
-  action before any public Play build can be uploaded. The internal backend
-  `https://readflow-backend-internal.onrender.com` was healthy and accepted the
-  current mobile app key, but it must stay internal because it grants dev paid
-  access.
+  `https://readflow-backend-internal.onrender.com`. This is the converted
+  production Render service: the service name is `readflow-backend`, but Render
+  kept the old `readflow-backend-internal` subdomain after the service was
+  renamed. It returned `{"ok":true,...}` and Free entitlements with the current
+  mobile app key on 2026-06-29.
+  The old `https://readflow-backend.onrender.com` URL still returns Render's
+  `Service Suspended` owner-state page and must not be used by Play builds
+  unless that old service is recovered or replaced.
 - Android permissions are reduced to `INTERNET`; `expo-audio` is configured with
   `recordAudioAndroid: false` and `microphonePermission: false`.
 - iOS background audio mode and Expo foreground/background playback flags are
@@ -73,9 +74,10 @@ Current Play release prep in source `1.0.23`:
 - Free is enforced as a limited manual-reading preview: page cap from
   `perDocPageCap`, no Listen/read-aloud, no OCR, no rF AI, no Cloud AI, and no
   AI questions. Reader Plus and higher unlock device read-aloud.
-- `npm run check:release` now fails if the build points to an internal backend,
-  asks for microphone permission, declares background audio, omits app-user-id
-  support, or has public Render blueprints with `ENTITLEMENTS_DEV_OVERRIDE=true`.
+- `npm run check:release` now fails if the build points away from the converted
+  production backend, asks for microphone permission, declares background audio,
+  omits app-user-id support, or has public Render blueprints with
+  `ENTITLEMENTS_DEV_OVERRIDE=true`.
 - Paid subscriptions are not ready to sell until Play Billing/RevenueCat is
   wired in the mobile app and the production Render backend has `RC_SECRET_KEY`
   set. Until then, a public build is a free-preview release with locked paid
@@ -91,12 +93,14 @@ Current Play release prep in source `1.0.23`:
   - The old local-AI label has been removed from tracked app source; the public
     customer-facing name is `rF AI`.
 
-Current external blocker:
-- Production Render service `readflow-backend` is suspended by owner as of
-  2026-06-29. Sign in to Render with `support@urmiaworks.com`, unsuspend or fix
-  billing/plan state, then manually deploy latest `main`. Public release is
-  blocked until `/api/health` returns `{"ok":true,...}` from
-  `https://readflow-backend.onrender.com`.
+Current backend note:
+- Production Render service name: `readflow-backend`.
+- Current reachable production URL:
+  `https://readflow-backend-internal.onrender.com`.
+- Old suspended URL: `https://readflow-backend.onrender.com`.
+- The current URL is acceptable for release only because the service was
+  converted to production and verified to return Free entitlements. Prefer a
+  future custom domain such as `https://api.urmiaworks.com` before broad launch.
 
 Changes after the latest finished build and included in source `1.0.18`:
 - Cloud AI voice is gated by `features.cloudVoice`, not generic AI.
@@ -352,7 +356,7 @@ manager.
 | GitHub | `tmoradikh-png` | Source repository | Always use this account/repo owner for readFlow. Remote is `readflow-app`. User email given for account work: `t.moradi.kh@gmail.com`. |
 | Expo / EAS | `tohid123` | Android builds and project ownership | Project is `tohid123/readflow`, projectId `097b0b5a-db90-46b4-b434-60836687b429`. User email given: `t.moradi.kh@gmail.com`. |
 | Google Play Console | Urmia Works developer account | Internal testing and later production release | Android package is permanent: `com.urmiaworks.readflow`. Verify exact login email before release. |
-| Render | `support@urmiaworks.com` | Hosted backend | Internal backend service currently targeted by the app: `readflow-backend-internal`. |
+| Render | `support@urmiaworks.com` | Hosted backend | Production service name is `readflow-backend`; current reachable URL is the legacy subdomain `readflow-backend-internal.onrender.com`. |
 | OpenAI | Owner-held account | AI, OCR assistance where applicable, and natural TTS | `OPENAI_API_KEY` must be set only in Render/local `.env`, never in mobile code. |
 | RevenueCat | Planned / verify account | Production subscription entitlement source | Backend code supports `RC_SECRET_KEY`, but public subscription flow still needs final setup. |
 | Urmia Works web | `urmiaworks.com` | Privacy/support URLs | App config points to `https://urmiaworks.com/readflow/privacy` and support email `support@urmiaworks.com`. |
@@ -609,9 +613,12 @@ Internal testing:
 - Everyone can test paid features. Do not use this config for public release.
 
 Public release:
+- Render service name: `readflow-backend`
+- Current URL: `https://readflow-backend-internal.onrender.com`
 - Blueprint: `render.yaml`
 - `ENTITLEMENTS_DEV_OVERRIDE=false`
-- `RC_SECRET_KEY` must be set to the production RevenueCat secret.
+- `RC_SECRET_KEY` must be set to the production RevenueCat secret before paid
+  subscriptions are sold.
 - Backend fails closed to free tier if RevenueCat is unavailable or no valid user
   id is present.
 

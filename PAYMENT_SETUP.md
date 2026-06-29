@@ -39,10 +39,12 @@ Missing before paid launch:
 - RevenueCat offerings are not configured.
 - The mobile app does not yet open the native Play Billing purchase flow.
 - The backend still needs the production RevenueCat secret key in Render.
-- The public production backend is currently suspended in Render. On
-  2026-06-29, `https://readflow-backend.onrender.com/api/health` returned
-  Render's `Service Suspended` page. This requires owner dashboard action before
-  Play release.
+- The production backend service has been converted from the old internal
+  service. Current reachable URL:
+  `https://readflow-backend-internal.onrender.com`. The service name is
+  `readflow-backend`, but Render kept the original subdomain. The old
+  `https://readflow-backend.onrender.com` URL returned Render's
+  `Service Suspended` page on 2026-06-29 and must not be used by Play builds.
 
 Until these are complete, the app can be released only as a free preview with
 paid features locked and purchase buttons unavailable.
@@ -147,7 +149,7 @@ Production Render service must have:
 Render production health must return 200 before a public release:
 
 ```powershell
-Invoke-WebRequest https://readflow-backend.onrender.com/api/health
+Invoke-WebRequest https://readflow-backend-internal.onrender.com/api/health
 ```
 
 The internal Render service can use `ENTITLEMENTS_DEV_OVERRIDE=true` for testing,

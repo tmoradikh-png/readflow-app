@@ -62,7 +62,7 @@
       "./plugins/withSherpaCodegenGradleFix"
     ],
     "extra": {
-      "apiUrl": "https://readflow-backend.onrender.com",
+      "apiUrl": "https://readflow-backend-internal.onrender.com",
       "appKey": "8bdafe087ef5b82bdc6790a2b9d62d29",
       "supportEmail": "support@urmiaworks.com",
       "website": "https://urmiaworks.com",

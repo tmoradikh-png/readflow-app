@@ -23,8 +23,10 @@ Current source status:
 
 Not ready for paid public launch:
 
-- Production backend health is not green yet; on 2026-06-29 the public Render
-  service returned `Service Suspended`.
+- Production backend must be verified at
+  `https://readflow-backend-internal.onrender.com/api/health`. The service is
+  named `readflow-backend`; the old `https://readflow-backend.onrender.com`
+  URL returned `Service Suspended` on 2026-06-29 and must not be used.
 - Play Billing/RevenueCat is not wired in the mobile purchase flow.
 - Legal URLs are not live yet.
 - Final AI Pro/Power pricing needs a product decision before Play products are
@@ -223,7 +225,9 @@ Avoid:
 ## Before Pressing Submit
 
 - Production Render backend returns 200 from `/api/health`.
-- Public build uses `https://readflow-backend.onrender.com`, not internal Render.
+- Public build uses the verified converted production URL
+  `https://readflow-backend-internal.onrender.com`, or a future custom domain
+  that points to the same production service.
 - `ENTITLEMENTS_DEV_OVERRIDE=false` in public Render.
 - RevenueCat/Play Billing purchase and restore flow is tested if paid launch is
   enabled.
