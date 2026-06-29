@@ -87,11 +87,13 @@ function preferredVoiceMode(
   preferences: ReadingPreferences,
   entitlement: EntitlementSnapshot
 ): RuntimeVoiceMode {
-  if (preferences.voiceEngine === "local_ai" && getReadingLanguage(preferences.bookLanguage).edgeAi) {
+  const readingLanguage = getReadingLanguage(preferences.bookLanguage);
+  if (preferences.voiceEngine === "local_ai" && readingLanguage.edgeAi) {
     return "local";
   }
   if (
     preferences.voiceEngine === "cloud" &&
+    readingLanguage.cloudAiVoice &&
     entitlement.features.cloudVoice &&
     entitlement.limits.cloudVoiceCharsPerMonth > 0
   ) {
@@ -174,10 +176,12 @@ export function Reader({
 
   const canUseAI = Boolean(entitlement.features.ai);
   const canUseOcr = Boolean(entitlement.features.ocr);
-  const canUseCloudVoice = Boolean(
-    entitlement.features.cloudVoice && entitlement.limits.cloudVoiceCharsPerMonth > 0
-  );
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
+  const canUseCloudVoice = Boolean(
+    readingLanguage.cloudAiVoice &&
+      entitlement.features.cloudVoice &&
+      entitlement.limits.cloudVoiceCharsPerMonth > 0
+  );
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement);
   const readerVoiceOptions = useMemo(
     () => [
@@ -191,11 +195,11 @@ export function Reader({
       {
         engine: "cloud" as const,
         label: "Cloud AI",
-        detail: canUseCloudVoice ? "Premium" : "Locked",
+        detail: readingLanguage.cloudAiVoice ? (canUseCloudVoice ? "Premium" : "Locked") : "QA",
         locked: !canUseCloudVoice,
       },
     ],
-    [canUseCloudVoice, readingLanguage.edgeAi]
+    [canUseCloudVoice, readingLanguage.cloudAiVoice, readingLanguage.edgeAi]
   );
 
   const insets = useSafeAreaInsets();
@@ -211,6 +215,7 @@ export function Reader({
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const cloudVoiceLimitWarnedRef = useRef(false);
+  const cloudVoiceLanguageWarnedRef = useRef(false);
   const localVoiceWarnedRef = useRef(false);
   const saveLastReadRef = useRef<() => void>(() => {});
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
@@ -311,7 +316,14 @@ export function Reader({
     if (engine === "local_ai" && !readingLanguage.edgeAi) {
       openFeatureLock(
         "Edge AI language pack",
-        `Edge AI is available for English right now. Use Device voice or Cloud AI for ${readingLanguage.label} until we add this language pack.`
+        `Edge AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`
+      );
+      return;
+    }
+    if (engine === "cloud" && !readingLanguage.cloudAiVoice) {
+      openFeatureLock(
+        "Cloud AI voice QA",
+        `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Phone voice now; we will add this language after voice quality passes testing.`
       );
       return;
     }
@@ -341,11 +353,9 @@ export function Reader({
 
   function openOcrLimitOffer() {
     const body =
-      entitlement.tier === "reader_plus"
-        ? "Reader Plus includes 300 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. AI Pro raises OCR to 1,000 pages/month, and Power raises it to 3,000 pages/month."
-        : entitlement.tier === "ai_pro"
+      entitlement.tier === "ai_pro"
           ? "AI Pro includes 1,000 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. Power raises OCR to 3,000 pages/month."
-          : "Scanned pages use OCR. Reader Plus includes 300 OCR pages/month, AI Pro includes 1,000, and Power includes 3,000.";
+          : "Scanned pages use OCR. AI Pro includes 1,000 OCR pages/month, and Power includes 3,000.";
     openFeatureLock("More OCR pages", body);
   }
 
@@ -462,8 +472,18 @@ export function Reader({
     return target ? target.id : indexRef.current;
   }
   function freeCap(): number {
+    if (doc.truncated && doc.pageCap) return Math.min(totalPages, doc.pageCap);
     if (!ENFORCE_FREE_LIMIT) return totalPages;
     return Math.min(totalPages, freePageLimit);
+  }
+  function isBeyondReturnedPageCap(page: number): boolean {
+    return Boolean(doc.truncated && doc.pageCap && page > doc.pageCap);
+  }
+  function openPageLimitOffer() {
+    openFeatureLock(
+      "Page limit reached",
+      `This plan includes the first ${doc.pageCap || freePageLimit} pages of this document. Upgrade to Reader Plus for full native-text books.`
+    );
   }
 
   function pageWithinIndex(sentence: Sentence, list = flatRef.current): number {
@@ -702,10 +722,7 @@ export function Reader({
       playingRef.current = false;
       setIsPlaying(false);
       ttsRef.current.stop();
-      openFeatureLock(
-        "Page limit reached",
-        `You've reached the free reading limit (${freePageLimit} pages). Upgrade to continue reading this document.`
-      );
+      openPageLimitOffer();
       return;
     }
 
@@ -769,6 +786,13 @@ export function Reader({
             "Edge AI not ready",
             info.message ||
               "Download Edge AI from the Voice panel, or keep reading with device voice."
+          );
+        } else if (info.reason === "language_unsupported" && !cloudVoiceLanguageWarnedRef.current) {
+          cloudVoiceLanguageWarnedRef.current = true;
+          openFeatureLock(
+            "Cloud AI voice QA",
+            info.message ||
+              "Cloud AI voice is not release-ready for this language yet. Device voice will keep reading."
           );
         }
       },
@@ -867,6 +891,10 @@ export function Reader({
   // ----- navigation -----
   function goToPage(page: number) {
     const p = Math.max(1, Math.min(totalPages, page));
+    if (isBeyondReturnedPageCap(p)) {
+      openPageLimitOffer();
+      return;
+    }
     const idx = TextReflow.firstIndexOfPage(flat, p);
     if (idx >= 0) {
       jumpToSentence(idx, false);
@@ -877,7 +905,7 @@ export function Reader({
     if (!canUseOcr) {
       openFeatureLock(
         "Scanned page",
-        `Page ${p} is a scanned page. Reading it needs OCR, available on paid plans with an internet connection.`
+        `Page ${p} is a scanned page. Reading it needs OCR, available in AI Pro and Power with an internet connection.`
       );
       return;
     }
@@ -903,10 +931,7 @@ export function Reader({
     const s = flat[globalId];
     if (!s) return;
     if (s.page > freeCap()) {
-      openFeatureLock(
-        "Page limit reached",
-        `You've reached the free reading limit (${freePageLimit} pages). Upgrade to continue reading this document.`
-      );
+      openPageLimitOffer();
       return;
     }
     epochRef.current++;
@@ -1064,7 +1089,7 @@ export function Reader({
           {doc.needsPaidOcr && !canUseOcr ? (
             <View style={styles.lockBanner}>
               <Text style={styles.lockBannerText}>
-                Scanned-PDF OCR is locked on Free. Upgrade to Reader Plus or AI Pro.
+                This scanned PDF needs OCR. Upgrade to AI Pro or Power to read it.
               </Text>
             </View>
           ) : null}

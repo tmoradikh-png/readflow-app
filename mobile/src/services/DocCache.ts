@@ -17,6 +17,8 @@ export interface CachedDoc {
   scanned: boolean;
   ocrPages: number;
   needsPaidOcr: boolean;
+  truncated?: boolean;
+  pageCap?: number;
   ocrLang?: string;
   pages: PdfPage[];
   /** Pages still needing OCR (empty = fully saved for offline). */
@@ -67,6 +69,8 @@ export const DocCache = {
         scanned: doc.scanned,
         ocrPages: doc.ocrPages,
         needsPaidOcr: Boolean(doc.needsPaidOcr),
+        truncated: Boolean(doc.truncated),
+        pageCap: doc.pageCap,
         ocrLang: doc.ocrLang,
         pages: doc.pages,
         pendingOcr: doc.pendingOcr ?? [],
@@ -120,6 +124,8 @@ export const DocCache = {
       ocrLang: c.ocrLang,
       pendingOcr: c.pendingOcr ?? [],
       needsPaidOcr: c.needsPaidOcr,
+      truncated: Boolean(c.truncated),
+      pageCap: c.pageCap,
     };
   },
 

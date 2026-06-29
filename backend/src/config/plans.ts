@@ -6,9 +6,9 @@
  * copy via `GET /api/config` so pricing/limits can change without an app
  * update (the app keeps a hard-coded fallback in case the network call fails).
  *
- * Business rule: the free tier must cost us nothing per use — no AI, no OCR,
- * no cloud voice. It is ad-supported and reads the user's own PDFs locally
- * (native text only, capped per document).
+ * Business rule: Free and Reader Plus must have no per-use AI/OCR/cloud-voice
+ * cost. They read normal text-layer PDFs with device voice. Scanned/image PDFs
+ * require AI Pro or Power because OCR consumes backend CPU and must be capped.
  */
 
 export type TierKey = "free" | "reader_plus" | "ai_pro" | "power";
@@ -91,10 +91,10 @@ export const TIERS: Tier[] = [
       ocrPagesPerMonth: 0,
       aiActionsPerMonth: 0,
       cloudVoiceCharsPerMonth: 0,
-      pdfsPerMonth: 30,
+      pdfsPerMonth: 1,
       maxFileSizeMb: 20,
       maxPages: 2000,
-      perDocPageCap: 30,
+      perDocPageCap: 100,
     },
     features: {
       ads: true,
@@ -109,25 +109,25 @@ export const TIERS: Tier[] = [
   {
     key: "reader_plus",
     name: "Reader Plus",
-    tagline: "Ad-free reading and scanned-PDF OCR.",
+    tagline: "Ad-free reading for full text PDFs.",
     entitlementId: "reader_plus",
     products: {
       monthly: { productId: "readflow_reader_plus_monthly", priceUsd: 4.99 },
       yearly: { productId: "readflow_reader_plus_yearly", priceUsd: 39.99 },
     },
     limits: {
-      ocrPagesPerMonth: 300,
+      ocrPagesPerMonth: 0,
       aiActionsPerMonth: 0,
       cloudVoiceCharsPerMonth: 0,
       pdfsPerMonth: 100,
-      maxFileSizeMb: 50,
-      maxPages: 500,
+      maxFileSizeMb: 100,
+      maxPages: 2000,
       perDocPageCap: 0,
     },
     features: {
       ads: false,
       ai: false,
-      ocr: true,
+      ocr: false,
       serverExtract: true,
       export: false,
       cloudVoice: false,

@@ -64,10 +64,16 @@ Current cloud voice implementation:
   not grow by the model size until the user chooses to download it. This replaced
   the first 20 MB Piper test voice because the smaller model sounded too robotic
   and paused too noticeably for book reading.
-- Free-tier limits are not aligned with the latest product decision. The user
-  wants roughly 1 free book and around 100 pages. Current backend config is
-  `pdfsPerMonth: 30` and `perDocPageCap: 30`; the mobile reader also has
-  `ENFORCE_FREE_LIMIT=false`, so local reading is not actually capped in-app.
+- Free-tier source now follows the latest product decision: 1 imported PDF per
+  month and the first 100 pages of a native-text document. The backend returns
+  `truncated/pageCap` so the reader can show a page-limit message instead of
+  mistaking page 101 for a scanned page.
+- Reader Plus is now intentionally non-OCR: ad-free/full native-text reading,
+  larger imports, and device voice. Scanned/image PDFs require AI Pro or Power.
+- Cloud AI voice is language-quality gated. Persian, Arabic, Russian, Hindi,
+  Chinese, Japanese, and Korean are blocked from Cloud AI voice until voice QA
+  passes; the app falls back to Phone voice instead of letting paid users hear a
+  bad cloud result.
 
 Do not launch public subscriptions until RevenueCat identity is wired and the
 free limits are explicit and enforced by the backend/mobile app.
@@ -100,19 +106,18 @@ The important distinction:
 - Reading an already-imported book costs us nothing per hour. The text, reading
   position, highlighting, typography, and device TTS playback run on the phone.
 - Device voice costs us nothing per hour. It uses the user's phone TTS engine.
-- Render is used when the user imports/extracts a PDF or DOCX, and when paid OCR
-  is needed for scanned/image pages.
+- Render is used when the user imports/extracts a PDF or DOCX. AI Pro/Power OCR
+  also uses Render CPU and memory for scanned/image pages.
 - OCR has no OpenAI/API cost in the current backend, but it consumes Render CPU
-  and memory. This is why Reader Plus still needs OCR page caps and concurrency
-  limits.
+  and memory. This is why OCR starts at AI Pro and stays capped.
 
 Current Reader Plus config:
 
 - Price: $4.99/month or $39.99/year.
-- OCR: 300 pages/month.
+- OCR: not included.
 - Server document extractions: 100/month.
-- Max file size: 50 MB.
-- Max processed pages per document: 500.
+- Max file size: 100 MB.
+- Max processed pages per document: 2,000.
 - AI: off.
 - Cloud voice: off.
 
@@ -129,16 +134,15 @@ Rough margin:
   9 users for $25/month or 18 users for $50/month.
 
 Conclusion: heavy Reader Plus reading is safe if it means many listening hours
-with device voice. The risky part is not reading time; it is many large imports
-and scanned/OCR-heavy books. Keep OCR capped, queue or throttle concurrent OCR,
-and move long-term caching/storage carefully.
+with device voice on native-text PDFs. The risky part is scanned/OCR-heavy books,
+so those are AI Pro/Power features with monthly OCR caps.
 
 ## OCR Cost Per Page
 
-Reader Plus currently has a 300 OCR pages/month allowance. This is not a limit
-on normal reading pages. It only applies to scanned/image pages that need OCR.
-A normal text PDF can be read and listened to with device voice for no per-hour
-vendor cost after import.
+Reader Plus currently has no OCR allowance. OCR starts at AI Pro because scanned
+books consume shared backend CPU/memory and should be paid/capped. A normal text
+PDF can be read and listened to with device voice for no per-hour vendor cost
+after import.
 
 OCR page cash cost:
 
@@ -165,20 +169,19 @@ extra bill from Render. The fixed monthly allocation matters more:
 | 10,000 pages | $0.25 / 100 pages | $0.85 / 100 pages |
 | 30,000 pages | $0.08 / 100 pages | $0.28 / 100 pages |
 
-At $4.99/month, Reader Plus nets roughly $4.19 after conservative Play +
-RevenueCat fees. If a user consumes the full 300 OCR pages, revenue is about
-$1.40 per 100 OCR pages. This is healthy at moderate shared volume, but a very
-small user base with many OCR-heavy users can feel expensive because the fixed
-server cost is spread over too few subscriptions.
+AI Pro at $9.99/month nets roughly $8.39 after conservative Play + RevenueCat
+fees. If a user consumes the full 1,000 OCR pages, revenue is about $0.84 per
+100 OCR pages before cloud voice/AI text costs. This is acceptable only if OCR is
+shared across a healthy user base, queued/throttled, and measured.
 
-Recommendation: allow unlimited normal reading/device listening in Reader Plus,
-but keep OCR capped, measured, and queue-limited. Start with 300 OCR pages/month,
-then adjust after real telemetry.
+Recommendation: allow generous normal reading/device listening in Reader Plus,
+but keep OCR out of Reader Plus. Keep AI Pro/Power OCR capped, measured, and
+queue-limited; adjust after telemetry.
 
 ## Multi-Month OCR for Large Scanned Books
 
-Reader Plus should allow a user to finish one large scanned book over multiple
-months instead of forcing an upgrade.
+AI Pro should allow a user to finish one large scanned book over multiple months
+instead of forcing an immediate Power upgrade.
 
 Current intended flow:
 
@@ -430,7 +433,7 @@ This is the conservative, profit-protecting plan shape:
 | Tier | Suggested price | What should be included | Cost risk |
 | --- | ---: | --- | --- |
 | Free | $0 | 1 saved book, about 100 pages, device voice, native text only | Render CPU/bandwidth only |
-| Reader Plus | $4.99/mo | Ad-free, bigger library, OCR allowance, device voice | OCR CPU on Render |
+| Reader Plus | $4.99/mo | Ad-free, bigger native-text library, device voice | Render import CPU/bandwidth |
 | AI Pro | $9.99-$14.99/mo | AI text actions, OCR, device voice, Edge AI, 60k cloud voice chars | Fine if cloud voice capped |
 | Power | $19.99-$29.99/mo | Higher AI/OCR/export limits, device voice, Edge AI, 180k cloud voice chars | Must hard-cap cloud voice |
 | Natural Voice Pack | Separate add-on | Extra cloud voice hours or pay-as-you-go credits | Best match to real OpenAI cost |

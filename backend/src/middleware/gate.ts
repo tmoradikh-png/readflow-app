@@ -59,7 +59,7 @@ function upgradeMessage(feature: keyof PlanFeatures): string {
     case "ai":
       return "AI features are part of AI Pro. Upgrade to summarize, explain and ask about your PDFs.";
     case "ocr":
-      return "Scanned-PDF OCR is part of Reader Plus and above. Upgrade to read scanned documents.";
+      return "Scanned-PDF OCR is part of AI Pro and Power. Upgrade to read scanned documents.";
     case "export":
       return "Export is part of Power. Upgrade to export your notes and summaries.";
     case "cloudVoice":

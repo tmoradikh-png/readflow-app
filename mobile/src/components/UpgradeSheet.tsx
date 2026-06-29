@@ -41,11 +41,11 @@ const PLANS: Plan[] = [
   {
     key: "reader_plus",
     name: "Reader Plus",
-    tagline: "Ad-free reading and scanned-PDF OCR.",
+    tagline: "Ad-free reading for full text PDFs.",
     monthly: 4.99,
     annualPerMonth: 3.33,
     annualTotal: 39.99,
-    perks: ["Ad-free reading", "Scanned-PDF OCR - 300 pages / month", "Unlimited library"],
+    perks: ["Ad-free reading", "Full text-PDF library", "Device voice with no AI cost"],
   },
   {
     key: "ai_pro",
@@ -57,9 +57,9 @@ const PLANS: Plan[] = [
     annualTotal: 79.99,
     perks: [
       "Everything in Reader Plus",
+      "OCR - 1,000 scanned pages / month",
       "AI summaries, explain & Q&A - 500 / month",
       "Cloud AI voice - 60k characters / month",
-      "OCR - 1,000 pages / month",
     ],
   },
   {
@@ -139,7 +139,7 @@ export function UpgradeSheet({
           <Text style={styles.title}>{reasonTitle || "Unlock more of ReadFlow"}</Text>
           <Text style={styles.body}>
             {reasonBody ||
-              "Upgrade to read every document with no limits, OCR your scanned PDFs, ask AI about anything you’re reading, and use capped Cloud AI voice."}
+              "Upgrade to read without native-text limits, OCR scanned PDFs, ask AI about anything you’re reading, and use capped Cloud AI voice."}
           </Text>
 
           {/* billing toggle */}

@@ -164,6 +164,24 @@ Changes after the latest finished build and included in source `1.0.18`:
 - Reader page changes now show a very faded divider line only when moving from
   one PDF page to the next; it does not add text to the spoken content or AI
   context.
+- 2026-06-29 product boundary update: Free is 1 native-text PDF/month with the
+  first 100 pages returned; Reader Plus is full/ad-free native-text reading with
+  device voice and no OCR/AI/cloud voice cost. OCR now starts at AI Pro
+  (1,000 pages/month) and Power (3,000 pages/month). Do not put OCR back into
+  Reader Plus unless the cost model is intentionally changed.
+- 2026-06-29 Persian book check from the owner's Downloads: `zayesh-tragedy-az-jan`
+  is a good Persian text-layer PDF and imports as native text. `Tabar_Shenasiye_Akhlagh`
+  and `Dayeratol_Maaref_Sotoon_Panjom` are scanned/image PDFs; they must show an
+  OCR-required path for Free/Reader Plus and run background OCR only for AI
+  Pro/Power. Pending OCR pages are returned blank instead of showing watermark
+  or garbage placeholder text.
+- Reader text cleanup now removes page-number-only lines, common URL/watermark
+  lines, and repeated short headers/footers before building reader sentences.
+  This affects display, TTS, and AI context so the app does not read page
+  numbers or site watermarks aloud.
+- Cloud AI voice is now language-quality gated. Persian and other unapproved
+  non-Latin voice languages fall back to Phone voice until voice QA passes; AI
+  text can still answer in those languages.
 - Connected-phone test on 2026-06-29 after the multilingual fix: installed a
   standalone local release APK on Samsung `SM_G975F` (`R58M168KTSZ`) from
   `C:\rf-mobile-test-voice2\android\app\build\outputs\apk\release\app-release.apk`

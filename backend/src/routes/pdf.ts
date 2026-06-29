@@ -29,8 +29,8 @@ const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingm
  *
  * Tier rules:
  *   - Free: native text only, capped to `perDocPageCap` pages, NO OCR. Ads UI.
- *   - Reader Plus+: full document, OCR for scanned pages (counts toward the
- *     monthly OCR-page quota).
+ *   - Reader Plus: full native-text documents, NO OCR and no AI cost.
+ *   - AI Pro / Power: OCR for scanned pages (counts toward monthly quota).
  * Per-tier file-size and page limits are enforced from the plan config so a
  * free user can't push large/expensive jobs through the backend.
  */
@@ -98,16 +98,20 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
     const ocrLang =
       typeof req.body?.ocrLang === "string" ? req.body.ocrLang : undefined;
 
+    const lowQuality = isPdf
+      ? doc.pages.filter((p) => needsOcr(p.text, ocrLang)).map((p) => p.page)
+      : [];
+
     // Keep the original bytes briefly so the client can OCR more pages on
     // demand (only for PDFs whose plan allows OCR).
     let docToken: string | null = null;
     const pendingOcr = new Set<number>();
 
     let ocrPages = 0;
-    // OCR is a PAID feature. Free users never trigger server OCR cost.
+    // OCR is an AI Pro / Power feature. Free and Reader Plus never trigger
+    // server OCR cost.
     if (isPdf && features.ocr) {
       docToken = putDoc(req.file.buffer);
-      const lowQuality = doc.pages.filter((p) => needsOcr(p.text, ocrLang)).map((p) => p.page);
       const lowQualitySet = new Set(lowQuality);
       if (lowQuality.length > 0) {
         // Only OCR the first few pages now; the rest are pending (on demand).
@@ -142,10 +146,13 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
       }
     }
 
-    const hasText = doc.pages.some((p) => p.text.length > 0);
     // Did this doc have scanned pages the user's plan couldn't OCR?
     const needsPaidOcr =
       isPdf && !features.ocr && documentNeedsPaidOcr(doc.pages, ocrLang);
+    if (isPdf && (features.ocr || needsPaidOcr)) {
+      blankUnusablePages(doc.pages, features.ocr ? Array.from(pendingOcr) : lowQuality);
+    }
+    const hasText = doc.pages.some((p) => p.text.trim().length > 0);
 
     return res.json({
       ...doc,
@@ -182,6 +189,13 @@ function documentNeedsPaidOcr(
 
   const substantiveLowQuality = lowQuality.filter((page) => page.textLength >= 40).length;
   return substantiveLowQuality >= Math.max(2, Math.ceil(checks.length * 0.2));
+}
+
+function blankUnusablePages(pages: { page: number; text: string }[], pageNumbers: number[]): void {
+  const blank = new Set(pageNumbers);
+  for (const page of pages) {
+    if (blank.has(page.page)) page.text = "";
+  }
 }
 
 const OCR_ONDEMAND_MAX = Number(process.env.OCR_ONDEMAND_MAX || 12);

@@ -42,10 +42,10 @@ export const FREE_LIMITS: PlanLimits = {
   ocrPagesPerMonth: 0,
   aiActionsPerMonth: 0,
   cloudVoiceCharsPerMonth: 0,
-  pdfsPerMonth: 30,
+  pdfsPerMonth: 1,
   maxFileSizeMb: 20,
   maxPages: 2000,
-  perDocPageCap: 30,
+  perDocPageCap: 100,
 };
 
 export const FREE_ENTITLEMENT: EntitlementSnapshot = {

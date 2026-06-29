@@ -32,6 +32,10 @@ export interface ParsedPdf {
   pendingOcr?: number[];
   /** True when the backend detected scanned content that requires paid OCR. */
   needsPaidOcr?: boolean;
+  /** True when backend returned only the plan-allowed leading pages. */
+  truncated?: boolean;
+  /** Highest page returned for this plan when truncated. */
+  pageCap?: number;
 }
 
 const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -110,6 +114,8 @@ export const PDFParser = {
       docToken: typeof data.docToken === "string" ? data.docToken : undefined,
       pendingOcr: Array.isArray(data.pendingOcr) ? data.pendingOcr : [],
       needsPaidOcr: Boolean(data.needsPaidOcr),
+      truncated: Boolean(data.truncated),
+      pageCap: Number.isFinite(Number(data.pageCap)) ? Number(data.pageCap) : undefined,
     };
   },
 

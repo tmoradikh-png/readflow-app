@@ -15,10 +15,10 @@
 
 | Feature | Free | Reader Plus | AI Pro | Power |
 |---------|------|-------------|--------|-------|
-| **Local PDF reading** | ✅ (30 pages/doc) | ✅ (unlimited) | ✅ | ✅ |
-| **Server PDF extraction** | ✅ (30 PDFs/mo) | ✅ (100/mo) | ✅ (300/mo) | ✅ (1000/mo) |
+| **Local PDF reading** | ✅ (100 pages/doc) | ✅ (full native text PDFs) | ✅ | ✅ |
+| **Server PDF extraction** | ✅ (1 PDF/mo) | ✅ (100/mo) | ✅ (300/mo) | ✅ (1000/mo) |
 | **AI summary/explain/ask** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (500/mo) | ✅ (2000/mo) |
-| **Cloud OCR (scanned PDFs)** | ❌ 402 Blocked | ✅ (300 pages/mo) | ✅ (1000/mo) | ✅ (3000/mo) |
+| **OCR (scanned PDFs)** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (1000/mo) | ✅ (3000/mo) |
 | **Cloud TTS (AI voice)** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (60k chars/mo) | ✅ (180k chars/mo) |
 | **Export** | ❌ 402 Blocked | ❌ 402 Blocked | ❌ 402 Blocked | ✅ |
 
@@ -81,10 +81,10 @@ Free tier definition (from `src/config/plans.ts`):
     aiActionsPerMonth: 0,     // ← Cannot make any AI requests
     cloudVoiceCharsPerMonth: 0, // ← Cannot make cloud voice requests
     ocrPagesPerMonth: 0,      // ← Cannot OCR any pages
-    pdfsPerMonth: 30,         // ✓ Can extract 30 PDFs
+    pdfsPerMonth: 1,          // ✓ Can extract 1 PDF
     maxFileSizeMb: 20,        // ✓ Max file size
     maxPages: 2000,           // ✓ Doc page limit
-    perDocPageCap: 30,        // ✓ Show first 30 pages, then paywall
+    perDocPageCap: 100,       // ✓ Show first 100 pages, then paywall
   },
 }
 ```
@@ -377,11 +377,11 @@ Check this header to verify the backend correctly identified the user's tier.
 
 ✅ **Free users CAN use:**
 - Local PDF reading (native text, device voice)
-- Server PDF extraction (30 PDFs/mo, 30 pages/doc max)
+- Server PDF extraction (1 PDF/mo, 100 pages/doc max)
 
 ✅ **Free users CANNOT use:**
 - AI summary/explain/ask
-- OCR for scanned PDFs
+- OCR for scanned PDFs (AI Pro / Power only)
 - Cloud AI voice TTS
 
 ✅ **AI Pro / Power Cloud AI voice is capped:**

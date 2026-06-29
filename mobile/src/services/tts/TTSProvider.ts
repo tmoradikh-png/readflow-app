@@ -23,7 +23,7 @@ export interface SpeakOptions {
   fallbackVoiceId?: string;
   /** Called when a provider keeps reading by falling back to a cheaper/local voice. */
   onFallback?: (info: {
-    reason: "quota" | "network" | "error" | "local_unavailable";
+    reason: "quota" | "network" | "error" | "local_unavailable" | "language_unsupported";
     message?: string;
   }) => void;
 }

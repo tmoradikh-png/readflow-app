@@ -135,6 +135,13 @@ Current ReadFlow QA checklist for any build that changes reading/voice:
   paragraphs aloud visually. Do not accept a test that only proves the letters or
   words exist; Persian/Arabic can have correct words in the wrong order if PDF
   item sorting regresses.
+- For Persian specifically, test both a text-layer book and a scanned book. A
+  text-layer book such as `zayesh-tragedy-az-jan` should import without OCR.
+  Scanned books such as `Tabar_Shenasiye_Akhlagh` should show OCR-required
+  messaging on Free/Reader Plus and should not show watermark/garbage placeholder
+  lines while AI Pro/Power OCR is pending.
+- Start playback on a multilingual book and confirm the voice does not read page
+  numbers, repeated headers/footers, or URL watermarks such as `www...`.
 - Proper text-layer PDFs in Reader/free-style testing should not consume OCR and
   should not show an OCR upsell just because the file has one blank or decorative
   page.
@@ -143,6 +150,8 @@ Current ReadFlow QA checklist for any build that changes reading/voice:
 - Download/select Edge AI, play several paragraphs, and check for natural
   enough voice quality, short paragraph gaps, and line highlight following the
   spoken text.
+- For Persian, Cloud AI voice should be unavailable/QA-labeled and the app
+  should recommend Phone voice until a Persian voice passes quality testing.
 - Rotate the phone while reading; the current line should re-anchor instead of
   scrolling through the book.
 - Open a saved book, jump to a bookmark, and use page navigation; each should

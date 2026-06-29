@@ -273,6 +273,7 @@ export function LibraryScreen({
   const cloudVoiceRemaining =
     usage?.remaining.cloudVoiceChars ?? entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
   const cloudVoiceLimit = entitlement.limits.cloudVoiceCharsPerMonth ?? 0;
+  const cloudVoiceReady = readingLanguage.cloudAiVoice;
 
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
@@ -327,7 +328,9 @@ export function LibraryScreen({
         <View style={styles.statusDot} />
         <Text style={styles.statusText}>
           {preferences.voiceEngine === "cloud"
-            ? cloudVoiceLimit > 0
+            ? !cloudVoiceReady
+              ? `Cloud AI voice is not ready for ${readingLanguage.label} yet - use Phone voice.`
+              : cloudVoiceLimit > 0
               ? `Cloud AI selected - ${formatChars(cloudVoiceRemaining)} left this month.`
               : "Cloud AI selected - upgrade or use device voice before reading."
             : preferences.voiceEngine === "local_ai"
@@ -345,6 +348,7 @@ export function LibraryScreen({
         cloudVoiceRemaining={cloudVoiceRemaining}
         cloudVoiceLimit={cloudVoiceLimit}
         localStatus={localStatus}
+        readingLanguage={readingLanguage}
         onPress={() => setShowVoice(true)}
       />
 
@@ -556,12 +560,14 @@ function VoiceOverview({
   cloudVoiceRemaining,
   cloudVoiceLimit,
   localStatus,
+  readingLanguage,
   onPress,
 }: {
   preferences: ReadingPreferences;
   cloudVoiceRemaining: number;
   cloudVoiceLimit: number;
   localStatus: LocalNeuralVoiceStatus;
+  readingLanguage: ReadingLanguage;
   onPress: () => void;
 }) {
   const isCloud = preferences.voiceEngine === "cloud";
@@ -574,7 +580,9 @@ function VoiceOverview({
       </View>
       <Text style={styles.voiceOverviewBody}>
         {isCloud
-          ? cloudVoiceLimit > 0
+          ? !readingLanguage.cloudAiVoice
+            ? `Cloud AI voice is not quality-approved for ${readingLanguage.label} yet. Use Phone voice until this language passes QA.`
+            : cloudVoiceLimit > 0
             ? `Cloud AI: ${formatChars(cloudVoiceRemaining)} left, about ${estimatePages(cloudVoiceRemaining)} pages.`
             : "Cloud AI needs AI Pro or Power. Device voice remains unlimited."
           : isLocal
@@ -606,7 +614,8 @@ function LanguageSettingsSheet({
       bookLanguage: language.code,
       deviceVoiceId: undefined,
       voiceEngine:
-        preferences.voiceEngine === "local_ai" && !language.edgeAi
+        (preferences.voiceEngine === "local_ai" && !language.edgeAi) ||
+        (preferences.voiceEngine === "cloud" && !language.cloudAiVoice)
           ? "device"
           : preferences.voiceEngine,
     });
@@ -691,7 +700,8 @@ function VoiceSettingsSheet({
 }) {
   const cloudLimit = entitlement.limits.cloudVoiceCharsPerMonth || 0;
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
-  const canUseCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
+  const planHasCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
+  const canUseCloud = Boolean(planHasCloud && readingLanguage.cloudAiVoice);
   const currentDeviceVoice = deviceVoices.find((v) => v.id === preferences.deviceVoiceId);
   const [voiceRegion, setVoiceRegion] = useState("recommended");
   const regionOptions = useMemo(() => {
@@ -708,7 +718,14 @@ function VoiceSettingsSheet({
   }, [deviceVoices, voiceRegion]);
 
   function selectEngine(engine: VoiceEngine) {
-    if (engine === "cloud" && !canUseCloud) {
+    if (engine === "cloud" && !readingLanguage.cloudAiVoice) {
+      onNotice({
+        title: "Cloud AI voice QA",
+        body: `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Phone voice now; we will add it after the language passes voice testing.`,
+      });
+      return;
+    }
+    if (engine === "cloud" && !planHasCloud) {
       onNotice({
         title: "Cloud AI voice",
         body:
@@ -719,7 +736,7 @@ function VoiceSettingsSheet({
     if (engine === "local_ai" && !readingLanguage.edgeAi) {
       onNotice({
         title: "Edge AI language pack",
-        body: `Edge AI is available for English right now. Use Device voice or Cloud AI for ${readingLanguage.label} until we add this language pack.`,
+        body: `Edge AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`,
       });
       return;
     }
@@ -806,13 +823,15 @@ function VoiceSettingsSheet({
               <VoiceChoice
                 title="Cloud AI"
                 detail={
-                  canUseCloud
+                  !readingLanguage.cloudAiVoice
+                    ? `${readingLanguage.label} voice QA is pending.`
+                    : canUseCloud
                     ? `${formatChars(cloudRemaining)} left this month. Best cloud quality.`
                     : "Included in AI Pro and Power. Best quality, monthly allowance."
                 }
                 active={preferences.voiceEngine === "cloud"}
                 locked={!canUseCloud}
-                stateLabel={canUseCloud ? undefined : "AI Pro"}
+                stateLabel={!readingLanguage.cloudAiVoice ? "QA" : canUseCloud ? undefined : "AI Pro"}
                 onPress={() => selectEngine("cloud")}
               />
             </View>

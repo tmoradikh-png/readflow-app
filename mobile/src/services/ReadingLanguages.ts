@@ -7,6 +7,8 @@ export interface ReadingLanguage {
   aiLanguage: string;
   voicePrefixes: string[];
   edgeAi: boolean;
+  /** Cloud AI voice should only be selectable after language quality QA. */
+  cloudAiVoice: boolean;
   rtl?: boolean;
 }
 
@@ -20,6 +22,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "English",
     voicePrefixes: ["en"],
     edgeAi: true,
+    cloudAiVoice: true,
   },
   {
     code: "es",
@@ -30,6 +33,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Spanish",
     voicePrefixes: ["es"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "fr",
@@ -40,6 +44,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "French",
     voicePrefixes: ["fr"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "de",
@@ -50,6 +55,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "German",
     voicePrefixes: ["de"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "it",
@@ -60,6 +66,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Italian",
     voicePrefixes: ["it"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "pt",
@@ -70,6 +77,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Portuguese",
     voicePrefixes: ["pt"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "nl",
@@ -80,6 +88,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Dutch",
     voicePrefixes: ["nl"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "sv",
@@ -90,6 +99,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Swedish",
     voicePrefixes: ["sv"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "no",
@@ -100,6 +110,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Norwegian",
     voicePrefixes: ["no", "nb", "nn"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "da",
@@ -110,6 +121,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Danish",
     voicePrefixes: ["da"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "fi",
@@ -120,6 +132,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Finnish",
     voicePrefixes: ["fi"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "tr",
@@ -130,6 +143,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Turkish",
     voicePrefixes: ["tr"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "id",
@@ -140,6 +154,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Indonesian",
     voicePrefixes: ["id", "in"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "vi",
@@ -150,6 +165,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Vietnamese",
     voicePrefixes: ["vi"],
     edgeAi: false,
+    cloudAiVoice: true,
   },
   {
     code: "ja",
@@ -160,6 +176,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Japanese",
     voicePrefixes: ["ja"],
     edgeAi: false,
+    cloudAiVoice: false,
   },
   {
     code: "ko",
@@ -170,6 +187,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Korean",
     voicePrefixes: ["ko"],
     edgeAi: false,
+    cloudAiVoice: false,
   },
   {
     code: "zh",
@@ -180,6 +198,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Chinese",
     voicePrefixes: ["zh"],
     edgeAi: false,
+    cloudAiVoice: false,
   },
   {
     code: "hi",
@@ -190,6 +209,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Hindi",
     voicePrefixes: ["hi"],
     edgeAi: false,
+    cloudAiVoice: false,
   },
   {
     code: "ru",
@@ -200,6 +220,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Russian",
     voicePrefixes: ["ru"],
     edgeAi: false,
+    cloudAiVoice: false,
   },
   {
     code: "ar",
@@ -210,6 +231,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Arabic",
     voicePrefixes: ["ar"],
     edgeAi: false,
+    cloudAiVoice: false,
     rtl: true,
   },
   {
@@ -221,6 +243,7 @@ export const READING_LANGUAGES: ReadingLanguage[] = [
     aiLanguage: "Persian",
     voicePrefixes: ["fa", "fas"],
     edgeAi: false,
+    cloudAiVoice: false,
     rtl: true,
   },
 ];

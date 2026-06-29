@@ -8,7 +8,7 @@ export const ttsRouter = Router();
 
 /**
  * POST /api/tts
- * body: { text, voice?, speed? }
+ * body: { text, voice?, speed?, language? }
  * -> audio/mpeg (spoken audio for one sentence/chunk)
  *
  * Natural cloud voice. The OpenAI key lives ONLY on the server; the mobile app
@@ -31,6 +31,25 @@ const VOICES = new Set([
 ]);
 
 const MAX_CHARS = 1200; // one sentence/short chunk; keeps latency + cost low
+
+const CLOUD_TTS_LANGUAGES = new Set([
+  "en",
+  "es",
+  "fr",
+  "de",
+  "it",
+  "pt",
+  "nl",
+  "sv",
+  "no",
+  "nb",
+  "nn",
+  "da",
+  "fi",
+  "tr",
+  "id",
+  "vi",
+]);
 
 // Small in-memory LRU so repeated sentences (and replays) don't re-bill OpenAI.
 const CACHE_MAX = 300;
@@ -68,9 +87,24 @@ ttsRouter.post("/", async (req, res) => {
     if (!ensureFeature(req, res, "cloudVoice")) return;
     const ent = req.entitlement!;
 
-    const body = (req.body || {}) as { text?: string; voice?: string; speed?: number };
+    const body = (req.body || {}) as {
+      text?: string;
+      voice?: string;
+      speed?: number;
+      language?: string;
+    };
     const text = typeof body.text === "string" ? body.text.trim().slice(0, MAX_CHARS) : "";
     if (!text) return res.status(400).json({ error: "text is required." });
+    const language = normalizeLanguage(body.language);
+    if (!CLOUD_TTS_LANGUAGES.has(language)) {
+      return res.status(422).json({
+        error: "cloud_voice_language_unsupported",
+        feature: "cloudVoice",
+        language,
+        message:
+          "Cloud AI voice is not quality-approved for this language yet. Use device voice until this language pack passes QA.",
+      });
+    }
 
     const voice = body.voice && VOICES.has(body.voice) ? body.voice : process.env.TTS_VOICE || "nova";
     const speed = Math.min(4, Math.max(0.25, Number(body.speed) || 1));
@@ -78,7 +112,7 @@ ttsRouter.post("/", async (req, res) => {
 
     const key = crypto
       .createHash("sha1")
-      .update(`${model}|${voice}|${speed}|${text}`)
+      .update(`${model}|${language}|${voice}|${speed}|${text}`)
       .digest("hex");
 
     let audio = cacheGet(key);
@@ -137,3 +171,10 @@ ttsRouter.post("/", async (req, res) => {
     return res.status(500).json({ error: "TTS request failed." });
   }
 });
+
+function normalizeLanguage(language?: string): string {
+  const raw = String(language || "en-US").trim().toLowerCase().replace("_", "-");
+  const primary = raw.split("-")[0] || "en";
+  if (primary === "no") return "no";
+  return primary;
+}

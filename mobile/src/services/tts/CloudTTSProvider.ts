@@ -56,20 +56,25 @@ export class CloudTTSProvider implements TTSProvider {
   private removeListener: (() => void) | null = null;
   private finishTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private keyFor(text: string, speed: number, voice: string) {
-    return `${voice}|${speed.toFixed(2)}|${text}`;
+  private keyFor(text: string, speed: number, voice: string, language: string) {
+    return `${language}|${voice}|${speed.toFixed(2)}|${text}`;
   }
 
   /** Download (and cache) the audio for one piece of text. Returns a file uri. */
-  private async fetchAudio(text: string, speed: number, voice: string): Promise<string> {
-    const key = this.keyFor(text, speed, voice);
+  private async fetchAudio(
+    text: string,
+    speed: number,
+    voice: string,
+    language: string
+  ): Promise<string> {
+    const key = this.keyFor(text, speed, voice, language);
     const cached = this.fileCache.get(key);
     if (cached) return cached;
 
     const inflight = this.inflightCache.get(key);
     if (inflight) return inflight;
 
-    const pending = this.downloadAudio(key, text, speed, voice).finally(() => {
+    const pending = this.downloadAudio(key, text, speed, voice, language).finally(() => {
       this.inflightCache.delete(key);
     });
     this.inflightCache.set(key, pending);
@@ -80,12 +85,13 @@ export class CloudTTSProvider implements TTSProvider {
     key: string,
     text: string,
     speed: number,
-    voice: string
+    voice: string,
+    language: string
   ): Promise<string> {
     const res = await fetch(`${API_BASE}/api/tts`, {
       method: "POST",
       headers: apiHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ text, voice, speed }),
+      body: JSON.stringify({ text, voice, speed, language }),
     });
     if (!res.ok) {
       let msg = `TTS failed (${res.status})`;
@@ -139,7 +145,12 @@ export class CloudTTSProvider implements TTSProvider {
     const t = (text || "").trim();
     if (!t) return;
     try {
-      await this.fetchAudio(t, clampSpeed(opts.rate), normalizeCloudVoice(opts.voiceId || this.voice));
+      await this.fetchAudio(
+        t,
+        clampSpeed(opts.rate),
+        normalizeCloudVoice(opts.voiceId || this.voice),
+        normalizeLanguage(opts.language)
+      );
     } catch {
       /* ignore prefetch errors */
     }
@@ -158,7 +169,12 @@ export class CloudTTSProvider implements TTSProvider {
 
     let uri: string;
     try {
-      uri = await this.fetchAudio(t, speed, normalizeCloudVoice(opts.voiceId || this.voice));
+      uri = await this.fetchAudio(
+        t,
+        speed,
+        normalizeCloudVoice(opts.voiceId || this.voice),
+        normalizeLanguage(opts.language)
+      );
     } catch (e) {
       // Cloud unavailable → keep reading with the on-device voice.
       if (mySeq !== this.seq) return;
@@ -299,11 +315,19 @@ function normalizeCloudVoice(voice: string): string {
   return CLOUD_VOICES.has(voice) ? voice : "nova";
 }
 
+function normalizeLanguage(language?: string): string {
+  const raw = String(language || "en-US").trim().replace("_", "-");
+  return raw || "en-US";
+}
+
 function cloudVoiceName(id: string): string {
   return id.charAt(0).toUpperCase() + id.slice(1);
 }
 
-function fallbackInfo(e: unknown): { reason: "quota" | "network" | "error"; message?: string } {
+function fallbackInfo(e: unknown): {
+  reason: "quota" | "network" | "error" | "language_unsupported";
+  message?: string;
+} {
   const err = e as { status?: number; feature?: string; code?: string; message?: string };
   if (err?.status === 429 || err?.code === "quota_exceeded" || err?.feature === "cloudVoice") {
     return {
@@ -311,6 +335,14 @@ function fallbackInfo(e: unknown): { reason: "quota" | "network" | "error"; mess
       message:
         err.message ||
         "AI voice allowance is used up. Continuing with device voice.",
+    };
+  }
+  if (err?.status === 422 || err?.code === "cloud_voice_language_unsupported") {
+    return {
+      reason: "language_unsupported",
+      message:
+        err.message ||
+        "Cloud AI voice is not ready for this language. Continuing with device voice.",
     };
   }
   if (/network|fetch/i.test(err?.message || "")) {

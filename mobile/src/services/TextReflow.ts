@@ -25,8 +25,8 @@ export const TextReflow = {
   PAGES_PER_CHUNK: 10,
 
   /** Normalize whitespace and join hard-wrapped lines into flowing paragraphs. */
-  cleanPageText(raw: string): string {
-    return raw
+  cleanPageText(raw: string, pageNumber?: number, skipLines?: Set<string>): string {
+    return stripNonReadingLines(raw, pageNumber, skipLines)
       .replace(/\r/g, "")
       // de-hyphenate words split across line breaks: "exam-\nple" -> "example"
       .replace(/(\w)-\n(\w)/g, "$1$2")
@@ -43,8 +43,8 @@ export const TextReflow = {
    * instead of being flowed into one paragraph (which previously ran every
    * step together).
    */
-  cleanOcrText(raw: string): string {
-    return raw
+  cleanOcrText(raw: string, pageNumber?: number, skipLines?: Set<string>): string {
+    return stripNonReadingLines(raw, pageNumber, skipLines)
       .replace(/\r/g, "")
       // de-hyphenate words split across line breaks: "exam-\nple" -> "example"
       .replace(/(\w)-\n(\w)/g, "$1$2")
@@ -62,9 +62,9 @@ export const TextReflow = {
    * Native pages flow wrapped lines into paragraphs; OCR pages keep each line
    * as its own unit so list/figure structure (and page enters) survive.
    */
-  unitsForPage(p: PdfPage): string[] {
+  unitsForPage(p: PdfPage, skipLines?: Set<string>): string[] {
     if (p.source === "ocr") {
-      const clean = this.cleanOcrText(p.text);
+      const clean = this.cleanOcrText(p.text, p.page, skipLines);
       const units: string[] = [];
       for (const line of clean.split(/\n+/)) {
         const trimmed = line.trim();
@@ -73,7 +73,7 @@ export const TextReflow = {
       }
       return units;
     }
-    return this.splitSentences(this.cleanPageText(p.text));
+    return this.splitSentences(this.cleanPageText(p.text, p.page, skipLines));
   },
 
   splitSentences(text: string): string[] {
@@ -95,9 +95,10 @@ export const TextReflow = {
    */
   buildSentences(pages: PdfPage[]): Sentence[] {
     const out: Sentence[] = [];
+    const skipLines = buildRepeatedSkipLines(pages);
     let id = 0;
     for (const p of pages) {
-      for (const s of this.unitsForPage(p)) {
+      for (const s of this.unitsForPage(p, skipLines)) {
         out.push({ id: id++, page: p.page, text: s });
       }
     }
@@ -110,6 +111,7 @@ export const TextReflow = {
   },
 
   buildChunks(pages: PdfPage[]): ReflowChunk[] {    const chunks: ReflowChunk[] = [];
+    const skipLines = buildRepeatedSkipLines(pages);
     let sentenceId = 0;
 
     for (let i = 0; i < pages.length; i += this.PAGES_PER_CHUNK) {
@@ -117,7 +119,7 @@ export const TextReflow = {
       const sentences: Sentence[] = [];
 
       for (const p of slice) {
-        for (const s of this.unitsForPage(p)) {
+        for (const s of this.unitsForPage(p, skipLines)) {
           sentences.push({ id: sentenceId++, page: p.page, text: s });
         }
       }
@@ -160,3 +162,93 @@ export const TextReflow = {
     return -1;
   },
 };
+
+function stripNonReadingLines(
+  raw: string,
+  pageNumber?: number,
+  skipLines?: Set<string>
+): string {
+  return (raw || "")
+    .replace(/\r/g, "")
+    .split("\n")
+    .filter((line) => !shouldSkipReaderLine(line, pageNumber, skipLines))
+    .join("\n");
+}
+
+function shouldSkipReaderLine(
+  line: string,
+  pageNumber?: number,
+  skipLines?: Set<string>
+): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return false;
+  const normalized = normalizeReaderLine(trimmed);
+  if (!normalized) return false;
+  if (skipLines?.has(normalized)) return true;
+  if (isPageNumberLine(normalized, pageNumber)) return true;
+  if (isUrlOrWatermarkLine(normalized)) return true;
+  if (/^[._=\-*~•·\s]{4,}$/.test(trimmed)) return true;
+  return false;
+}
+
+function buildRepeatedSkipLines(pages: PdfPage[]): Set<string> {
+  const counts = new Map<string, number>();
+  for (const page of pages) {
+    const seen = new Set<string>();
+    for (const line of (page.text || "").split(/\r?\n/)) {
+      const normalized = normalizeReaderLine(line);
+      if (!isRepeatableBoilerplate(normalized)) continue;
+      seen.add(normalized);
+    }
+    for (const line of seen) counts.set(line, (counts.get(line) || 0) + 1);
+  }
+
+  const threshold = Math.max(3, Math.ceil(pages.length * 0.18));
+  const skip = new Set<string>();
+  for (const [line, count] of counts) {
+    if (count >= threshold) skip.add(line);
+  }
+  return skip;
+}
+
+function isRepeatableBoilerplate(normalized: string): boolean {
+  if (normalized.length < 4 || normalized.length > 90) return false;
+  if (isUrlOrWatermarkLine(normalized)) return true;
+  if (/^\d+$/.test(normalized)) return true;
+  return true;
+}
+
+function isPageNumberLine(normalized: string, pageNumber?: number): boolean {
+  if (!pageNumber || pageNumber < 1) return false;
+  const page = String(pageNumber);
+  if (normalized === page) return true;
+  return normalized === `page ${page}` || normalized === `صفحه ${page}`;
+}
+
+function isUrlOrWatermarkLine(normalized: string): boolean {
+  return (
+    /https?:\/\//i.test(normalized) ||
+    /\bwww\./i.test(normalized) ||
+    /\.(com|ir|org|net)\b/i.test(normalized) ||
+    /ketabfarsi|takbook|veyq|ebook|persianblog|golshan/i.test(normalized)
+  );
+}
+
+function normalizeReaderLine(line: string): string {
+  return normalizeDigits(line)
+    .replace(/\s+/g, " ")
+    .replace(/[ـ]+/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeDigits(value: string): string {
+  const fa = "۰۱۲۳۴۵۶۷۸۹";
+  const ar = "٠١٢٣٤٥٦٧٨٩";
+  return value.replace(/[۰-۹٠-٩]/g, (ch) => {
+    const faIndex = fa.indexOf(ch);
+    if (faIndex >= 0) return String(faIndex);
+    const arIndex = ar.indexOf(ch);
+    return arIndex >= 0 ? String(arIndex) : ch;
+  });
+}
