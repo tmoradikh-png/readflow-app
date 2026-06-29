@@ -57,6 +57,34 @@ posted to the live Render `/api/pdf/extract` endpoint with the app key from
 Main conclusion: proper text-layer PDFs can be read across Latin, Cyrillic,
 Chinese, Japanese, and Korean without OCR cost. Scanned files route to OCR.
 
+## Word / DOCX Smoke
+
+Local backend smoke run on 2026-06-29 with `PORT=4051`,
+`ENTITLEMENTS_DEV_OVERRIDE=true`, and `DEV_DEFAULT_TIER=reader_plus`.
+
+Generated fixture: `tmp/readflow-word-smoke.docx`.
+
+Endpoint tested:
+
+```powershell
+curl.exe -H "x-app-user-id: word-smoke" `
+  -F "file=@tmp/readflow-word-smoke.docx;type=application/vnd.openxmlformats-officedocument.wordprocessingml.document" `
+  http://localhost:4051/api/pdf/extract
+```
+
+Result:
+
+- Returned `kind: docx`.
+- Returned `pageCount: 1`, `pages: 1`.
+- Returned `ocrPages: 0`, `needsPaidOcr: false`, `scanned: false`.
+- Preserved plain paragraphs plus Spanish accents, Persian RTL text, Chinese
+  text, and the final paragraph.
+
+Scope note: Word support currently means modern `.docx` text extraction through
+Mammoth. Legacy `.doc`, image-only Word pages, embedded images, footnotes,
+tables, columns, and advanced formatting are not covered by this smoke test and
+should not be promised as fully preserved.
+
 ## Real Document Checks
 
 Temporary copies were created in `tmp/pdfs/real_qa_20260629` to avoid lock
