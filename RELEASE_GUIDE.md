@@ -26,7 +26,7 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ## Public Release Gate — 2026-07-01
 
-Current source release candidate: **1.0.25 / Android versionCode 25**.
+Current source release candidate: **1.0.27 / Android versionCode 33**.
 
 What is already prepared in source:
 - `mobile/app.json` points at the public backend host
@@ -59,15 +59,14 @@ are complete:
 - Render production env has `ENTITLEMENTS_DEV_OVERRIDE=false`,
   production `APP_KEY`, production `OPENAI_API_KEY`, and production
   `RC_SECRET_KEY` if subscriptions are sold.
-- Play Billing/RevenueCat mobile SDK is wired in source `1.0.25`. Google Play
+- Play Billing/RevenueCat mobile SDK is wired in source `1.0.27`. Google Play
   subscription products are active. RevenueCat now has the project, Android
   app, entitlements, published products, Google Play service-account
   credentials, and six packages in the `default` offering. Render production
   has `RC_SECRET_KEY` set and a non-buyer entitlement probe returned
-  `source: revenuecat`, `tier: free`. Build `1.0.25` / code `25` was built
-  after the EAS RevenueCat public Android key was added and was published to
-  Play internal testing on 2026-07-01. Paid selling still depends on sandbox
-  purchase/restore tests before public rollout.
+  `source: revenuecat`, `tier: free`. Build `1.0.27` / code `33` is the
+  production candidate. Paid selling still needs production purchase/restore
+  monitoring after rollout.
 - Privacy policy URL must be live and must explain document upload/extraction,
   OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
   deletion/contact flow.
@@ -408,7 +407,7 @@ eas build -p android --profile internal
 
 Confirmations (all already set in `app.json`):
 - ✅ applicationId / package: `com.urmiaworks.readflow` (permanent once uploaded)
-- ✅ versionCode/versionName: bump every release; current source is `25` / `1.0.25`
+- ✅ versionCode/versionName: bump every release; current source is `33` / `1.0.27`
 - ✅ Release signing: EAS‑managed keystore (or Play App Signing)
 - ✅ Target SDK: Expo SDK 54 → targetSdk 35 (Play‑accepted)
 - ✅ Permissions: `INTERNET` and Google Play Billing only (no location / contacts / SMS / microphone)
@@ -568,10 +567,16 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 23 | 1.0.23 | 8c701727 | finished | Play/internal AAB release candidate. Converted production backend URL, no mic/background audio, per-install app-user id, Free no Listen, stale native Android guard. AAB: https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab |
 | 24 | 1.0.24 | e3bc6713 | finished | RevenueCat SDK / Google Play Billing permission, purchase + restore paywall wiring, stable `rf_...` RevenueCat app user id, release guard bumped to 24. Built with no EAS RevenueCat public key, so billing-capable but purchase CTA remains disabled. AAB: https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab |
 | 25 | 1.0.25 | 22710f0d | finished | Paid internal AAB candidate built on 2026-07-01 after RevenueCat Android public SDK key was added to EAS production environment. EAS log confirmed `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` loaded. AAB: https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab |
+| 27 | 1.0.26 | b090e91c | finished | First production-track AAB attempt; Play required foreground-service declarations. AAB: https://expo.dev/artifacts/eas/aH9I9xd0F7lQUuhAcbrXC7DB3CFhpXY8CL-oDyCR5eU.aab |
+| 29 | 1.0.27 | bc7e2924 | finished | Production build after listing/release prep; superseded by later foreground-service cleanup builds. AAB: https://expo.dev/artifacts/eas/WlMi9drg84kxkp10bjlA1K0-bw_GlNZj3CUVkTUNvIk.aab |
+| 30 | 1.0.27 | 45edd240 | errored | EAS Gradle failure during release cleanup iteration. |
+| 31 | 1.0.27 | f0631eb6 | finished | Release cleanup iteration; superseded by code 33. AAB: https://expo.dev/artifacts/eas/Aje0y0HNaeGZIDJ4OQGAxeN7Sn0i9qRUmNKu5xOrAQw.aab |
+| 32 | 1.0.27 | 5b058155 | finished | Release cleanup iteration; superseded by code 33. AAB: https://expo.dev/artifacts/eas/JIb-McpvkB6YFWx9qqIDbBEJcNOp4h75zu4UrO1TtwM.aab |
+| 33 | 1.0.27 | 6bee8c21 | finished | Current Play production candidate. Adds Android manifest cleanup to remove unused microphone/foreground-service declarations and includes Play review declaration videos. AAB: https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab |
 
-**Next source candidate versionCode: 26.** Before starting any later EAS build, run
-`eas build:list` and pick a higher code if any account build has consumed 26 or
-above.
+**Next source candidate versionCode: 34 or higher.** Before starting any later
+EAS build, run `eas build:list` and pick a higher code if any account build has
+consumed 34 or above.
 
 ### Lessons baked into this guide (do not relearn the hard way)
 - **Never reuse a versionCode.** Build `f2511def` reused code 13 → a paid build was

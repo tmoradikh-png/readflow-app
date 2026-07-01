@@ -30,9 +30,9 @@ const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
 const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.25";
-const EXPECTED_ANDROID_VERSION_CODE = 25;
-const EXPECTED_IOS_BUILD_NUMBER = "25";
+const EXPECTED_VERSION = "1.0.27";
+const EXPECTED_ANDROID_VERSION_CODE = 33;
+const EXPECTED_IOS_BUILD_NUMBER = "27";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
 // 0) This repo releases as a managed Expo app. A local generated android/
@@ -126,6 +126,23 @@ if (permissions.includes("com.android.vending.BILLING")) {
   fail("Google Play Billing permission is missing. Subscription builds need com.android.vending.BILLING.");
 }
 
+const blockedPermissions = Array.isArray(android.blockedPermissions) ? android.blockedPermissions : [];
+const foregroundPermissions = [
+  "android.permission.FOREGROUND_SERVICE",
+  "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+  "android.permission.FOREGROUND_SERVICE_MICROPHONE",
+  "android.permission.RECORD_AUDIO",
+];
+const missingBlockedForegroundPermissions = foregroundPermissions.filter(
+  (permission) => !blockedPermissions.includes(permission)
+);
+if (missingBlockedForegroundPermissions.length === 0) {
+  pass("Foreground-service permissions are blocked for the foreground-only reader");
+} else {
+  fail(`Block foreground-service permissions before Play release: ${missingBlockedForegroundPermissions.join(", ")}`);
+}
+
 function pluginConfig(name) {
   const plugins = Array.isArray(expo.plugins) ? expo.plugins : [];
   for (const plugin of plugins) {
@@ -140,6 +157,12 @@ if (audioPlugin && audioPlugin.recordAudioAndroid === false && audioPlugin.micro
   pass("expo-audio is configured without microphone access");
 } else {
   fail("expo-audio must set recordAudioAndroid:false and microphonePermission:false for Play release");
+}
+
+if (pluginConfig("./plugins/withAndroidReleaseManifestCleanup")) {
+  pass("Android release manifest cleanup plugin is enabled");
+} else {
+  fail("Android release manifest cleanup plugin must strip unused microphone and foreground service declarations");
 }
 
 const backgroundModes = ios.infoPlist?.UIBackgroundModes;

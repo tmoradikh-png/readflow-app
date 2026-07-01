@@ -35,22 +35,21 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.25`
-- Current source Android `versionCode`: `25`
-- Current source iOS `buildNumber`: `25`
-- Latest finished EAS build: `1.0.25` / code `25`
-- Latest finished EAS build id: `22710f0d-49cd-4115-b82b-0dfaeab7efad`
-- Latest finished AAB:
-  `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`
-- Latest finished AAB local copy:
-  `artifacts/readflow-1.0.25-25.aab` (141,587,657 bytes; SHA-256
-  `DEB06771CABB09F4819C7513AD3D6FBEA961F5A4669F8EA94A250FB3149A990F`).
+- Current source version: `1.0.27`
+- Current source Android `versionCode`: `33`
+- Current source iOS `buildNumber`: `27`
+- Latest finished Android EAS build: `1.0.27` / code `33`
+- Latest finished Android EAS build id: `6bee8c21-d52c-4e4f-8622-0dc992a5f2f2`
+- Latest finished Android AAB:
+  `https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab`
+- Latest finished Android AAB local copy:
+  `artifacts/readflow-1.0.27-33.aab`.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build should use code `26` unless another EAS
+- Next Android build should use code `34` unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
-- Next iOS build should use buildNumber `25` unless an iOS EAS build has already
+- Next iOS build should use buildNumber `27` unless an iOS EAS build has already
   consumed it. Run the EAS `build:list --platform ios` command in
   `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 
@@ -83,7 +82,7 @@ Important: build `178c888f` / `1.0.18` was canceled because a stale generated
 and `RECORD_AUDIO`. The folder was moved to
 `tmp/android-local-backup-20260629-1`, and the release checker now blocks this.
 
-Current Play release prep in source `1.0.25`:
+Current Play release prep in source `1.0.27`:
 - `mobile/app.json` now points at the public backend host
   `https://readflow-backend-internal.onrender.com`. This is the converted
   production Render service: the service name is `readflow-backend`, but Render
@@ -95,7 +94,9 @@ Current Play release prep in source `1.0.25`:
   unless that old service is recovered or replaced.
 - Android permissions are `INTERNET` and `com.android.vending.BILLING`;
   `expo-audio` is configured with `recordAudioAndroid: false` and
-  `microphonePermission: false`.
+  `microphonePermission: false`. The release manifest cleanup plugin removes
+  unused microphone and foreground-service declarations from library manifests
+  before EAS/Play review.
 - iOS background audio mode and Expo foreground/background playback flags are
   disabled for the current foreground-only product behavior.
 - Mobile now creates a stable local `rf_...` install id and sends it as
@@ -115,11 +116,12 @@ Current Play release prep in source `1.0.25`:
   `Published`, all six packages are in the `default` offering, EAS has the
   Android public SDK key, and production Render has `RC_SECRET_KEY` set. A
   random non-buyer entitlement probe returned `source: revenuecat`,
-  `tier: free`. Build 25 was created after the EAS key existed and was
-  published to Play internal testing on 2026-07-01; Play shows
-  `Available to internal testers`. It still needs sandbox purchase/restore QA.
-  Build 24 is billing-capable but was started before the EAS key existed, so
-  purchase buttons stay disabled as "Setting up purchases" in that build.
+  `tier: free`. Build 33 is the current Play production candidate and was
+  uploaded as a production-track draft on 2026-07-01. Build 25 was created
+  after the EAS key existed and was published to Play internal testing on
+  2026-07-01; Play shows `Available to internal testers`. Build 24 is
+  billing-capable but was started before the EAS key existed, so purchase
+  buttons stay disabled as "Setting up purchases" in that build.
 - Payment/legal release prep added on 2026-06-29:
   - `PAYMENT_SETUP.md` records product ids, RevenueCat/Play setup, backend env,
     and sandbox tests.
@@ -130,6 +132,11 @@ Current Play release prep in source `1.0.25`:
     before going live.
   - The old local-AI label has been removed from tracked app source; the public
     customer-facing name is `rF AI`.
+- Play foreground-service declaration support added on 2026-07-01:
+  `docs/play-review/readflow-data-sync-demo.mp4` and
+  `docs/play-review/readflow-media-playback-demo.mp4`. These files are intended
+  only for Play review declaration fields and are linked from
+  `PLAY_RELEASE_PACKET.md`.
 
 Current iOS release prep in source `1.0.25`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber

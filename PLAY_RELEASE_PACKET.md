@@ -17,7 +17,7 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.25 / versionCode 25`.
+- Source release candidate is `1.0.27 / versionCode 33`.
 - Release checker passes for the current source configuration.
 - Android permissions are minimal plus billing for subscriptions: `INTERNET`
   and `com.android.vending.BILLING`.
@@ -26,8 +26,8 @@ Current source status:
   Cloud AI.
 - RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
   Google Play products are published in RevenueCat, and the `default` offering
-  has all six paid packages. Build `1.0.25` / code `25` was created after the
-  EAS public key was set and is live on Play internal testing.
+  has all six paid packages. Build `1.0.27` / code `33` is the current Play
+  production candidate.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, government apps, financial features, health, and content rating are saved
   or ready in Publishing overview.
@@ -44,11 +44,14 @@ Verified for paid launch prep:
   service-account credentials, and all six `default` offering packages exist.
   Render production has `RC_SECRET_KEY` set and a random non-buyer entitlement
   probe returned `source: revenuecat`, `tier: free`.
-- Android AAB `1.0.25` / code `25` finished on EAS with artifact
-  `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`.
-  Local copy: `artifacts/readflow-1.0.25-25.aab`.
-- Play internal testing release `25 (1.0.25)` was published on 2026-07-01 and
-  shows `Available to internal testers`.
+- Android AAB `1.0.27` / code `33` finished on EAS with artifact
+  `https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab`.
+  Local copy: `artifacts/readflow-1.0.27-33.aab`.
+- Play production release draft `33 (1.0.27)` was uploaded through the Android
+  Publisher API on 2026-07-01. Before submission, Play required the foreground
+  service declaration for media playback and data sync; source now strips unused
+  foreground-service/microphone declarations and review-support videos are in
+  `docs/play-review/`.
 
 Not ready for paid public launch:
 
@@ -196,6 +199,16 @@ readFlow does not require login for basic use. Paid features are sold through Go
 The app processes supported documents to create a phone-friendly reading view. OCR, AI answers, and Cloud AI voice use the backend. rF AI voice runs on the device after an optional model download. The app is not designed for children and does not contain ads in this release.
 ```
 
+Foreground-service declaration video links:
+
+```text
+Data sync / document import:
+https://raw.githubusercontent.com/tmoradikh-png/readflow-app/main/docs/play-review/readflow-data-sync-demo.mp4
+
+Media playback / foreground reading aloud:
+https://raw.githubusercontent.com/tmoradikh-png/readflow-app/main/docs/play-review/readflow-media-playback-demo.mp4
+```
+
 If paid purchases are not wired yet, use this instead:
 
 ```text
@@ -267,6 +280,8 @@ Avoid:
 - RevenueCat/Play Billing purchase and restore flow is tested if paid launch is
   enabled.
 - Privacy Policy and Terms are live at the URLs in this packet.
+- Play foreground-service declaration is saved for any permissions Play still
+  detects in the uploaded AAB, with review videos from `docs/play-review/`.
 - Data Safety form matches the final build, SDKs, and backend behavior.
 - `npm run check:release` passes.
 - Fresh install from Play internal testing passes the QA checklist in
