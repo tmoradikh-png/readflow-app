@@ -92,7 +92,7 @@ at the top is the step‑by‑step routine (bump `versionCode`, regenerate the i
 > reusing one wastes a paid EAS build. Always pick the next free code (see the guide).
 
 For iOS/TestFlight, use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)**. The
-current iOS source candidate is `1.0.24` / buildNumber `24`, and EAS returned
+current iOS source candidate is `1.0.25` / buildNumber `25`, and EAS returned
 no prior iOS builds on 2026-06-29.
 
 ## Voice

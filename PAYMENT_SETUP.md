@@ -324,7 +324,7 @@ but it must not be used in public builds because it grants paid access.
 
 ## Mobile Work Still Needed
 
-Mobile RevenueCat wiring status as of source `1.0.24`:
+Mobile RevenueCat wiring status as of source `1.0.25`:
 
 1. `react-native-purchases@10.4.0` is installed.
 2. The app reads `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` and
@@ -343,7 +343,7 @@ Mobile RevenueCat wiring status as of source `1.0.24`:
 Still required before paid launch:
 
 - Build a fresh Android AAB after the public key and offering packages are ready.
-- Upload a billing-capable AAB (`1.0.24` or later) to Play internal testing.
+- Upload a billing-capable AAB (`1.0.25` or later) to Play internal testing.
 - Complete sandbox purchase and restore tests on a Play license tester account.
 
 ## Sandbox Test Matrix

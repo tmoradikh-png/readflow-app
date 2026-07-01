@@ -17,7 +17,7 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.24 / versionCode 24`.
+- Source release candidate is `1.0.25 / versionCode 25`.
 - Release checker passes for the current source configuration.
 - Android permissions are minimal plus billing for subscriptions: `INTERNET`
   and `com.android.vending.BILLING`.
@@ -26,8 +26,8 @@ Current source status:
   Cloud AI.
 - RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
   Google Play products are published in RevenueCat, and the `default` offering
-  has all six paid packages. A fresh AAB is still required because build 24 was
-  created before the EAS public key was set.
+  has all six paid packages. A fresh `1.0.25` AAB is still required because
+  build 24 was created before the EAS public key was set.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, government apps, financial features, health, and content rating are saved
   or ready in Publishing overview.

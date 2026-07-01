@@ -35,9 +35,9 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.24`
-- Current source Android `versionCode`: `24`
-- Current source iOS `buildNumber`: `24`
+- Current source version: `1.0.25`
+- Current source Android `versionCode`: `25`
+- Current source iOS `buildNumber`: `25`
 - Latest finished EAS build: `1.0.24` / code `24`
 - Latest finished EAS build id: `e3bc6713-2277-404e-8b08-11f4f592f3ba`
 - Latest finished AAB:
@@ -49,7 +49,7 @@ Current shape:
 - Next Android build should use code `25` unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
-- Next iOS build can use buildNumber `24` unless an iOS EAS build has already
+- Next iOS build should use buildNumber `25` unless an iOS EAS build has already
   consumed it. Run the EAS `build:list --platform ios` command in
   `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 
@@ -79,7 +79,7 @@ Important: build `178c888f` / `1.0.18` was canceled because a stale generated
 and `RECORD_AUDIO`. The folder was moved to
 `tmp/android-local-backup-20260629-1`, and the release checker now blocks this.
 
-Current Play release prep in source `1.0.24`:
+Current Play release prep in source `1.0.25`:
 - `mobile/app.json` now points at the public backend host
   `https://readflow-backend-internal.onrender.com`. This is the converted
   production Render service: the service name is `readflow-backend`, but Render
@@ -126,9 +126,9 @@ Current Play release prep in source `1.0.24`:
   - The old local-AI label has been removed from tracked app source; the public
     customer-facing name is `rF AI`.
 
-Current iOS release prep in source `1.0.24`:
+Current iOS release prep in source `1.0.25`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
-  `24`, and `ITSAppUsesNonExemptEncryption=false`.
+  `25`, and `ITSAppUsesNonExemptEncryption=false`.
 - `mobile/eas.json` now has explicit iOS settings for development/preview
   device builds and App Store/TestFlight archive builds.
 - `npm run check:release` now checks iOS bundle id, build number, no generated
@@ -137,7 +137,7 @@ Current iOS release prep in source `1.0.24`:
 - `IOS_RELEASE_GUIDE.md` records the iOS EAS build routine and TestFlight QA
   checklist. `APP_STORE_RELEASE_PACKET.md` records App Store listing text,
   review notes, subscription disclosure, and App Privacy worksheet notes.
-- EAS had no iOS build history on 2026-06-29, so buildNumber `24` is currently
+- EAS had no iOS build history on 2026-06-29, so buildNumber `25` is currently
   free unless a later iOS build consumes it.
 - Paid iOS subscriptions are not ready to sell until Apple in-app purchase /
   RevenueCat dashboard setup is complete and production Render has
@@ -605,8 +605,8 @@ iOS/TestFlight release prep is in `IOS_RELEASE_GUIDE.md`. Short version:
    cd C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
    npx --yes eas-cli build:list --platform ios --limit 5 --json --non-interactive
    ```
-2. If buildNumber `24` is still unused, keep `mobile/app.json` as
-   `1.0.24` / `ios.buildNumber` `24`; otherwise bump only the iOS build number
+2. If buildNumber `25` is still unused, keep `mobile/app.json` as
+   `1.0.25` / `ios.buildNumber` `25`; otherwise bump only the iOS build number
    and `EXPECTED_IOS_BUILD_NUMBER`.
 3. Run:
    ```powershell

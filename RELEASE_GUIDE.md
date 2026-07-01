@@ -26,7 +26,7 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ## Public Release Gate — 2026-07-01
 
-Current source release candidate: **1.0.24 / Android versionCode 24**.
+Current source release candidate: **1.0.25 / Android versionCode 25**.
 
 What is already prepared in source:
 - `mobile/app.json` points at the public backend host
@@ -59,7 +59,7 @@ are complete:
 - Render production env has `ENTITLEMENTS_DEV_OVERRIDE=false`,
   production `APP_KEY`, production `OPENAI_API_KEY`, and production
   `RC_SECRET_KEY` if subscriptions are sold.
-- Play Billing/RevenueCat mobile SDK is wired in source `1.0.24`. Google Play
+- Play Billing/RevenueCat mobile SDK is wired in source `1.0.25`. Google Play
   subscription products are active. RevenueCat now has the project, Android
   app, entitlements, published products, Google Play service-account
   credentials, and six packages in the `default` offering. Render production
@@ -139,9 +139,9 @@ The first line is the most recent build. **Next free code = highest `appBuildVer
 Set `versionCode` to the next free code and bump the version name. Both must agree.
 
 1. `mobile/app.json`:
-  - `expo.version` → e.g. `"1.0.24"`
-  - `expo.ios.buildNumber` → `"24"`
-  - `expo.android.versionCode` → `24`
+  - `expo.version` → e.g. `"1.0.25"`
+  - `expo.ios.buildNumber` → `"25"`
+  - `expo.android.versionCode` → `25`
 2. `mobile/scripts/check-release-config.mjs` — update the three expected values to
    match (it hard‑checks `versionCode` and `version` so a stale bump fails loudly):
    - `EXPECTED_VERSION_CODE`
@@ -407,7 +407,7 @@ eas build -p android --profile internal
 
 Confirmations (all already set in `app.json`):
 - ✅ applicationId / package: `com.urmiaworks.readflow` (permanent once uploaded)
-- ✅ versionCode/versionName: bump every release; current source is `24` / `1.0.24`
+- ✅ versionCode/versionName: bump every release; current source is `25` / `1.0.25`
 - ✅ Release signing: EAS‑managed keystore (or Play App Signing)
 - ✅ Target SDK: Expo SDK 54 → targetSdk 35 (Play‑accepted)
 - ✅ Permissions: `INTERNET` and Google Play Billing only (no location / contacts / SMS / microphone)
@@ -426,11 +426,12 @@ Build 24 AAB is available here and was also downloaded locally to
 `artifacts/readflow-1.0.24-24.aab`:
 `https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`
 
-Build 24 adds RevenueCat/Play Billing wiring and should unlock Play Console
-subscription-product setup after it is uploaded to internal testing. It was
+Build 24 added RevenueCat/Play Billing wiring and unlocked Play Console
+subscription-product setup after it was uploaded to internal testing. It was
 built without `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` in EAS, so in-app
-purchases stay disabled until a follow-up build includes that public SDK key
-and RevenueCat offerings/products are configured.
+purchases stay disabled in that build. Use source `1.0.25` / versionCode `25`
+for the next paid internal test AAB because it includes the EAS public SDK key
+environment.
 
 Optional CLI submit:
 - Command: `eas submit -p android --profile internal --id <build-id> --wait`
@@ -566,7 +567,7 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 23 | 1.0.23 | 8c701727 | finished | Play/internal AAB release candidate. Converted production backend URL, no mic/background audio, per-install app-user id, Free no Listen, stale native Android guard. AAB: https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab |
 | 24 | 1.0.24 | e3bc6713 | finished | RevenueCat SDK / Google Play Billing permission, purchase + restore paywall wiring, stable `rf_...` RevenueCat app user id, release guard bumped to 24. Built with no EAS RevenueCat public key, so billing-capable but purchase CTA remains disabled. AAB: https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab |
 
-**Next source candidate versionCode: 25.** Before spending EAS quota, still run
+**Current source candidate versionCode: 25.** Before spending EAS quota, still run
 `eas build:list` and pick a higher code if any account build has consumed 25 or
 above.
 
