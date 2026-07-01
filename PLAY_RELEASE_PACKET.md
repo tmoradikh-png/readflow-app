@@ -1,6 +1,6 @@
 # readFlow Play Release Packet
 
-Updated: 2026-06-29
+Updated: 2026-07-01
 
 This packet gathers the launch text and review checklist for Google Play. Keep
 it in sync with `PAYMENT_SETUP.md`, `PRIVACY_POLICY_DRAFT.md`,
@@ -17,12 +17,16 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.23 / versionCode 23`.
+- Source release candidate is `1.0.24 / versionCode 24`.
 - Release checker passes for the current source configuration.
-- Android permissions are minimal for the current build: `INTERNET`.
+- Android permissions are minimal plus billing for subscriptions: `INTERNET`
+  and `com.android.vending.BILLING`.
 - Background audio has been removed; reading should stop when leaving the app.
 - Free tier is a limited manual preview with no read-aloud, OCR, AI, rF AI, or
   Cloud AI.
+- RevenueCat mobile SDK wiring is present. The purchase CTA opens Google Play
+  only after the RevenueCat Android public key and offering/products are
+  configured.
 
 Not ready for paid public launch:
 
@@ -30,7 +34,8 @@ Not ready for paid public launch:
   `https://readflow-backend-internal.onrender.com/api/health`. The service is
   named `readflow-backend`; the old `https://readflow-backend.onrender.com`
   URL returned `Service Suspended` on 2026-06-29 and must not be used.
-- Play Billing/RevenueCat is not wired in the mobile purchase flow.
+- RevenueCat dashboard setup, Google Play products, Render `RC_SECRET_KEY`, and
+  sandbox purchase/restore tests are not complete yet.
 - Legal URLs are not live yet.
 - Final AI Pro/Power pricing needs a product decision before Play products are
   created.

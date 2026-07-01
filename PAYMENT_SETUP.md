@@ -1,6 +1,6 @@
 # readFlow Payment Setup
 
-Updated: 2026-06-29
+Updated: 2026-07-01
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer
@@ -30,7 +30,7 @@ Policy sources checked on 2026-06-29:
 
 ## Current Status
 
-Payment is not ready for public paid release yet.
+Payment is partially wired, but not ready for public paid release yet.
 
 Already present:
 
@@ -39,18 +39,19 @@ Already present:
   `backend/src/services/entitlements.ts`.
 - Mobile sends a stable local install id as `x-app-user-id`.
 - Free, Reader Plus, AI Pro, and Power plan copy exists in the paywall.
+- Mobile now includes `react-native-purchases` and can configure RevenueCat with
+  the same stable `rf_...` install id used for backend entitlements.
+- The paywall can open the native purchase flow and restore purchases once a
+  RevenueCat public SDK key and a valid offering are present.
 
 Missing before paid launch:
 
-- RevenueCat SDK is not wired in the mobile app.
 - Google Play subscription products are not created/tested.
 - Apple App Store in-app purchase products are not created/tested.
 - RevenueCat offerings are not configured.
-- The mobile app does not yet open the native Google Play Billing or Apple
-  in-app purchase flow.
 - The backend still needs the production RevenueCat secret key in Render.
-- Platform-specific RevenueCat public SDK keys for Android and iOS are not in
-  mobile config yet.
+- Platform-specific RevenueCat public SDK keys are not set in release build
+  environment yet.
 - The production backend service has been converted from the old internal
   service. Current reachable URL:
   `https://readflow-backend-internal.onrender.com`. The service name is
@@ -58,8 +59,9 @@ Missing before paid launch:
   `https://readflow-backend.onrender.com` URL returned Render's
   `Service Suspended` page on 2026-06-29 and must not be used by Play builds.
 
-Until these are complete, the Android and iOS apps can be released only as free
-previews with paid features locked and purchase buttons unavailable.
+Until these are complete, Android and iOS can be released only as free previews
+with paid features locked. If the RevenueCat public key or offering is missing,
+the paywall CTA remains disabled as "Setting up purchases".
 
 ## Product IDs
 
@@ -164,8 +166,13 @@ to buy Reader Plus, AI Pro, Power, OCR pages, or voice packs.
 8. Attach the correct products from both stores to the correct entitlements.
 9. Create an offering named `default`.
 10. Add monthly and yearly packages for each paid tier.
-11. Copy the RevenueCat public SDK key for Android into mobile config.
-12. Copy the RevenueCat public SDK key for iOS into mobile config.
+11. Set the RevenueCat public SDK key for Android as
+    `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` for EAS builds, or as
+    `expo.extra.revenueCatAndroidApiKey` in `mobile/app.json` for local
+    controlled test builds.
+12. Set the RevenueCat public SDK key for iOS as
+    `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`, or as
+    `expo.extra.revenueCatIosApiKey` for local controlled test builds.
 13. Copy the RevenueCat secret/server key into Render as `RC_SECRET_KEY`.
 14. Test purchase, restore, cancellation, grace period, billing retry, and
     expired subscription on both Android and iOS.
@@ -199,22 +206,30 @@ but it must not be used in public builds because it grants paid access.
 
 ## Mobile Work Still Needed
 
-Add the RevenueCat SDK and connect it to the existing entitlement flow:
+Mobile RevenueCat wiring status as of source `1.0.24`:
 
-1. Add the SDK dependency, likely `react-native-purchases`.
-2. Configure platform-specific Android and iOS public SDK keys at app startup.
-3. Use RevenueCat's app user id as the stable `x-app-user-id` sent to the
-   backend. The current local `rf_...` id is useful for free quotas but is not a
-   purchase identity.
-4. Fetch offerings from RevenueCat.
-5. Pass `purchasingAvailable=true` to `UpgradeSheet` only after offerings load.
-6. Open the native purchase sheet for selected tier and billing period.
-7. Implement Restore Purchases.
-8. After purchase/restore, refresh backend entitlements and usage.
-9. Add graceful error UI for cancelled, pending, failed, and already-owned
-   purchases.
-10. Make sure Free still cannot call OCR, AI text, Cloud AI voice, rF AI, or
-    read-aloud.
+1. `react-native-purchases@10.4.0` is installed.
+2. The app reads `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` and
+   `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`, with `mobile/app.json` fallback fields.
+3. RevenueCat is configured with the stable local `rf_...` app user id, and the
+   backend receives that same id as `x-app-user-id`.
+4. The app fetches the current RevenueCat offering and maps packages by product
+   id, not by RevenueCat package label.
+5. `UpgradeSheet` opens purchase and restore flows only after mapped packages
+   are available.
+6. After purchase or restore, the app refreshes backend entitlement and usage.
+7. Purchase cancellation, pending payment, network errors, inactive products,
+   and missing offerings show themed in-app messages.
+8. Free still cannot call OCR, AI text, Cloud AI voice, rF AI, or read-aloud.
+
+Still required before paid launch:
+
+- Add the RevenueCat Android public SDK key to the EAS build environment.
+- Set `RC_SECRET_KEY` on Render production.
+- Create/import Google Play products and attach them to the RevenueCat
+  entitlements and default offering.
+- Upload a billing-capable AAB (`1.0.24` or later) to Play internal testing.
+- Complete sandbox purchase and restore tests on a Play license tester account.
 
 ## Sandbox Test Matrix
 

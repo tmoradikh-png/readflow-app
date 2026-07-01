@@ -28,6 +28,15 @@ import {
   UsageSnapshot,
 } from "./src/services/Entitlements";
 import {
+  isRevenueCatCancellation,
+  purchaseRevenueCatPlan,
+  refreshRevenueCatOfferings,
+  restoreRevenueCatPurchases,
+  revenueCatErrorMessage,
+  type PurchaseBilling,
+  type PurchaseTierKey,
+} from "./src/services/RevenueCat";
+import {
   DEFAULT_PREFERENCES,
   loadPreferences,
   ReadingPreferences,
@@ -45,6 +54,10 @@ export default function App() {
   const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(FREE_ENTITLEMENT);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [preferences, setPreferences] = useState<ReadingPreferences>(DEFAULT_PREFERENCES);
+  const [purchaseSetupLoading, setPurchaseSetupLoading] = useState(true);
+  const [purchasingAvailable, setPurchasingAvailable] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
 
   const [fontsLoaded] = useFonts({
@@ -62,11 +75,34 @@ export default function App() {
     if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
   }, [fontsLoaded]);
 
-  useEffect(() => {
-    fetchEntitlement().then(setEntitlement).catch(() => {});
-    fetchUsage().then(setUsage).catch(() => {});
-    loadPreferences().then(setPreferences).catch(() => {});
+  const refreshEntitlementAndUsage = useCallback(async () => {
+    const [nextEntitlement, nextUsage] = await Promise.all([
+      fetchEntitlement(),
+      fetchUsage(),
+    ]);
+    setEntitlement(nextEntitlement);
+    setUsage(nextUsage);
   }, []);
+
+  const refreshPurchaseSetup = useCallback(async () => {
+    setPurchaseSetupLoading(true);
+    try {
+      const status = await refreshRevenueCatOfferings();
+      setPurchasingAvailable(status.available);
+      setPurchaseError(status.configured && status.message ? status.message : null);
+    } catch (err) {
+      setPurchasingAvailable(false);
+      setPurchaseError(revenueCatErrorMessage(err));
+    } finally {
+      setPurchaseSetupLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshEntitlementAndUsage().catch(() => {});
+    refreshPurchaseSetup().catch(() => {});
+    loadPreferences().then(setPreferences).catch(() => {});
+  }, [refreshEntitlementAndUsage, refreshPurchaseSetup]);
 
   const updatePreferences = useCallback((next: ReadingPreferences) => {
     setPreferences(next);
@@ -76,6 +112,41 @@ export default function App() {
   const refreshUsage = useCallback(() => {
     fetchUsage().then(setUsage).catch(() => {});
   }, []);
+
+  const handlePurchasePlan = useCallback(
+    async (planKey: PurchaseTierKey, billing: PurchaseBilling) => {
+      setPurchasing(true);
+      setPurchaseError(null);
+      try {
+        await purchaseRevenueCatPlan(planKey, billing);
+        await refreshEntitlementAndUsage();
+        await refreshPurchaseSetup();
+      } catch (err) {
+        if (!isRevenueCatCancellation(err)) {
+          setPurchaseError(revenueCatErrorMessage(err));
+        }
+      } finally {
+        setPurchasing(false);
+      }
+    },
+    [refreshEntitlementAndUsage, refreshPurchaseSetup]
+  );
+
+  const handleRestorePurchases = useCallback(async () => {
+    setPurchasing(true);
+    setPurchaseError(null);
+    try {
+      await restoreRevenueCatPurchases();
+      await refreshEntitlementAndUsage();
+      await refreshPurchaseSetup();
+    } catch (err) {
+      if (!isRevenueCatCancellation(err)) {
+        setPurchaseError(revenueCatErrorMessage(err));
+      }
+    } finally {
+      setPurchasing(false);
+    }
+  }, [refreshEntitlementAndUsage, refreshPurchaseSetup]);
 
   const openDoc = useCallback((d: ParsedPdf, it: LibraryItem) => {
     setItem(it);
@@ -110,6 +181,12 @@ export default function App() {
             freePageLimit={entitlement.limits.perDocPageCap ?? 100}
             startSentenceId={item?.lastSentenceId ?? 0}
             onProgress={handleProgress}
+            purchasingAvailable={purchasingAvailable}
+            purchaseSetupLoading={purchaseSetupLoading}
+            purchasing={purchasing}
+            purchaseError={purchaseError}
+            onPurchasePlan={handlePurchasePlan}
+            onRestorePurchases={handleRestorePurchases}
             onBack={() => {
               setDoc(null);
               setItem(null);
@@ -123,6 +200,12 @@ export default function App() {
             preferences={preferences}
             onPreferencesChange={updatePreferences}
             onRefreshUsage={refreshUsage}
+            purchasingAvailable={purchasingAvailable}
+            purchaseSetupLoading={purchaseSetupLoading}
+            purchasing={purchasing}
+            purchaseError={purchaseError}
+            onPurchasePlan={handlePurchasePlan}
+            onRestorePurchases={handleRestorePurchases}
           />
         )}
       </View>

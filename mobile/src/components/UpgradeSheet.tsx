@@ -24,10 +24,11 @@ import { theme } from "../theme";
  * than presenting a fake payment button.
  */
 
-type Billing = "monthly" | "annual";
+export type UpgradeBilling = "monthly" | "annual";
+export type UpgradePlanKey = "reader_plus" | "ai_pro" | "power";
 
 interface Plan {
-  key: string;
+  key: UpgradePlanKey;
   name: string;
   tagline: string;
   recommended?: boolean;
@@ -92,6 +93,11 @@ interface Props {
   onClose: () => void;
   /** Flip to true once Play Billing / RevenueCat purchases are wired. */
   purchasingAvailable?: boolean;
+  purchaseSetupLoading?: boolean;
+  purchasing?: boolean;
+  purchaseError?: string | null;
+  onPurchase?: (planKey: UpgradePlanKey, billing: UpgradeBilling) => void;
+  onRestore?: () => void;
 }
 
 export function UpgradeSheet({
@@ -100,9 +106,14 @@ export function UpgradeSheet({
   reasonBody,
   onClose,
   purchasingAvailable = false,
+  purchaseSetupLoading = false,
+  purchasing = false,
+  purchaseError,
+  onPurchase,
+  onRestore,
 }: Props) {
-  const [billing, setBilling] = useState<Billing>("annual");
-  const [selected, setSelected] = useState<string>("ai_pro");
+  const [billing, setBilling] = useState<UpgradeBilling>("annual");
+  const [selected, setSelected] = useState<UpgradePlanKey>("ai_pro");
 
   const plan = PLANS.find((p) => p.key === selected) ?? PLANS[1];
 
@@ -110,6 +121,7 @@ export function UpgradeSheet({
     // When purchases are live this opens the native subscription flow for the
     // selected plan + billing period. Until then we never show a fake button.
     if (!purchasingAvailable) return;
+    onPurchase?.(plan.key, billing);
   };
 
   const openLearnMore = () => {
@@ -211,17 +223,24 @@ export function UpgradeSheet({
 
           {/* primary CTA */}
           <Pressable
-            style={[styles.cta, !purchasingAvailable && styles.ctaDisabled]}
+            style={[styles.cta, (!purchasingAvailable || purchasing) && styles.ctaDisabled]}
             onPress={onPrimary}
-            disabled={!purchasingAvailable}
+            disabled={!purchasingAvailable || purchasing}
           >
             <Text style={styles.ctaText}>
-              {purchasingAvailable ? `Upgrade to ${plan.name}` : "Coming soon"}
+              {purchaseSetupLoading
+                ? "Checking Google Play..."
+                : purchasing
+                  ? "Opening Google Play..."
+                  : purchasingAvailable
+                    ? `Upgrade to ${plan.name}`
+                    : "Setting up purchases"}
             </Text>
           </Pressable>
+          {purchaseError ? <Text style={styles.errorNote}>{purchaseError}</Text> : null}
           {!purchasingAvailable ? (
             <Text style={styles.ctaNote}>
-              Subscriptions and AI voice packs are not live yet. No charge.
+              Subscriptions are waiting for store setup. No charge.
             </Text>
           ) : (
             <Text style={styles.ctaNote}>
@@ -236,6 +255,16 @@ export function UpgradeSheet({
             <Pressable onPress={onClose} hitSlop={8}>
               <Text style={styles.maybeLater}>Maybe later</Text>
             </Pressable>
+            {purchasingAvailable && onRestore ? (
+              <>
+                <Text style={styles.footerDot}>/</Text>
+                <Pressable onPress={onRestore} hitSlop={8} disabled={purchasing}>
+                  <Text style={[styles.learnMore, purchasing && styles.footerDisabled]}>
+                    Restore
+                  </Text>
+                </Pressable>
+              </>
+            ) : null}
             <Text style={styles.footerDot}>/</Text>
             <Pressable onPress={openLearnMore} hitSlop={8}>
               <Text style={styles.learnMore}>Learn more</Text>
@@ -401,6 +430,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: theme.spacing(1),
   },
+  errorNote: {
+    color: theme.colors.danger,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12.5,
+    textAlign: "center",
+    marginTop: theme.spacing(1),
+  },
   footer: {
     flexDirection: "row",
     alignItems: "center",
@@ -416,4 +452,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textDecorationLine: "underline",
   },
+  footerDisabled: { opacity: 0.45 },
 });

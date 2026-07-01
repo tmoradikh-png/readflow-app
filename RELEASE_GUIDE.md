@@ -24,9 +24,9 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ---
 
-## Public Release Gate — 2026-06-29
+## Public Release Gate — 2026-07-01
 
-Current source release candidate: **1.0.23 / Android versionCode 23**.
+Current source release candidate: **1.0.24 / Android versionCode 24**.
 
 What is already prepared in source:
 - `mobile/app.json` points at the public backend host
@@ -39,9 +39,9 @@ What is already prepared in source:
   app-user-id support, stale version numbers, a generated `mobile/android`
   directory that would override `app.json`, and unsafe public Render dev-override
   blueprints.
-- Android permissions are intentionally minimal for Play review: `INTERNET`.
-  `expo-audio` is configured with `recordAudioAndroid:false` and
-  `microphonePermission:false`.
+- Android permissions are intentionally minimal for Play review plus billing:
+  `INTERNET` and `com.android.vending.BILLING`. `expo-audio` is configured
+  with `recordAudioAndroid:false` and `microphonePermission:false`.
 - Free tier is a limited manual-reading preview: 1 document/month, first 100
   pages of native-text documents, no Listen/read-aloud, no OCR, no rF AI, no
   Cloud AI, and no AI Q&A.
@@ -59,11 +59,12 @@ are complete:
 - Render production env has `ENTITLEMENTS_DEV_OVERRIDE=false`,
   production `APP_KEY`, production `OPENAI_API_KEY`, and production
   `RC_SECRET_KEY` if subscriptions are sold.
-- Play Billing/RevenueCat mobile SDK is not wired yet. Until that is done, a
-  public build can only be a free-preview app with paid features locked and
-  purchase buttons unavailable. To sell Reader Plus / AI Pro / Power, add the
-  SDK, configure Google Play products, RevenueCat offerings/entitlements, and
-  send RevenueCat's app-user id to the backend.
+- Play Billing/RevenueCat mobile SDK is wired in source `1.0.24`, but paid
+  selling still depends on dashboard setup: RevenueCat public Android key in
+  the EAS build environment, Google Play subscription products, RevenueCat
+  entitlements/offerings, Render `RC_SECRET_KEY`, and sandbox purchase tests.
+  If the key or offering is missing, the in-app CTA stays disabled as
+  "Setting up purchases".
 - Privacy policy URL must be live and must explain document upload/extraction,
   OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
   deletion/contact flow.
@@ -76,7 +77,7 @@ are complete:
 
 For a real paid launch, the order is:
 1. Deploy/fix production Render backend.
-2. Wire Play Billing/RevenueCat in mobile and test sandbox purchases.
+2. Configure Play Billing/RevenueCat dashboard items and test sandbox purchases.
 3. Run `npm run check:release`.
 4. Run an EAS Android production/internal AAB build with a new versionCode.
 5. Upload to Play internal testing first, then promote after phone QA.
@@ -136,9 +137,9 @@ The first line is the most recent build. **Next free code = highest `appBuildVer
 Set `versionCode` to the next free code and bump the version name. Both must agree.
 
 1. `mobile/app.json`:
-  - `expo.version` → e.g. `"1.0.23"`
-  - `expo.ios.buildNumber` → `"23"`
-  - `expo.android.versionCode` → `23`
+  - `expo.version` → e.g. `"1.0.24"`
+  - `expo.ios.buildNumber` → `"24"`
+  - `expo.android.versionCode` → `24`
 2. `mobile/scripts/check-release-config.mjs` — update the three expected values to
    match (it hard‑checks `versionCode` and `version` so a stale bump fails loudly):
    - `EXPECTED_VERSION_CODE`
@@ -404,10 +405,10 @@ eas build -p android --profile internal
 
 Confirmations (all already set in `app.json`):
 - ✅ applicationId / package: `com.urmiaworks.readflow` (permanent once uploaded)
-- ✅ versionCode: `1` · versionName: `1.0.0`
+- ✅ versionCode/versionName: bump every release; current source is `24` / `1.0.24`
 - ✅ Release signing: EAS‑managed keystore (or Play App Signing)
 - ✅ Target SDK: Expo SDK 54 → targetSdk 35 (Play‑accepted)
-- ✅ Permissions: `INTERNET` only (no location / contacts / SMS)
+- ✅ Permissions: `INTERNET` and Google Play Billing only (no location / contacts / SMS / microphone)
 - ✅ No debug build (internal profile is a release app‑bundle)
 
 ---
@@ -422,6 +423,9 @@ Play Console → your app → **Testing → Internal testing → Create new rele
 Build 23 AAB is available here and was also downloaded locally to
 `artifacts/readflow-1.0.23-23.aab`:
 `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`
+
+Source `1.0.24` / versionCode `24` adds RevenueCat/Play Billing wiring and
+needs a new AAB before Play subscription products can be fully tested.
 
 Optional CLI submit:
 - Command: `eas submit -p android --profile internal --id <build-id> --wait`
@@ -493,9 +497,9 @@ For a paid release, this older minimal checklist is superseded by
 `PAYMENT_SETUP.md` and `PLAY_RELEASE_PACKET.md`. Keep this section only for a
 free/internal preview build where purchases are not live.
 
-- ✅ No subscriptions / no in‑app purchases yet.
-- ✅ No AI paid limits / paywall (paywall code is inert; `ENFORCE_FREE_LIMIT=false`).
-- ✅ Permissions: INTERNET only. No microphone, background location, contacts, SMS, call log.
+- ✅ If subscriptions are not fully configured, the in-app purchase CTA stays disabled.
+- ✅ Free users stay behind backend feature gates for AI/OCR/Cloud AI/rF AI/read-aloud.
+- ✅ Permissions: INTERNET and Google Play Billing only. No microphone, background location, contacts, SMS, call log.
 - ✅ No medical/health claims. No misleading "free AI" wording in the listing.
 - ✅ Core features shipped: PDF import · read‑aloud (device + natural voice) · OCR fallback ·
   remembers reading position · font/spacing/speed settings · privacy policy · support contact.
@@ -555,6 +559,7 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 18 | 1.0.18 | 178c888f | canceled | stale generated `mobile/android/` would have used native versionCode 18 and `RECORD_AUDIO`; build canceled before release |
 | 18-22 | 1.0.18-1.0.22 | local only / no release AAB | phone QA builds | rF AI, multilingual OCR/text repair, OCR controls, scroll/audio fixes installed via local APKs |
 | 23 | 1.0.23 | 8c701727 | finished | Play/internal AAB release candidate. Converted production backend URL, no mic/background audio, per-install app-user id, Free no Listen, stale native Android guard. AAB: https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab |
+| 24 | 1.0.24 | pending | source ready | RevenueCat SDK / Google Play Billing permission, purchase + restore paywall wiring, stable `rf_...` RevenueCat app user id, release guard bumped to 24. Needs EAS AAB. |
 
 **Next source candidate versionCode: 24.** Before spending EAS quota, still run
 `eas build:list` and pick a higher code if any account build has consumed 24 or

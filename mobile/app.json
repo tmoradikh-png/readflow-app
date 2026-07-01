@@ -2,7 +2,7 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.23",
+    "version": "1.0.24",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
@@ -20,16 +20,17 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urmiaworks.readflow",
-      "buildNumber": "23",
+      "buildNumber": "24",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 23,
+      "versionCode": 24,
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "com.android.vending.BILLING"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -64,6 +65,8 @@
     "extra": {
       "apiUrl": "https://readflow-backend-internal.onrender.com",
       "appKey": "8bdafe087ef5b82bdc6790a2b9d62d29",
+      "revenueCatAndroidApiKey": "",
+      "revenueCatIosApiKey": "",
       "supportEmail": "support@urmiaworks.com",
       "website": "https://urmiaworks.com",
       "privacyPolicy": "https://urmiaworks.com/readflow/privacy",

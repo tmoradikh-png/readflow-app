@@ -53,6 +53,21 @@ export const APP_KEY: string =
   ((Constants.expoConfig as any)?.extra?.appKey as string | undefined) ||
   "";
 
+/**
+ * RevenueCat public SDK keys. These are safe to ship in the app, but they are
+ * still environment-driven so release builds can be prepared without committing
+ * account-specific dashboard values.
+ */
+export const REVENUECAT_ANDROID_API_KEY: string =
+  (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY as string | undefined) ||
+  ((Constants.expoConfig as any)?.extra?.revenueCatAndroidApiKey as string | undefined) ||
+  "";
+
+export const REVENUECAT_IOS_API_KEY: string =
+  (process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY as string | undefined) ||
+  ((Constants.expoConfig as any)?.extra?.revenueCatIosApiKey as string | undefined) ||
+  "";
+
 /** Merge the app-key header into any request headers. */
 export function apiHeaders(extra?: Record<string, string>): Record<string, string> {
   const h: Record<string, string> = { ...(extra || {}) };

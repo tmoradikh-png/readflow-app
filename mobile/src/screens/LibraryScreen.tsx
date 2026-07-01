@@ -25,7 +25,11 @@ import { OcrLoader, OcrProgress } from "../services/OcrLoader";
 import { Bookmarks } from "../services/Bookmarks";
 import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
 import { ThemedNotice, ThemedNoticeAction } from "../components/ThemedNotice";
-import { UpgradeSheet } from "../components/UpgradeSheet";
+import {
+  UpgradeSheet,
+  type UpgradeBilling,
+  type UpgradePlanKey,
+} from "../components/UpgradeSheet";
 import {
   downloadLocalNeuralVoice,
   formatLocalModelSize,
@@ -53,6 +57,12 @@ interface Props {
   preferences: ReadingPreferences;
   onPreferencesChange: (next: ReadingPreferences) => void;
   onRefreshUsage?: () => void;
+  purchasingAvailable?: boolean;
+  purchaseSetupLoading?: boolean;
+  purchasing?: boolean;
+  purchaseError?: string | null;
+  onPurchasePlan?: (planKey: UpgradePlanKey, billing: UpgradeBilling) => void;
+  onRestorePurchases?: () => void;
 }
 
 interface NoticeState {
@@ -81,6 +91,12 @@ export function LibraryScreen({
   preferences,
   onPreferencesChange,
   onRefreshUsage,
+  purchasingAvailable,
+  purchaseSetupLoading,
+  purchasing,
+  purchaseError,
+  onPurchasePlan,
+  onRestorePurchases,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -626,6 +642,12 @@ export function LibraryScreen({
         reasonTitle={upgrade?.title}
         reasonBody={upgrade?.body}
         onClose={() => setUpgrade(null)}
+        purchasingAvailable={purchasingAvailable}
+        purchaseSetupLoading={purchaseSetupLoading}
+        purchasing={purchasing}
+        purchaseError={purchaseError}
+        onPurchase={onPurchasePlan}
+        onRestore={onRestorePurchases}
       />
     </SafeAreaView>
   );

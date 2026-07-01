@@ -1,6 +1,6 @@
 # readFlow Developer Handoff
 
-Updated: 2026-06-29
+Updated: 2026-07-01
 
 Read this file first when taking over the project. It is the high-level map of
 accounts, services, release status, and operational habits. Then use
@@ -35,19 +35,19 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.23`
-- Current source Android `versionCode`: `23`
-- Current source iOS `buildNumber`: `23`
+- Current source version: `1.0.24`
+- Current source Android `versionCode`: `24`
+- Current source iOS `buildNumber`: `24`
 - Latest finished EAS build: `1.0.23` / code `23`
 - Latest finished EAS build id: `8c701727-dcc5-403d-9b69-4f4d2e4fc9b2`
 - Latest finished AAB:
   `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build should use code `24` unless another EAS build has already
-  consumed a higher code. Run the EAS `build:list` command in `RELEASE_GUIDE.md`
-  immediately before spending build quota.
-- Next iOS build can use buildNumber `23` unless an iOS EAS build has already
+- Next Android build should use code `24` from current source unless another EAS
+  build has already consumed it. Run the EAS `build:list` command in
+  `RELEASE_GUIDE.md` immediately before spending build quota.
+- Next iOS build can use buildNumber `24` unless an iOS EAS build has already
   consumed it. Run the EAS `build:list --platform ios` command in
   `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 
@@ -71,7 +71,7 @@ Important: build `178c888f` / `1.0.18` was canceled because a stale generated
 and `RECORD_AUDIO`. The folder was moved to
 `tmp/android-local-backup-20260629-1`, and the release checker now blocks this.
 
-Current Play release prep in source `1.0.23`:
+Current Play release prep in source `1.0.24`:
 - `mobile/app.json` now points at the public backend host
   `https://readflow-backend-internal.onrender.com`. This is the converted
   production Render service: the service name is `readflow-backend`, but Render
@@ -81,14 +81,16 @@ Current Play release prep in source `1.0.23`:
   The old `https://readflow-backend.onrender.com` URL still returns Render's
   `Service Suspended` owner-state page and must not be used by Play builds
   unless that old service is recovered or replaced.
-- Android permissions are reduced to `INTERNET`; `expo-audio` is configured with
-  `recordAudioAndroid: false` and `microphonePermission: false`.
+- Android permissions are `INTERNET` and `com.android.vending.BILLING`;
+  `expo-audio` is configured with `recordAudioAndroid: false` and
+  `microphonePermission: false`.
 - iOS background audio mode and Expo foreground/background playback flags are
   disabled for the current foreground-only product behavior.
 - Mobile now creates a stable local `rf_...` install id and sends it as
   `x-app-user-id` so public free users do not all share the backend
-  `"anonymous"` usage/quota bucket. This is an install-level id only; RevenueCat
-  identity is still required before selling subscriptions.
+  `"anonymous"` usage/quota bucket. RevenueCat is also configured with this same
+  id, so store entitlements and backend quotas resolve to one customer identity
+  without requiring login.
 - Free is enforced as a limited manual-reading preview: page cap from
   `perDocPageCap`, no Listen/read-aloud, no OCR, no rF AI, no Cloud AI, and no
   AI questions. Reader Plus and higher unlock device read-aloud.
@@ -96,10 +98,10 @@ Current Play release prep in source `1.0.23`:
   production backend, asks for microphone permission, declares background audio,
   omits app-user-id support, or has public Render blueprints with
   `ENTITLEMENTS_DEV_OVERRIDE=true`.
-- Paid subscriptions are not ready to sell until Play Billing/RevenueCat is
-  wired in the mobile app and the production Render backend has `RC_SECRET_KEY`
-  set. Until then, a public build is a free-preview release with locked paid
-  features and plan UI marked as not purchasable.
+- Paid subscriptions are not ready to sell until RevenueCat dashboard setup is
+  complete and the production Render backend has `RC_SECRET_KEY` set. The mobile
+  SDK/paywall wiring exists in source `1.0.24`; if the public SDK key or
+  offering is missing, purchase buttons stay disabled as "Setting up purchases".
 - Payment/legal release prep added on 2026-06-29:
   - `PAYMENT_SETUP.md` records product ids, RevenueCat/Play setup, backend env,
     and sandbox tests.
@@ -111,9 +113,9 @@ Current Play release prep in source `1.0.23`:
   - The old local-AI label has been removed from tracked app source; the public
     customer-facing name is `rF AI`.
 
-Current iOS release prep in source `1.0.23`:
+Current iOS release prep in source `1.0.24`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
-  `23`, and `ITSAppUsesNonExemptEncryption=false`.
+  `24`, and `ITSAppUsesNonExemptEncryption=false`.
 - `mobile/eas.json` now has explicit iOS settings for development/preview
   device builds and App Store/TestFlight archive builds.
 - `npm run check:release` now checks iOS bundle id, build number, no generated
@@ -122,12 +124,12 @@ Current iOS release prep in source `1.0.23`:
 - `IOS_RELEASE_GUIDE.md` records the iOS EAS build routine and TestFlight QA
   checklist. `APP_STORE_RELEASE_PACKET.md` records App Store listing text,
   review notes, subscription disclosure, and App Privacy worksheet notes.
-- EAS had no iOS build history on 2026-06-29, so buildNumber `23` is currently
+- EAS had no iOS build history on 2026-06-29, so buildNumber `24` is currently
   free unless a later iOS build consumes it.
 - Paid iOS subscriptions are not ready to sell until Apple in-app purchase /
-  RevenueCat is wired in the mobile app and production Render has
-  `RC_SECRET_KEY` set. Until then, iOS is a free-preview/TestFlight path with
-  locked paid features and no live purchase flow.
+  RevenueCat dashboard setup is complete and production Render has
+  `RC_SECRET_KEY` set. The shared mobile paywall wiring is present, but no iOS
+  sandbox purchase has been tested yet.
 
 Current backend note:
 - Production Render service name: `readflow-backend`.
@@ -572,8 +574,10 @@ Short version:
    ```
 7. Add a row to the build ledger in `RELEASE_GUIDE.md` as soon as a build is
    started. Mark it finished and add the artifact URL once EAS finishes.
-8. Upload the `.aab` to Google Play Console internal testing. Build 23 artifact:
+8. Upload the `.aab` to Google Play Console internal testing. Latest finished
+   build 23 artifact:
    `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`.
+   Source `1.0.24` needs a new AAB for Play Billing / RevenueCat wiring.
    EAS submit is not automated yet because the Expo project does not have a
    Google Service Account JSON configured for Play upload.
 9. On the phone, uninstall the old app before reinstalling. Android launchers and
@@ -585,8 +589,8 @@ iOS/TestFlight release prep is in `IOS_RELEASE_GUIDE.md`. Short version:
    cd C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
    npx --yes eas-cli build:list --platform ios --limit 5 --json --non-interactive
    ```
-2. If buildNumber `23` is still unused, keep `mobile/app.json` as
-   `1.0.23` / `ios.buildNumber` `23`; otherwise bump only the iOS build number
+2. If buildNumber `24` is still unused, keep `mobile/app.json` as
+   `1.0.24` / `ios.buildNumber` `24`; otherwise bump only the iOS build number
    and `EXPECTED_IOS_BUILD_NUMBER`.
 3. Run:
    ```powershell

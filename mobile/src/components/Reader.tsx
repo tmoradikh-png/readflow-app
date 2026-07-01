@@ -25,7 +25,7 @@ import { createTTSProvider } from "../services/tts";
 import { Controls, ReadingSettings } from "./Controls";
 import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
-import { UpgradeSheet } from "./UpgradeSheet";
+import { UpgradeSheet, type UpgradeBilling, type UpgradePlanKey } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
 import { getReadingLanguage } from "../services/ReadingLanguages";
@@ -48,6 +48,12 @@ interface Props {
   startSentenceId?: number;
   /** Reports the latest reading position so the Library can persist it. */
   onProgress?: (page: number, sentenceId: number, totalPages: number) => void;
+  purchasingAvailable?: boolean;
+  purchaseSetupLoading?: boolean;
+  purchasing?: boolean;
+  purchaseError?: string | null;
+  onPurchasePlan?: (planKey: UpgradePlanKey, billing: UpgradeBilling) => void;
+  onRestorePurchases?: () => void;
   onBack: () => void;
 }
 
@@ -144,6 +150,12 @@ export function Reader({
   freePageLimit = 100,
   startSentenceId = 0,
   onProgress,
+  purchasingAvailable,
+  purchaseSetupLoading,
+  purchasing,
+  purchaseError,
+  onPurchasePlan,
+  onRestorePurchases,
   onBack,
 }: Props) {
   // One continuous, globally-indexed sentence list (id === array index).
@@ -1444,6 +1456,12 @@ export function Reader({
         reasonTitle={paywallTitle}
         reasonBody={paywallBody}
         onClose={() => setShowPaywall(false)}
+        purchasingAvailable={purchasingAvailable}
+        purchaseSetupLoading={purchaseSetupLoading}
+        purchasing={purchasing}
+        purchaseError={purchaseError}
+        onPurchase={onPurchasePlan}
+        onRestore={onRestorePurchases}
       />
     </View>
   );
