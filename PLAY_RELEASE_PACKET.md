@@ -27,7 +27,7 @@ Current source status:
 - RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
   Google Play products are published in RevenueCat, and the `default` offering
   has all six paid packages. Build `1.0.25` / code `25` was created after the
-  EAS public key was set and is ready to upload to Play internal testing.
+  EAS public key was set and is live on Play internal testing.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, government apps, financial features, health, and content rating are saved
   or ready in Publishing overview.
@@ -47,10 +47,11 @@ Verified for paid launch prep:
 - Android AAB `1.0.25` / code `25` finished on EAS with artifact
   `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`.
   Local copy: `artifacts/readflow-1.0.25-25.aab`.
+- Play internal testing release `25 (1.0.25)` was published on 2026-07-01 and
+  shows `Available to internal testers`.
 
 Not ready for paid public launch:
 
-- Build `1.0.25` / code `25` is not uploaded to Play internal testing yet.
 - Sandbox purchase/restore tests are not complete yet.
 - Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
   Confirm the final public terms URL before production submission.

@@ -65,8 +65,9 @@ are complete:
   credentials, and six packages in the `default` offering. Render production
   has `RC_SECRET_KEY` set and a non-buyer entitlement probe returned
   `source: revenuecat`, `tier: free`. Build `1.0.25` / code `25` was built
-  after the EAS RevenueCat public Android key was added. Paid selling still
-  depends on Play internal upload and sandbox purchase/restore tests.
+  after the EAS RevenueCat public Android key was added and was published to
+  Play internal testing on 2026-07-01. Paid selling still depends on sandbox
+  purchase/restore tests before public rollout.
 - Privacy policy URL must be live and must explain document upload/extraction,
   OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
   deletion/contact flow.
@@ -428,6 +429,8 @@ Build 25 AAB is available here and was also downloaded locally to
 
 Build 25 was created after `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` was added
 to the EAS production environment, so it is the paid internal testing candidate.
+It was published to Play internal testing on 2026-07-01 and Play shows
+`Available to internal testers`.
 Build 24 stays in the ledger as the earlier billing-capable build whose purchase
 CTA remains disabled because it was built before the EAS public key existed.
 

@@ -115,10 +115,11 @@ Current Play release prep in source `1.0.25`:
   `Published`, all six packages are in the `default` offering, EAS has the
   Android public SDK key, and production Render has `RC_SECRET_KEY` set. A
   random non-buyer entitlement probe returned `source: revenuecat`,
-  `tier: free`. Build 25 was created after the EAS key existed and should be
-  uploaded to Play internal testing for sandbox purchase/restore QA. Build 24 is
-  billing-capable but was started before the EAS key existed, so purchase
-  buttons stay disabled as "Setting up purchases" in that build.
+  `tier: free`. Build 25 was created after the EAS key existed and was
+  published to Play internal testing on 2026-07-01; Play shows
+  `Available to internal testers`. It still needs sandbox purchase/restore QA.
+  Build 24 is billing-capable but was started before the EAS key existed, so
+  purchase buttons stay disabled as "Setting up purchases" in that build.
 - Payment/legal release prep added on 2026-06-29:
   - `PAYMENT_SETUP.md` records product ids, RevenueCat/Play setup, backend env,
     and sandbox tests.
@@ -595,7 +596,7 @@ Short version:
    ```
 7. Add a row to the build ledger in `RELEASE_GUIDE.md` as soon as a build is
    started. Mark it finished and add the artifact URL once EAS finishes.
-8. Upload the `.aab` to Google Play Console internal testing. Latest finished
+8. Play internal testing now has build `25 (1.0.25)` live. Latest finished
    build 25 artifact:
    `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`.
    EAS submit is not automated yet because the Expo project does not have a
