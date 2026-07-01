@@ -7,6 +7,7 @@ accounts, services, release status, and operational habits. Then use
 `README.md` for local setup, `RELEASE_GUIDE.md` for Android builds,
 `IOS_RELEASE_GUIDE.md` for iOS/TestFlight builds, `PAYMENT_SETUP.md` for
 store billing/RevenueCat, `PLAY_RELEASE_PACKET.md` for Play submission text,
+`GOOGLE_PLAY_HANDOFF.md` for the submitted Android release/account handoff,
 `APP_STORE_RELEASE_PACKET.md` for App Store submission text,
 `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
 `PLAY_DATA_SAFETY_DRAFT.md` for legal/app-content drafts,
@@ -140,6 +141,11 @@ Current Play release prep in source `1.0.27`:
   `PLAY_RELEASE_PACKET.md`.
 - Play Advertising ID declaration was completed on 2026-07-01 with `No` because
   readFlow does not use ads or advertising ID.
+- Google Play production release `1.0.27` / code `33` was submitted for review
+  on 2026-07-01. Last observed Play state in this session: "Your changes are
+  now in review"; managed publishing was off. See `GOOGLE_PLAY_HANDOFF.md` for
+  account URLs, Review Q&A, service credentials, and what to tell Google if they
+  ask for clarification.
 
 Current iOS release prep in source `1.0.27`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
@@ -421,11 +427,11 @@ service dashboards or the owner's password manager.
 | --- | --- | --- | --- |
 | GitHub | `tmoradikh-png` | Source repository | Always use this account/repo owner for readFlow. Remote is `readflow-app`. User email given for account work: `t.moradi.kh@gmail.com`. |
 | Expo / EAS | `tohid123` | Android builds and project ownership | Project is `tohid123/readflow`, projectId `097b0b5a-db90-46b4-b434-60836687b429`. User email given: `t.moradi.kh@gmail.com`. |
-| Google Play Console | Urmia Works developer account | Internal testing and later production release | Android package is permanent: `com.urmiaworks.readflow`. Verify exact login email before release. |
+| Google Play Console | Urmia Works developer account | Internal testing and production release | Android package is permanent: `com.urmiaworks.readflow`. Developer id `5814875347439289711`, app id `4975304972724343415`. |
 | Apple Developer / App Store Connect | Urmia Works developer account (verify) | TestFlight and later App Store release | iOS bundle id is `com.urmiaworks.readflow`. App Store Connect app record and signing credentials still need owner verification before the first iOS build/submit. |
 | Render | `support@urmiaworks.com` | Hosted backend | Production service name is `readflow-backend`; current reachable URL is the legacy subdomain `readflow-backend-internal.onrender.com`. |
 | OpenAI | Owner-held account | AI, OCR assistance where applicable, and natural TTS | `OPENAI_API_KEY` must be set only in Render/local `.env`, never in mobile code. |
-| RevenueCat | `support@urmiaworks.com` / Urmia Works | Production subscription entitlement source | Project `readFlow` (`d73a07a4`) exists. Android app `readFlow (Play Store)` (`appb8f9dbf896`) exists for `com.urmiaworks.readflow`. Entitlements/products are created, products are `Published`, Google Play service credentials are uploaded, all six `default` offering packages are configured, Android public SDK key is set in EAS, and Render `RC_SECRET_KEY` is set. Fresh AAB plus sandbox purchase/restore QA are still required. |
+| RevenueCat | `support@urmiaworks.com` / Urmia Works | Production subscription entitlement source | Project `readFlow` (`d73a07a4`) exists. Android app `readFlow (Play Store)` (`appb8f9dbf896`) exists for `com.urmiaworks.readflow`. Entitlements/products are created, products are `Published`, Google Play service credentials are uploaded, all six `default` offering packages are configured, Android public SDK key is set in EAS, and Render `RC_SECRET_KEY` is set. Sandbox purchase/restore QA should be run on the Play build as soon as available. |
 | Urmia Works web | `urmiaworks.com` | Privacy/support URLs | App config points to `https://urmiaworks.com/readflow/privacy` and support email `support@urmiaworks.com`. |
 | Codex | Owner's Codex account | Development assistant usage only | Codex subscription/account state is not part of app runtime and should not be stored in repo. |
 
@@ -446,6 +452,8 @@ Known public URLs and IDs:
   `https://app.revenuecat.com/projects/d73a07a4`
 - RevenueCat Android app REST id:
   `appb8f9dbf896`
+- Google Play release/account handoff:
+  `GOOGLE_PLAY_HANDOFF.md`
 
 ## Secret Handling
 

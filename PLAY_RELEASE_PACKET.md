@@ -53,12 +53,17 @@ Verified for paid launch prep:
   Play required the foreground service declaration for media playback and data
   sync; source now strips unused foreground-service/microphone declarations and
   review-support videos are in `docs/play-review/`.
+- Last observed Play publishing state in this Codex session: release changes
+  were in review, quick checks had no blocking issue, and managed publishing was
+  off. Use `GOOGLE_PLAY_HANDOFF.md` for account URLs and exact support answers
+  if Google asks follow-up questions.
 
-Not ready for paid public launch:
+Known post-submit follow-ups:
 
-- Sandbox purchase/restore tests are not complete yet.
+- Sandbox purchase/restore tests should be run as soon as the Play build is
+  available to testers or after approval.
 - Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
-  Confirm the final public terms URL before production submission.
+  Confirm the final public terms URL before iOS submission or wider marketing.
 - Google Play subscription products and base plans were created and activated
   on 2026-07-01. See `PAYMENT_SETUP.md` for product ids, base plan ids, and
   USD anchor prices.
