@@ -70,37 +70,39 @@ readFlow
 Title:
 
 ```text
-readFlow: PDF Reader & Voice
+readFlow PDF Reader with AI
 ```
 
 Short description, under 80 characters:
 
 ```text
-Read PDFs and text-based Word docs in a clean phone view, with voice and AI.
+Reflow PDFs and Word docs into an ebook-style reader with voice and AI.
 ```
 
 Full description:
 
 ```text
-readFlow helps make long PDFs and text-based Word .docx documents easier to read on your phone.
+readFlow is a PDF and Word reader built to replace pinch-and-zoom PDF reading with an ebook-style phone view, voice, and AI reading help.
 
-Instead of forcing you to pinch and zoom a fixed page, readFlow turns supported documents into a clean mobile reading view, keeps your place, and can read aloud depending on your plan, phone, and language.
+Use it when a PDF is too small, too fixed, or too tiring to read. readFlow turns supported PDFs and text-based Word .docx documents into comfortable flowing text, keeps your place, and helps you listen or ask AI while you read depending on your plan, phone, and language.
 
 Features:
 
-- Reflow supported PDFs and text-based Word .docx documents into phone-friendly text
-- Read manually with clean typography, bookmarks, and saved progress
+- Replace fixed-page PDF reading with an ebook-style text view
+- Build a phone library for supported PDFs and Word .docx files
+- Read manually with clean typography, bookmarks, saved progress, and focus controls
 - Listen with Phone voice on eligible plans
 - Use rF AI voice on eligible phones after downloading the voice model
 - Use capped Cloud AI voice on supported paid plans and approved languages
 - Highlight text while listening
-- Ask AI for summaries, explanations, simplified text, key points, and answers on eligible plans
+- Ask AI for summaries, explanations, simplified passages, key points, and Q&A on eligible plans
 - Use OCR allowances on paid AI plans for scanned or image-based PDFs
 - Choose document language for OCR, voices, and AI answers
 
 Important notes:
 
-- readFlow works best with clean text-based PDFs and modern Word .docx documents that contain real text.
+- readFlow is designed for PDFs and text-based Word .docx files; it is not a full EPUB reader or audiobook service in this release.
+- It works best with clean text-based PDFs and modern Word .docx documents that contain real text.
 - Scanned, image-heavy, damaged, blurred, skewed, noisy, phone-photo, legacy, or heavily formatted documents may require OCR and may not convert perfectly.
 - OCR, AI answers, and AI voices are assistive features and may be incomplete or inaccurate.
 - Voice quality and availability vary by language, device, installed voices, and plan.
@@ -147,13 +149,19 @@ https://urmiaworks.com/readflow/terms
 
 Recommended phone screenshots:
 
-1. Shelf with imported books and clean `readFlow` branding.
-2. Reader view showing reflowed PDF text and large comfortable typography.
-3. Voice selector showing Phone voice, rF AI, and Cloud AI.
-4. AI panel showing summary/explain/Q&A, with AI Pro/Power context.
-5. OCR/Fix text progress screen for scanned PDFs.
-6. Language selector showing multilingual OCR/voice options.
-7. Upgrade sheet with Free, Reader Plus, AI Pro, and Power.
+1. Feature graphic using the Nano Banana real-reading output
+   `pic/*this_1.png`: a real person reading a book-like screen on the phone.
+2. Optional alternate feature graphic:
+   `artifacts/play-store/feature-graphic-mockup-1024x500.png`.
+3. First phone screenshot:
+   `artifacts/play-store/phone-00-real-reading.png`.
+4. Library view showing PDF/Word imports, voice, OCR, and AI.
+5. Reader view showing ebook-style PDF text and large comfortable typography.
+6. Voice selector showing Phone voice, rF AI, and Cloud AI.
+7. AI panel showing summary/explain/Q&A with allowance context.
+8. OCR/Fix text progress screen for scanned PDFs.
+9. Language selector showing multilingual OCR/voice options.
+10. Upgrade sheet with Free, Reader Plus, AI Pro, and Power.
 
 Avoid screenshots that imply every language, scan, or AI voice is perfect. Use
 realistic examples and show limits where helpful.

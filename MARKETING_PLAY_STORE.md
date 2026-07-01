@@ -1,6 +1,6 @@
 # readFlow Marketing and Store Copy
 
-Updated: 2026-06-29
+Updated: 2026-07-01
 
 This file is for the marketing/web/Play Store team. It describes what readFlow
 does, how to present each tier, and how to word claims carefully while the app,
@@ -23,7 +23,7 @@ from `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
 ## Core Positioning
 
 readFlow turns supported PDFs and text-based Word `.docx` documents into a
-phone-first reading experience.
+phone-first, ebook-style reading experience.
 Instead of forcing users to pinch and zoom a fixed page, it extracts the text,
 reflows it into readable mobile typography, highlights the current line or
 paragraph, and can read aloud with phone voice, rF AI voice, or capped Cloud AI
@@ -35,7 +35,11 @@ Recommended one-line positioning:
 
 Shorter store positioning:
 
-> Reflow PDFs into clean mobile reading, listen aloud, and ask AI when you need help.
+> Reflow PDFs into an ebook-style reader, listen aloud, and ask AI when you need help.
+
+Stronger launch positioning:
+
+> Replace pinch-and-zoom PDF reading with an ebook-style reader for PDFs and Word docs, with voice and AI reading help on eligible plans.
 
 ## Important Claim Rules
 
@@ -249,35 +253,41 @@ Includes:
 
 ### App Title
 
-readFlow: PDF Reader & Voice
+readFlow PDF Reader with AI
 
 ### Short Description
 
-Read PDFs and text-based Word docs in a clean phone view, listen aloud, and ask AI.
+Reflow PDFs and Word docs into an ebook-style reader with voice and AI.
 
 ### Full Description
 
-readFlow helps make long PDFs and text-based Word `.docx` documents easier to
-read on your phone.
-It turns supported documents into a clean mobile reading view, keeps your place,
-and can read aloud with device voice, rF AI voice, or capped Cloud AI voice
-depending on your plan, device, and language.
+readFlow is a PDF and Word reader built to replace pinch-and-zoom PDF reading
+with an ebook-style phone view, voice, and AI reading help.
+
+Use it when a PDF is too small, too fixed, or too tiring to read. readFlow turns
+supported PDFs and text-based Word `.docx` documents into comfortable flowing
+text, keeps your place, and helps you listen or ask AI while you read depending
+on your plan, phone, and language.
 
 Features:
 
-- Reflow supported PDFs and text-based Word `.docx` documents into phone-friendly text
-- Listen with device voice at no cloud voice cost
+- Replace fixed-page PDF reading with an ebook-style text view
+- Build a phone library for supported PDFs and Word `.docx` files
+- Read manually with clean typography, bookmarks, saved progress, and focus controls
+- Listen with Phone voice on eligible plans
 - Use rF AI voice on eligible phones after downloading the voice model
 - Use capped Cloud AI voice on supported paid plans and approved languages
 - Highlight text while listening
-- Bookmark pages and continue where you left off
-- Ask AI for summaries, explanations, simplified text, key points, and answers
-- Use OCR allowances on paid AI plans for scanned/image PDFs
+- Ask AI for summaries, explanations, simplified passages, key points, and Q&A
+  on eligible plans
+- Use OCR allowances on paid AI plans for scanned or image-based PDFs
 - Choose document language for OCR, voices, and AI answers
 
 Important notes:
 
-- Works best with clean text-based PDFs and modern Word `.docx` documents.
+- readFlow is designed for PDFs and text-based Word `.docx` files; it is not a
+  full EPUB reader or audiobook service in this release.
+- It works best with clean text-based PDFs and modern Word `.docx` documents.
 - Word files that are mostly pictures/scans, legacy `.doc`, or heavily formatted
   layouts may not convert cleanly.
 - Good-quality printed scans can be converted with OCR on eligible AI plans.
@@ -306,9 +316,9 @@ Important notes:
 ## Web Page Sections
 
 1. Hero:
-   - Headline: `readFlow makes long documents easier on your phone.`
-   - Subcopy: `Reflow PDFs and text-based Word .docx documents into clean mobile reading, listen
-     aloud, and ask AI when you need help.`
+   - Headline: `Your PDF reader with AI.`
+   - Subcopy: `Reflow PDFs and text-based Word .docx documents into ebook-style mobile reading,
+     listen aloud, and ask AI while you read.`
    - CTA: `Try readFlow`
 
 2. Problem:
