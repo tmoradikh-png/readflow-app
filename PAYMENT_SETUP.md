@@ -63,8 +63,9 @@ Missing before paid launch:
   Because of that, product status shows `Could not check` and the offering
   package product picker only shows `No product`.
 - The backend still needs the production RevenueCat secret key in Render.
-- Platform-specific RevenueCat public SDK keys are not set in release build
-  environment yet.
+- The RevenueCat Android public SDK key is set in EAS project environments
+  `production`, `preview`, and `development`, but no new AAB has been built
+  with it yet. The iOS public SDK key is not set yet.
 - The production backend service has been converted from the old internal
   service. Current reachable URL:
   `https://readflow-backend-internal.onrender.com`. The service name is
@@ -227,6 +228,17 @@ Offering:
 | --- | --- | --- | --- |
 | `default` | Default | `ofrng6b3bf29391` | Created, no packages yet |
 
+EAS public key status:
+
+- `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` was added to EAS project
+  `@tohid123/readflow` in `production`, `preview`, and `development` on
+  2026-07-01.
+- Build `1.0.24` / code `24` was created before this key existed, so its
+  purchase CTA remains disabled. The next Android build should include the
+  public key.
+- `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` is still unset until the iOS RevenueCat
+  app is created.
+
 Current blocker:
 
 RevenueCat needs the Google Play service-account credentials JSON uploaded on
@@ -320,10 +332,10 @@ Mobile RevenueCat wiring status as of source `1.0.24`:
 
 Still required before paid launch:
 
-- Add the RevenueCat Android public SDK key to the EAS build environment.
 - Set `RC_SECRET_KEY` on Render production.
 - Upload Google Play service-account credentials to RevenueCat.
 - Add the six custom packages listed above to the `default` RevenueCat offering.
+- Build a fresh Android AAB after the public key and offering packages are ready.
 - Upload a billing-capable AAB (`1.0.24` or later) to Play internal testing.
 - Complete sandbox purchase and restore tests on a Play license tester account.
 

@@ -39,9 +39,9 @@ Not ready for paid public launch:
   URL returned `Service Suspended` on 2026-06-29 and must not be used.
 - RevenueCat dashboard setup is partially complete: project, Android app,
   entitlements, products, and empty `default` offering exist. Google Play
-  service-account credentials, offering packages, Render `RC_SECRET_KEY`, EAS
-  RevenueCat public key, and sandbox purchase/restore tests are not complete
-  yet.
+  service-account credentials, offering packages, Render `RC_SECRET_KEY`, a
+  fresh AAB built after the EAS RevenueCat public Android key, and sandbox
+  purchase/restore tests are not complete yet.
 - Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
   Confirm the final public terms URL before production submission.
 - Google Play subscription products and base plans were created and activated

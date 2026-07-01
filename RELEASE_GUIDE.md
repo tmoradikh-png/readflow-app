@@ -63,9 +63,10 @@ are complete:
   subscription products are active, and RevenueCat now has the project,
   Android app, entitlements, products, and empty `default` offering. Paid
   selling still depends on Google Play service-account credentials in
-  RevenueCat, six offering packages, the RevenueCat public Android key in EAS,
-  Render `RC_SECRET_KEY`, and sandbox purchase tests. If the key or offering
-  packages are missing, the in-app CTA stays disabled as "Setting up purchases".
+  RevenueCat, six offering packages, Render `RC_SECRET_KEY`, a fresh AAB built
+  after the EAS RevenueCat public Android key was added, and sandbox purchase
+  tests. If offering packages are missing, the in-app CTA stays disabled as
+  "Setting up purchases".
 - Privacy policy URL must be live and must explain document upload/extraction,
   OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
   deletion/contact flow.

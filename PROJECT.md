@@ -107,11 +107,13 @@ Current Play release prep in source `1.0.24`:
   omits app-user-id support, or has public Render blueprints with
   `ENTITLEMENTS_DEV_OVERRIDE=true`.
 - Paid subscriptions are not ready to sell until RevenueCat Google Play service
-  credentials, offering packages, EAS public SDK key, and the production Render
-  `RC_SECRET_KEY` are complete. RevenueCat project/app/entitlements/products
-  and an empty `default` offering were created on 2026-07-01. Build 24 is
-  billing-capable but was started with no EAS RevenueCat public SDK key, so
-  purchase buttons stay disabled as "Setting up purchases" in that build.
+  credentials, offering packages, a fresh Android build, and the production
+  Render `RC_SECRET_KEY` are complete. RevenueCat project, Android app,
+  entitlements, products, and an empty `default` offering were created on
+  2026-07-01. The
+  Android RevenueCat public SDK key was added to EAS on 2026-07-01. Build 24 is
+  billing-capable but was started before that EAS key existed, so purchase
+  buttons stay disabled as "Setting up purchases" in that build.
 - Payment/legal release prep added on 2026-06-29:
   - `PAYMENT_SETUP.md` records product ids, RevenueCat/Play setup, backend env,
     and sandbox tests.
@@ -407,7 +409,7 @@ service dashboards or the owner's password manager.
 | Apple Developer / App Store Connect | Urmia Works developer account (verify) | TestFlight and later App Store release | iOS bundle id is `com.urmiaworks.readflow`. App Store Connect app record and signing credentials still need owner verification before the first iOS build/submit. |
 | Render | `support@urmiaworks.com` | Hosted backend | Production service name is `readflow-backend`; current reachable URL is the legacy subdomain `readflow-backend-internal.onrender.com`. |
 | OpenAI | Owner-held account | AI, OCR assistance where applicable, and natural TTS | `OPENAI_API_KEY` must be set only in Render/local `.env`, never in mobile code. |
-| RevenueCat | `support@urmiaworks.com` / Urmia Works | Production subscription entitlement source | Project `readFlow` (`d73a07a4`) exists. Android app `readFlow (Play Store)` (`appb8f9dbf896`) exists for `com.urmiaworks.readflow`. Entitlements/products are created; Google Play service credentials, offering packages, public SDK key in EAS, and Render `RC_SECRET_KEY` are still required. |
+| RevenueCat | `support@urmiaworks.com` / Urmia Works | Production subscription entitlement source | Project `readFlow` (`d73a07a4`) exists. Android app `readFlow (Play Store)` (`appb8f9dbf896`) exists for `com.urmiaworks.readflow`. Entitlements/products are created; Android public SDK key is set in EAS. Google Play service credentials, offering packages, fresh AAB, and Render `RC_SECRET_KEY` are still required. |
 | Urmia Works web | `urmiaworks.com` | Privacy/support URLs | App config points to `https://urmiaworks.com/readflow/privacy` and support email `support@urmiaworks.com`. |
 | Codex | Owner's Codex account | Development assistant usage only | Codex subscription/account state is not part of app runtime and should not be stored in repo. |
 
