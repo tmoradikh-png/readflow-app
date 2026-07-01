@@ -46,7 +46,7 @@ Already present:
 
 Missing before paid launch:
 
-- Google Play subscription products are not created/tested.
+- Google Play subscription products are not fully created/tested.
 - Apple App Store in-app purchase products are not created/tested.
 - RevenueCat offerings are not configured.
 - The backend still needs the production RevenueCat secret key in Render.
@@ -126,6 +126,29 @@ $17.99+ to keep the same margin.
 7. Confirm the app has billing capability after the RevenueCat SDK is added.
 8. Complete Play App content sections: Data safety, Privacy policy, Content
    rating, Target audience, Ads declaration, App access, and Payments.
+
+2026-07-01 Play Console status:
+
+- Internal test build `1.0.24` / versionCode `24` is uploaded and includes
+  `com.android.vending.BILLING`.
+- Privacy policy, app access, ads, government apps, financial features, health,
+  and content rating were completed or saved in Play Console. Content rating
+  summary was saved with online/generated content and in-app purchases declared.
+- Subscription shell `readflow_reader_plus_monthly` exists as `Reader Plus
+  Monthly`, with benefits:
+  - `Read clean PDFs and Word files`
+  - `Device voice reading`
+  - `Bookmarks, focus, and progress`
+- Base plan creation is blocked in Play Console. The form validates the base
+  plan id before saving, accepts USD 4.99 regional pricing, then final Save
+  flips the id field to invalid with the generic message: `Must start with a
+  number or lowercase letter, and can contain numbers (0-9), lowercase letters
+  (a-z) and hyphens (-)`.
+- IDs tried include `uwreaderplusm20260701`, `urmia-reader-plus-20260701-1`,
+  `20260701urmia1`, `urmia20260701reader1`, and `uwm26070101`. The short id
+  `uwm26070101` validated as clean before save and failed only at final Save.
+  This points to a Play Console/account/backend propagation issue, not a real
+  id format or uniqueness problem.
 
 Google Play requires Play Billing for in-app purchases of digital goods and
 services distributed through Google Play. Do not send users from the app to a

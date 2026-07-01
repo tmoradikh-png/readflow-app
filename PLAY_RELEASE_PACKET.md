@@ -27,6 +27,9 @@ Current source status:
 - RevenueCat mobile SDK wiring is present. The purchase CTA opens Google Play
   only after the RevenueCat Android public key and offering/products are
   configured.
+- Play Console app-content progress on 2026-07-01: privacy policy, app access,
+  ads, government apps, financial features, health, and content rating are saved
+  or ready in Publishing overview.
 
 Not ready for paid public launch:
 
@@ -36,9 +39,13 @@ Not ready for paid public launch:
   URL returned `Service Suspended` on 2026-06-29 and must not be used.
 - RevenueCat dashboard setup, Google Play products, Render `RC_SECRET_KEY`, and
   sandbox purchase/restore tests are not complete yet.
-- Legal URLs are not live yet.
+- Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
+  Confirm the final public terms URL before production submission.
 - Final AI Pro/Power pricing needs a product decision before Play products are
   created.
+- Google Play currently blocks Reader Plus base-plan Save even with valid unique
+  ids and USD 4.99 pricing. Latest valid id attempted: `uwm26070101`. See
+  `PAYMENT_SETUP.md` for the exact attempted ids and error.
 
 ## Play Store Listing
 
