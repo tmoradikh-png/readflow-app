@@ -44,6 +44,10 @@ Current shape:
   `https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`
 - Latest finished AAB local copy:
   `artifacts/readflow-1.0.24-24.aab` (~142 MB).
+- Current Android EAS build in progress: `1.0.25` / code `25`, id
+  `22710f0d-49cd-4115-b82b-0dfaeab7efad`. EAS confirmed
+  `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` was loaded from the production
+  environment when the build started on 2026-07-01.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
 - Next Android build should use code `25` unless another EAS

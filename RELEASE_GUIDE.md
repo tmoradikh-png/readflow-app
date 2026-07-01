@@ -566,8 +566,9 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 18-22 | 1.0.18-1.0.22 | local only / no release AAB | phone QA builds | rF AI, multilingual OCR/text repair, OCR controls, scroll/audio fixes installed via local APKs |
 | 23 | 1.0.23 | 8c701727 | finished | Play/internal AAB release candidate. Converted production backend URL, no mic/background audio, per-install app-user id, Free no Listen, stale native Android guard. AAB: https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab |
 | 24 | 1.0.24 | e3bc6713 | finished | RevenueCat SDK / Google Play Billing permission, purchase + restore paywall wiring, stable `rf_...` RevenueCat app user id, release guard bumped to 24. Built with no EAS RevenueCat public key, so billing-capable but purchase CTA remains disabled. AAB: https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab |
+| 25 | 1.0.25 | 22710f0d | in progress | Paid internal AAB candidate started on 2026-07-01 after RevenueCat Android public SDK key was added to EAS production environment. EAS log confirmed `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` loaded. Logs: https://expo.dev/accounts/tohid123/projects/readflow/builds/22710f0d-49cd-4115-b82b-0dfaeab7efad |
 
-**Current source candidate versionCode: 25.** Before spending EAS quota, still run
+**Build 25 is now in progress.** Before starting any later EAS build, run
 `eas build:list` and pick a higher code if any account build has consumed 25 or
 above.
 
