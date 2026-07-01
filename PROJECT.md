@@ -117,8 +117,9 @@ Current Play release prep in source `1.0.27`:
   Android public SDK key, and production Render has `RC_SECRET_KEY` set. A
   random non-buyer entitlement probe returned `source: revenuecat`,
   `tier: free`. Build 33 is the current Play production candidate and was
-  uploaded as a production-track draft on 2026-07-01. Build 25 was created
-  after the EAS key existed and was published to Play internal testing on
+  uploaded as a production-track draft and sent to Google for review on
+  2026-07-01. Build 25 was created after the EAS key existed and was published
+  to Play internal testing on
   2026-07-01; Play shows `Available to internal testers`. Build 24 is
   billing-capable but was started before the EAS key existed, so purchase
   buttons stay disabled as "Setting up purchases" in that build.
@@ -137,10 +138,12 @@ Current Play release prep in source `1.0.27`:
   `docs/play-review/readflow-media-playback-demo.mp4`. These files are intended
   only for Play review declaration fields and are linked from
   `PLAY_RELEASE_PACKET.md`.
+- Play Advertising ID declaration was completed on 2026-07-01 with `No` because
+  readFlow does not use ads or advertising ID.
 
-Current iOS release prep in source `1.0.25`:
+Current iOS release prep in source `1.0.27`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
-  `25`, and `ITSAppUsesNonExemptEncryption=false`.
+  `27`, and `ITSAppUsesNonExemptEncryption=false`.
 - `mobile/eas.json` now has explicit iOS settings for development/preview
   device builds and App Store/TestFlight archive builds.
 - `npm run check:release` now checks iOS bundle id, build number, no generated
@@ -149,7 +152,7 @@ Current iOS release prep in source `1.0.25`:
 - `IOS_RELEASE_GUIDE.md` records the iOS EAS build routine and TestFlight QA
   checklist. `APP_STORE_RELEASE_PACKET.md` records App Store listing text,
   review notes, subscription disclosure, and App Privacy worksheet notes.
-- EAS had no iOS build history on 2026-06-29, so buildNumber `25` is currently
+- EAS had no iOS build history on 2026-06-29, so buildNumber `27` is currently
   free unless a later iOS build consumes it.
 - Paid iOS subscriptions are not ready to sell until Apple in-app purchase /
   RevenueCat dashboard setup is complete and production Render has
@@ -617,8 +620,8 @@ iOS/TestFlight release prep is in `IOS_RELEASE_GUIDE.md`. Short version:
    cd C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
    npx --yes eas-cli build:list --platform ios --limit 5 --json --non-interactive
    ```
-2. If buildNumber `25` is still unused, keep `mobile/app.json` as
-   `1.0.25` / `ios.buildNumber` `25`; otherwise bump only the iOS build number
+2. If buildNumber `27` is still unused, keep `mobile/app.json` as
+   `1.0.27` / `ios.buildNumber` `27`; otherwise bump only the iOS build number
    and `EXPECTED_IOS_BUILD_NUMBER`.
 3. Run:
    ```powershell

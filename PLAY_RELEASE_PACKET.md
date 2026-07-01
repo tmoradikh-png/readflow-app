@@ -29,8 +29,9 @@ Current source status:
   has all six paid packages. Build `1.0.27` / code `33` is the current Play
   production candidate.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
-  ads, government apps, financial features, health, and content rating are saved
-  or ready in Publishing overview.
+  ads, Advertising ID (`No`), foreground services, government apps, financial
+  features, health, content rating, target audience, Data Safety, and app
+  category are saved or in review.
 
 Verified for paid launch prep:
 
@@ -47,11 +48,11 @@ Verified for paid launch prep:
 - Android AAB `1.0.27` / code `33` finished on EAS with artifact
   `https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab`.
   Local copy: `artifacts/readflow-1.0.27-33.aab`.
-- Play production release draft `33 (1.0.27)` was uploaded through the Android
-  Publisher API on 2026-07-01. Before submission, Play required the foreground
-  service declaration for media playback and data sync; source now strips unused
-  foreground-service/microphone declarations and review-support videos are in
-  `docs/play-review/`.
+- Play production release `33 (1.0.27)` was uploaded through the Android
+  Publisher API and sent to Google for review on 2026-07-01. Before submission,
+  Play required the foreground service declaration for media playback and data
+  sync; source now strips unused foreground-service/microphone declarations and
+  review-support videos are in `docs/play-review/`.
 
 Not ready for paid public launch:
 
