@@ -420,12 +420,15 @@ Play Console → your app → **Testing → Internal testing → Create new rele
 - Add testers (an email list or a Google Group). Save → Review → **Roll out**.
 - Share the opt‑in link with your testers; they install via Play.
 
-Build 23 AAB is available here and was also downloaded locally to
-`artifacts/readflow-1.0.23-23.aab`:
-`https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`
+Build 24 AAB is available here and was also downloaded locally to
+`artifacts/readflow-1.0.24-24.aab`:
+`https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`
 
-Source `1.0.24` / versionCode `24` adds RevenueCat/Play Billing wiring and
-needs a new AAB before Play subscription products can be fully tested.
+Build 24 adds RevenueCat/Play Billing wiring and should unlock Play Console
+subscription-product setup after it is uploaded to internal testing. It was
+built without `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` in EAS, so in-app
+purchases stay disabled until a follow-up build includes that public SDK key
+and RevenueCat offerings/products are configured.
 
 Optional CLI submit:
 - Command: `eas submit -p android --profile internal --id <build-id> --wait`
@@ -559,10 +562,10 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 18 | 1.0.18 | 178c888f | canceled | stale generated `mobile/android/` would have used native versionCode 18 and `RECORD_AUDIO`; build canceled before release |
 | 18-22 | 1.0.18-1.0.22 | local only / no release AAB | phone QA builds | rF AI, multilingual OCR/text repair, OCR controls, scroll/audio fixes installed via local APKs |
 | 23 | 1.0.23 | 8c701727 | finished | Play/internal AAB release candidate. Converted production backend URL, no mic/background audio, per-install app-user id, Free no Listen, stale native Android guard. AAB: https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab |
-| 24 | 1.0.24 | pending | source ready | RevenueCat SDK / Google Play Billing permission, purchase + restore paywall wiring, stable `rf_...` RevenueCat app user id, release guard bumped to 24. Needs EAS AAB. |
+| 24 | 1.0.24 | e3bc6713 | finished | RevenueCat SDK / Google Play Billing permission, purchase + restore paywall wiring, stable `rf_...` RevenueCat app user id, release guard bumped to 24. Built with no EAS RevenueCat public key, so billing-capable but purchase CTA remains disabled. AAB: https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab |
 
-**Next source candidate versionCode: 24.** Before spending EAS quota, still run
-`eas build:list` and pick a higher code if any account build has consumed 24 or
+**Next source candidate versionCode: 25.** Before spending EAS quota, still run
+`eas build:list` and pick a higher code if any account build has consumed 25 or
 above.
 
 ### Lessons baked into this guide (do not relearn the hard way)

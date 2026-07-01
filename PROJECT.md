@@ -38,13 +38,15 @@ Current shape:
 - Current source version: `1.0.24`
 - Current source Android `versionCode`: `24`
 - Current source iOS `buildNumber`: `24`
-- Latest finished EAS build: `1.0.23` / code `23`
-- Latest finished EAS build id: `8c701727-dcc5-403d-9b69-4f4d2e4fc9b2`
+- Latest finished EAS build: `1.0.24` / code `24`
+- Latest finished EAS build id: `e3bc6713-2277-404e-8b08-11f4f592f3ba`
 - Latest finished AAB:
-  `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`
+  `https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`
+- Latest finished AAB local copy:
+  `artifacts/readflow-1.0.24-24.aab` (~142 MB).
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build should use code `24` from current source unless another EAS
+- Next Android build should use code `25` unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
 - Next iOS build can use buildNumber `24` unless an iOS EAS build has already
@@ -52,6 +54,12 @@ Current shape:
   `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 
 Changes included in the latest finished EAS build:
+- RevenueCat SDK / Play Billing wiring was added in mobile source, with the
+  explicit `com.android.vending.BILLING` permission.
+- Upgrade paywalls can open purchase and restore flows when RevenueCat public
+  SDK key plus offerings/products are configured.
+- RevenueCat is configured with the same stable local `rf_...` app user id sent
+  to the backend as `x-app-user-id`.
 - Active line highlighting and the foreground-only reading policy were added.
 - Cloud voice paragraph handoff was improved with wider prefetch, player reuse,
   and a shorter tail guard.
@@ -62,7 +70,7 @@ Changes included in the latest finished EAS build:
   `readflow-backend`, dev override is off, and `/api/entitlements` returns Free
   for the current app key.
 - Android release config has no microphone permission and no background audio
-  declaration.
+  declaration. It now includes Play Billing permission for subscription builds.
 - `npm run check:release` blocks stale generated `mobile/android/` directories
   so native Gradle values cannot override `app.json`.
 
@@ -99,9 +107,9 @@ Current Play release prep in source `1.0.24`:
   omits app-user-id support, or has public Render blueprints with
   `ENTITLEMENTS_DEV_OVERRIDE=true`.
 - Paid subscriptions are not ready to sell until RevenueCat dashboard setup is
-  complete and the production Render backend has `RC_SECRET_KEY` set. The mobile
-  SDK/paywall wiring exists in source `1.0.24`; if the public SDK key or
-  offering is missing, purchase buttons stay disabled as "Setting up purchases".
+  complete and the production Render backend has `RC_SECRET_KEY` set. Build 24
+  is billing-capable but was started with no EAS RevenueCat public SDK key, so
+  purchase buttons stay disabled as "Setting up purchases" in that build.
 - Payment/legal release prep added on 2026-06-29:
   - `PAYMENT_SETUP.md` records product ids, RevenueCat/Play setup, backend env,
     and sandbox tests.
@@ -575,9 +583,8 @@ Short version:
 7. Add a row to the build ledger in `RELEASE_GUIDE.md` as soon as a build is
    started. Mark it finished and add the artifact URL once EAS finishes.
 8. Upload the `.aab` to Google Play Console internal testing. Latest finished
-   build 23 artifact:
-   `https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab`.
-   Source `1.0.24` needs a new AAB for Play Billing / RevenueCat wiring.
+   build 24 artifact:
+   `https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`.
    EAS submit is not automated yet because the Expo project does not have a
    Google Service Account JSON configured for Play upload.
 9. On the phone, uninstall the old app before reinstalling. Android launchers and
