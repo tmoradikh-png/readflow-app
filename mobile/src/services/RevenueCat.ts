@@ -54,6 +54,13 @@ function allProductIds(): string[] {
   return Object.values(PRODUCT_IDS).flatMap((byBilling) => Object.values(byBilling));
 }
 
+function productIdentifierMatches(expectedProductId: string, actualIdentifier: string): boolean {
+  return (
+    actualIdentifier === expectedProductId ||
+    actualIdentifier.startsWith(`${expectedProductId}:`)
+  );
+}
+
 function selectOffering(offerings: { current: PurchasesOffering | null; all: Record<string, PurchasesOffering> }) {
   return offerings.current || offerings.all.default || Object.values(offerings.all)[0] || null;
 }
@@ -65,7 +72,7 @@ function indexPackages(offering: PurchasesOffering | null): PackageMap {
     const productId = pack.product.identifier;
     for (const tier of Object.keys(PRODUCT_IDS) as PurchaseTierKey[]) {
       for (const billing of Object.keys(PRODUCT_IDS[tier]) as PurchaseBilling[]) {
-        if (PRODUCT_IDS[tier][billing] === productId) {
+        if (productIdentifierMatches(PRODUCT_IDS[tier][billing], productId)) {
           indexed[packageKey(tier, billing)] = pack;
         }
       }
@@ -109,7 +116,9 @@ export async function refreshRevenueCatOfferings(): Promise<RevenueCatStatus> {
   cachedPackages = indexPackages(offering);
   const missingProductIds = allProductIds().filter(
     (id) =>
-      !Object.values(cachedPackages).some((pack) => pack?.product.identifier === id)
+      !Object.values(cachedPackages).some((pack) =>
+        pack ? productIdentifierMatches(id, pack.product.identifier) : false
+      )
   );
 
   return {

@@ -46,7 +46,8 @@ Already present:
 
 Missing before paid launch:
 
-- Google Play subscription products are not fully created/tested.
+- Google Play subscription products are created and active, but sandbox purchase
+  and restore testing is not complete yet.
 - Apple App Store in-app purchase products are not created/tested.
 - RevenueCat offerings are not configured.
 - The backend still needs the production RevenueCat secret key in Render.
@@ -134,21 +135,24 @@ $17.99+ to keep the same margin.
 - Privacy policy, app access, ads, government apps, financial features, health,
   and content rating were completed or saved in Play Console. Content rating
   summary was saved with online/generated content and in-app purchases declared.
-- Subscription shell `readflow_reader_plus_monthly` exists as `Reader Plus
-  Monthly`, with benefits:
-  - `Read clean PDFs and Word files`
-  - `Device voice reading`
-  - `Bookmarks, focus, and progress`
-- Base plan creation is blocked in Play Console. The form validates the base
-  plan id before saving, accepts USD 4.99 regional pricing, then final Save
-  flips the id field to invalid with the generic message: `Must start with a
-  number or lowercase letter, and can contain numbers (0-9), lowercase letters
-  (a-z) and hyphens (-)`.
-- IDs tried include `uwreaderplusm20260701`, `urmia-reader-plus-20260701-1`,
-  `20260701urmia1`, `urmia20260701reader1`, and `uwm26070101`. The short id
-  `uwm26070101` validated as clean before save and failed only at final Save.
-  This points to a Play Console/account/backend propagation issue, not a real
-  id format or uniqueness problem.
+- All six Google Play subscription products are created and each has one active
+  auto-renewing base plan:
+
+| Product id | Name | Base plan id | Period | USD anchor price |
+| --- | --- | --- | --- | --- |
+| `readflow_reader_plus_monthly` | Reader Plus Monthly | `uw-baseplan01` | Monthly | $4.99 |
+| `readflow_reader_plus_yearly` | Reader Plus Yearly | `uw-baseplan02` | Yearly | $39.99 |
+| `readflow_ai_pro_monthly` | AI Pro Monthly | `uw-baseplan03` | Monthly | $12.99 |
+| `readflow_ai_pro_yearly` | AI Pro Yearly | `uw-baseplan04` | Yearly | $119.99 |
+| `readflow_power_monthly` | Power Monthly | `uw-baseplan05` | Monthly | $29.99 |
+| `readflow_power_yearly` | Power Yearly | `uw-baseplan06` | Yearly | $279.99 |
+
+- Earlier Play Console Save failures happened with several generated ids. The
+  working pattern was the short company-prefixed base plan ids above.
+- Subscription benefits were added in Play Console:
+  - Reader Plus: clean PDF/Word reading, device voice reading, bookmarks/focus/progress.
+  - AI Pro: Reader Plus features, OCR and AI reading help, rF AI and Cloud AI voices.
+  - Power: higher OCR/AI limits, more Cloud AI voice time, heavy reading use.
 
 Google Play requires Play Billing for in-app purchases of digital goods and
 services distributed through Google Play. Do not send users from the app to a
@@ -188,7 +192,9 @@ to buy Reader Plus, AI Pro, Power, OCR pages, or voice packs.
    - `power`
 8. Attach the correct products from both stores to the correct entitlements.
 9. Create an offering named `default`.
-10. Add monthly and yearly packages for each paid tier.
+10. Add monthly and yearly packages for each paid tier. For Google Play, expect
+    RevenueCat to reference products using either the plain Play product id or
+    a `product_id:base_plan_id` identifier; mobile source `1.0.24+` accepts both.
 11. Set the RevenueCat public SDK key for Android as
     `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` for EAS builds, or as
     `expo.extra.revenueCatAndroidApiKey` in `mobile/app.json` for local
@@ -249,7 +255,7 @@ Still required before paid launch:
 
 - Add the RevenueCat Android public SDK key to the EAS build environment.
 - Set `RC_SECRET_KEY` on Render production.
-- Create/import Google Play products and attach them to the RevenueCat
+- Import the active Google Play products into RevenueCat and attach them to the
   entitlements and default offering.
 - Upload a billing-capable AAB (`1.0.24` or later) to Play internal testing.
 - Complete sandbox purchase and restore tests on a Play license tester account.
