@@ -26,8 +26,8 @@ Current source status:
   Cloud AI.
 - RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
   Google Play products are published in RevenueCat, and the `default` offering
-  has all six paid packages. A fresh `1.0.25` AAB is still required because
-  build 24 was created before the EAS public key was set.
+  has all six paid packages. Build `1.0.25` / code `25` was created after the
+  EAS public key was set and is ready to upload to Play internal testing.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, government apps, financial features, health, and content rating are saved
   or ready in Publishing overview.
@@ -43,14 +43,14 @@ Verified for paid launch prep:
   project, Android app, entitlements, published products, Google Play
   service-account credentials, and all six `default` offering packages exist.
   Render production has `RC_SECRET_KEY` set and a random non-buyer entitlement
-  probe returned `source: revenuecat`, `tier: free`. A fresh AAB built after
-  the EAS RevenueCat public Android key and sandbox purchase/restore tests are
-  still required.
+  probe returned `source: revenuecat`, `tier: free`.
+- Android AAB `1.0.25` / code `25` finished on EAS with artifact
+  `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`.
+  Local copy: `artifacts/readflow-1.0.25-25.aab`.
 
 Not ready for paid public launch:
 
-- Fresh AAB built after the EAS RevenueCat public Android key is not uploaded
-  yet.
+- Build `1.0.25` / code `25` is not uploaded to Play internal testing yet.
 - Sandbox purchase/restore tests are not complete yet.
 - Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
   Confirm the final public terms URL before production submission.

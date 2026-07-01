@@ -65,8 +65,9 @@ Missing before paid launch:
   and restore testing is not complete yet.
 - Apple App Store in-app purchase products are not created/tested.
 - The RevenueCat Android public SDK key is set in EAS project environments
-  `production`, `preview`, and `development`, but no new AAB has been built
-  with it yet. The iOS public SDK key is not set yet.
+  `production`, `preview`, and `development`, and Android build `1.0.25` /
+  code `25` was built with it. The build still needs Play internal upload and
+  sandbox purchase/restore QA. The iOS public SDK key is not set yet.
 - The production backend service has been converted from the old internal
   service. Current reachable URL:
   `https://readflow-backend-internal.onrender.com`. The service name is
@@ -146,6 +147,10 @@ $17.99+ to keep the same margin.
 
 - Internal test build `1.0.24` / versionCode `24` is uploaded and includes
   `com.android.vending.BILLING`.
+- EAS build `1.0.25` / versionCode `25` finished after the RevenueCat Android
+  public SDK key was added. Artifact:
+  `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`.
+  Local copy: `artifacts/readflow-1.0.25-25.aab`.
 - Privacy policy, app access, ads, government apps, financial features, health,
   and content rating were completed or saved in Play Console. Content rating
   summary was saved with online/generated content and in-app purchases declared.
@@ -342,8 +347,7 @@ Mobile RevenueCat wiring status as of source `1.0.25`:
 
 Still required before paid launch:
 
-- Build a fresh Android AAB after the public key and offering packages are ready.
-- Upload a billing-capable AAB (`1.0.25` or later) to Play internal testing.
+- Upload the billing-capable `1.0.25` / code `25` AAB to Play internal testing.
 - Complete sandbox purchase and restore tests on a Play license tester account.
 
 ## Sandbox Test Matrix

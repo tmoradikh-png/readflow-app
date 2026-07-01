@@ -38,19 +38,16 @@ Current shape:
 - Current source version: `1.0.25`
 - Current source Android `versionCode`: `25`
 - Current source iOS `buildNumber`: `25`
-- Latest finished EAS build: `1.0.24` / code `24`
-- Latest finished EAS build id: `e3bc6713-2277-404e-8b08-11f4f592f3ba`
+- Latest finished EAS build: `1.0.25` / code `25`
+- Latest finished EAS build id: `22710f0d-49cd-4115-b82b-0dfaeab7efad`
 - Latest finished AAB:
-  `https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`
+  `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`
 - Latest finished AAB local copy:
-  `artifacts/readflow-1.0.24-24.aab` (~142 MB).
-- Current Android EAS build in progress: `1.0.25` / code `25`, id
-  `22710f0d-49cd-4115-b82b-0dfaeab7efad`. EAS confirmed
-  `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` was loaded from the production
-  environment when the build started on 2026-07-01.
+  `artifacts/readflow-1.0.25-25.aab` (141,587,657 bytes; SHA-256
+  `DEB06771CABB09F4819C7513AD3D6FBEA961F5A4669F8EA94A250FB3149A990F`).
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build should use code `25` unless another EAS
+- Next Android build should use code `26` unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
 - Next iOS build should use buildNumber `25` unless an iOS EAS build has already
@@ -75,6 +72,9 @@ Changes included in the latest finished EAS build:
   for the current app key.
 - Android release config has no microphone permission and no background audio
   declaration. It now includes Play Billing permission for subscription builds.
+- Build 25 was the first AAB created after EAS production loaded
+  `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`, so it is the candidate for paid
+  internal testing.
 - `npm run check:release` blocks stale generated `mobile/android/` directories
   so native Gradle values cannot override `app.json`.
 
@@ -115,8 +115,8 @@ Current Play release prep in source `1.0.25`:
   `Published`, all six packages are in the `default` offering, EAS has the
   Android public SDK key, and production Render has `RC_SECRET_KEY` set. A
   random non-buyer entitlement probe returned `source: revenuecat`,
-  `tier: free`. Paid selling still needs a fresh Android build after the EAS
-  public key/offering setup and sandbox purchase/restore QA. Build 24 is
+  `tier: free`. Build 25 was created after the EAS key existed and should be
+  uploaded to Play internal testing for sandbox purchase/restore QA. Build 24 is
   billing-capable but was started before the EAS key existed, so purchase
   buttons stay disabled as "Setting up purchases" in that build.
 - Payment/legal release prep added on 2026-06-29:
@@ -596,8 +596,8 @@ Short version:
 7. Add a row to the build ledger in `RELEASE_GUIDE.md` as soon as a build is
    started. Mark it finished and add the artifact URL once EAS finishes.
 8. Upload the `.aab` to Google Play Console internal testing. Latest finished
-   build 24 artifact:
-   `https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`.
+   build 25 artifact:
+   `https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`.
    EAS submit is not automated yet because the Expo project does not have a
    Google Service Account JSON configured for Play upload.
 9. On the phone, uninstall the old app before reinstalling. Android launchers and

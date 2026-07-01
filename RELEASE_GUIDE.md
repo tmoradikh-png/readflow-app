@@ -64,9 +64,9 @@ are complete:
   app, entitlements, published products, Google Play service-account
   credentials, and six packages in the `default` offering. Render production
   has `RC_SECRET_KEY` set and a non-buyer entitlement probe returned
-  `source: revenuecat`, `tier: free`. Paid selling still depends on a fresh AAB
-  built after the EAS RevenueCat public Android key was added and sandbox
-  purchase/restore tests.
+  `source: revenuecat`, `tier: free`. Build `1.0.25` / code `25` was built
+  after the EAS RevenueCat public Android key was added. Paid selling still
+  depends on Play internal upload and sandbox purchase/restore tests.
 - Privacy policy URL must be live and must explain document upload/extraction,
   OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
   deletion/contact flow.
@@ -422,16 +422,14 @@ Play Console → your app → **Testing → Internal testing → Create new rele
 - Add testers (an email list or a Google Group). Save → Review → **Roll out**.
 - Share the opt‑in link with your testers; they install via Play.
 
-Build 24 AAB is available here and was also downloaded locally to
-`artifacts/readflow-1.0.24-24.aab`:
-`https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab`
+Build 25 AAB is available here and was also downloaded locally to
+`artifacts/readflow-1.0.25-25.aab`:
+`https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab`
 
-Build 24 added RevenueCat/Play Billing wiring and unlocked Play Console
-subscription-product setup after it was uploaded to internal testing. It was
-built without `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` in EAS, so in-app
-purchases stay disabled in that build. Use source `1.0.25` / versionCode `25`
-for the next paid internal test AAB because it includes the EAS public SDK key
-environment.
+Build 25 was created after `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` was added
+to the EAS production environment, so it is the paid internal testing candidate.
+Build 24 stays in the ledger as the earlier billing-capable build whose purchase
+CTA remains disabled because it was built before the EAS public key existed.
 
 Optional CLI submit:
 - Command: `eas submit -p android --profile internal --id <build-id> --wait`
@@ -566,10 +564,10 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 18-22 | 1.0.18-1.0.22 | local only / no release AAB | phone QA builds | rF AI, multilingual OCR/text repair, OCR controls, scroll/audio fixes installed via local APKs |
 | 23 | 1.0.23 | 8c701727 | finished | Play/internal AAB release candidate. Converted production backend URL, no mic/background audio, per-install app-user id, Free no Listen, stale native Android guard. AAB: https://expo.dev/artifacts/eas/01ytFmd3sp43B5heDGEvI4MKb68Wt79XXt2cXAOI22c.aab |
 | 24 | 1.0.24 | e3bc6713 | finished | RevenueCat SDK / Google Play Billing permission, purchase + restore paywall wiring, stable `rf_...` RevenueCat app user id, release guard bumped to 24. Built with no EAS RevenueCat public key, so billing-capable but purchase CTA remains disabled. AAB: https://expo.dev/artifacts/eas/A99FL8SxYSoTpYukWz-9miu4EvjVluCOsLIprGqQUDo.aab |
-| 25 | 1.0.25 | 22710f0d | in progress | Paid internal AAB candidate started on 2026-07-01 after RevenueCat Android public SDK key was added to EAS production environment. EAS log confirmed `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` loaded. Logs: https://expo.dev/accounts/tohid123/projects/readflow/builds/22710f0d-49cd-4115-b82b-0dfaeab7efad |
+| 25 | 1.0.25 | 22710f0d | finished | Paid internal AAB candidate built on 2026-07-01 after RevenueCat Android public SDK key was added to EAS production environment. EAS log confirmed `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` loaded. AAB: https://expo.dev/artifacts/eas/pilWTrz8rJCy24NNqdosrG5aTKUy3nZugLsNvCIsUrs.aab |
 
-**Build 25 is now in progress.** Before starting any later EAS build, run
-`eas build:list` and pick a higher code if any account build has consumed 25 or
+**Next source candidate versionCode: 26.** Before starting any later EAS build, run
+`eas build:list` and pick a higher code if any account build has consumed 26 or
 above.
 
 ### Lessons baked into this guide (do not relearn the hard way)
