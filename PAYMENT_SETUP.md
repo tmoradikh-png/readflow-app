@@ -43,13 +43,25 @@ Already present:
   the same stable `rf_...` install id used for backend entitlements.
 - The paywall can open the native purchase flow and restore purchases once a
   RevenueCat public SDK key and a valid offering are present.
+- RevenueCat project `readFlow` exists at project id `d73a07a4`.
+- RevenueCat Android app `readFlow (Play Store)` exists for
+  `com.urmiaworks.readflow` with REST API identifier `appb8f9dbf896`.
+- RevenueCat entitlements `reader_plus`, `ai_pro`, and `power` exist.
+- All six Google Play subscription products were manually created in
+  RevenueCat and attached to the correct entitlement.
+- RevenueCat offering `default` exists with REST API identifier
+  `ofrng6b3bf29391`.
 
 Missing before paid launch:
 
 - Google Play subscription products are created and active, but sandbox purchase
   and restore testing is not complete yet.
 - Apple App Store in-app purchase products are not created/tested.
-- RevenueCat offerings are not configured.
+- RevenueCat offering packages are not configured yet. The `default` offering
+  exists, but it has no packages.
+- RevenueCat Google Play service-account credentials are not uploaded yet.
+  Because of that, product status shows `Could not check` and the offering
+  package product picker only shows `No product`.
 - The backend still needs the production RevenueCat secret key in Render.
 - Platform-specific RevenueCat public SDK keys are not set in release build
   environment yet.
@@ -179,6 +191,61 @@ to buy Reader Plus, AI Pro, Power, OCR pages, or voice packs.
 
 ## RevenueCat Setup
 
+2026-07-01 RevenueCat dashboard status:
+
+- Account/project: `readFlow`, project id `d73a07a4`.
+- Dashboard banner still asked for email confirmation on 2026-07-01. Confirm
+  the `support@urmiaworks.com` RevenueCat email before relying on production
+  billing alerts.
+- Android app: `readFlow (Play Store)`, package `com.urmiaworks.readflow`,
+  REST API identifier `appb8f9dbf896`.
+- RevenueCat Test Store app also appears in the project; do not confuse it with
+  the production Google Play app.
+
+Entitlements:
+
+| Tier | RevenueCat entitlement id | RevenueCat REST id |
+| --- | --- | --- |
+| Reader Plus | `reader_plus` | `entla46d6a0f47` |
+| AI Pro | `ai_pro` | `entl6903c64468` |
+| Power | `power` | `entl6d7340401b` |
+
+Android products already created in RevenueCat:
+
+| RevenueCat product identifier | Display name | Entitlement | REST id |
+| --- | --- | --- | --- |
+| `readflow_reader_plus_monthly:uw-baseplan01` | Reader Plus Monthly | `reader_plus` | `prodf8413e1cc4` |
+| `readflow_reader_plus_yearly:uw-baseplan02` | Reader Plus Yearly | `reader_plus` | `prodd579420f1b` |
+| `readflow_ai_pro_monthly:uw-baseplan03` | AI Pro Monthly | `ai_pro` | `prod314910e894` |
+| `readflow_ai_pro_yearly:uw-baseplan04` | AI Pro Yearly | `ai_pro` | `prod3503bbc680` |
+| `readflow_power_monthly:uw-baseplan05` | Power Monthly | `power` | `prod7c976b59aa` |
+| `readflow_power_yearly:uw-baseplan06` | Power Yearly | `power` | `prod308bd3aeac` |
+
+Offering:
+
+| Offering id | Display name | REST id | Package status |
+| --- | --- | --- | --- |
+| `default` | Default | `ofrng6b3bf29391` | Created, no packages yet |
+
+Current blocker:
+
+RevenueCat needs the Google Play service-account credentials JSON uploaded on
+the `readFlow (Play Store)` app before it can validate products. Until then,
+RevenueCat shows product status `Could not check`, product import is disabled,
+and the offering package picker does not expose the six products. The next
+dashboard step is to create/download the Google Play service-account JSON,
+upload it to RevenueCat, save the app configuration, then add six custom
+packages to the `default` offering:
+
+| Package id | Product |
+| --- | --- |
+| `reader_plus_monthly` | `readflow_reader_plus_monthly:uw-baseplan01` |
+| `reader_plus_yearly` | `readflow_reader_plus_yearly:uw-baseplan02` |
+| `ai_pro_monthly` | `readflow_ai_pro_monthly:uw-baseplan03` |
+| `ai_pro_yearly` | `readflow_ai_pro_yearly:uw-baseplan04` |
+| `power_monthly` | `readflow_power_monthly:uw-baseplan05` |
+| `power_yearly` | `readflow_power_yearly:uw-baseplan06` |
+
 1. Create a RevenueCat project for readFlow.
 2. Add the Android app package `com.urmiaworks.readflow`.
 3. Add the iOS app bundle id `com.urmiaworks.readflow`.
@@ -255,8 +322,8 @@ Still required before paid launch:
 
 - Add the RevenueCat Android public SDK key to the EAS build environment.
 - Set `RC_SECRET_KEY` on Render production.
-- Import the active Google Play products into RevenueCat and attach them to the
-  entitlements and default offering.
+- Upload Google Play service-account credentials to RevenueCat.
+- Add the six custom packages listed above to the `default` RevenueCat offering.
 - Upload a billing-capable AAB (`1.0.24` or later) to Play internal testing.
 - Complete sandbox purchase and restore tests on a Play license tester account.
 

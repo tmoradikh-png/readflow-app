@@ -59,12 +59,13 @@ are complete:
 - Render production env has `ENTITLEMENTS_DEV_OVERRIDE=false`,
   production `APP_KEY`, production `OPENAI_API_KEY`, and production
   `RC_SECRET_KEY` if subscriptions are sold.
-- Play Billing/RevenueCat mobile SDK is wired in source `1.0.24`, but paid
-  selling still depends on dashboard setup: RevenueCat public Android key in
-  the EAS build environment, Google Play subscription products, RevenueCat
-  entitlements/offerings, Render `RC_SECRET_KEY`, and sandbox purchase tests.
-  If the key or offering is missing, the in-app CTA stays disabled as
-  "Setting up purchases".
+- Play Billing/RevenueCat mobile SDK is wired in source `1.0.24`. Google Play
+  subscription products are active, and RevenueCat now has the project,
+  Android app, entitlements, products, and empty `default` offering. Paid
+  selling still depends on Google Play service-account credentials in
+  RevenueCat, six offering packages, the RevenueCat public Android key in EAS,
+  Render `RC_SECRET_KEY`, and sandbox purchase tests. If the key or offering
+  packages are missing, the in-app CTA stays disabled as "Setting up purchases".
 - Privacy policy URL must be live and must explain document upload/extraction,
   OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
   deletion/contact flow.
@@ -77,7 +78,7 @@ are complete:
 
 For a real paid launch, the order is:
 1. Deploy/fix production Render backend.
-2. Configure Play Billing/RevenueCat dashboard items and test sandbox purchases.
+2. Finish RevenueCat Play credentials/offering packages and test sandbox purchases.
 3. Run `npm run check:release`.
 4. Run an EAS Android production/internal AAB build with a new versionCode.
 5. Upload to Play internal testing first, then promote after phone QA.
