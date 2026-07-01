@@ -60,13 +60,13 @@ are complete:
   production `APP_KEY`, production `OPENAI_API_KEY`, and production
   `RC_SECRET_KEY` if subscriptions are sold.
 - Play Billing/RevenueCat mobile SDK is wired in source `1.0.24`. Google Play
-  subscription products are active, and RevenueCat now has the project,
-  Android app, entitlements, products, and empty `default` offering. Paid
-  selling still depends on Google Play service-account credentials in
-  RevenueCat, six offering packages, Render `RC_SECRET_KEY`, a fresh AAB built
-  after the EAS RevenueCat public Android key was added, and sandbox purchase
-  tests. If offering packages are missing, the in-app CTA stays disabled as
-  "Setting up purchases".
+  subscription products are active. RevenueCat now has the project, Android
+  app, entitlements, published products, Google Play service-account
+  credentials, and six packages in the `default` offering. Render production
+  has `RC_SECRET_KEY` set and a non-buyer entitlement probe returned
+  `source: revenuecat`, `tier: free`. Paid selling still depends on a fresh AAB
+  built after the EAS RevenueCat public Android key was added and sandbox
+  purchase/restore tests.
 - Privacy policy URL must be live and must explain document upload/extraction,
   OCR, AI requests, cloud voice, OpenAI processing, local rF AI downloads, and
   deletion/contact flow.
@@ -78,11 +78,11 @@ are complete:
   Play.
 
 For a real paid launch, the order is:
-1. Deploy/fix production Render backend.
-2. Finish RevenueCat Play credentials/offering packages and test sandbox purchases.
-3. Run `npm run check:release`.
-4. Run an EAS Android production/internal AAB build with a new versionCode.
-5. Upload to Play internal testing first, then promote after phone QA.
+1. Verify production Render backend health and RevenueCat entitlement lookup.
+2. Run `npm run check:release`.
+3. Run an EAS Android production/internal AAB build with a new versionCode.
+4. Upload to Play internal testing.
+5. Run sandbox purchase/restore tests, then promote after phone QA.
 
 Immediate Render action when `Service Suspended` appears:
 1. Sign in to Render with `support@urmiaworks.com`.

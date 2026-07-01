@@ -24,24 +24,34 @@ Current source status:
 - Background audio has been removed; reading should stop when leaving the app.
 - Free tier is a limited manual preview with no read-aloud, OCR, AI, rF AI, or
   Cloud AI.
-- RevenueCat mobile SDK wiring is present. The purchase CTA opens Google Play
-  only after the RevenueCat Android public key and offering/products are
-  configured.
+- RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
+  Google Play products are published in RevenueCat, and the `default` offering
+  has all six paid packages. A fresh AAB is still required because build 24 was
+  created before the EAS public key was set.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, government apps, financial features, health, and content rating are saved
   or ready in Publishing overview.
 
+Verified for paid launch prep:
+
+- Production backend returned healthy from
+  `https://readflow-backend-internal.onrender.com/api/health` on 2026-07-01.
+  The service is named `readflow-backend`; the old
+  `https://readflow-backend.onrender.com` URL returned `Service Suspended` on
+  2026-06-29 and must not be used.
+- RevenueCat dashboard setup is complete for Android paid-product wiring:
+  project, Android app, entitlements, published products, Google Play
+  service-account credentials, and all six `default` offering packages exist.
+  Render production has `RC_SECRET_KEY` set and a random non-buyer entitlement
+  probe returned `source: revenuecat`, `tier: free`. A fresh AAB built after
+  the EAS RevenueCat public Android key and sandbox purchase/restore tests are
+  still required.
+
 Not ready for paid public launch:
 
-- Production backend must be verified at
-  `https://readflow-backend-internal.onrender.com/api/health`. The service is
-  named `readflow-backend`; the old `https://readflow-backend.onrender.com`
-  URL returned `Service Suspended` on 2026-06-29 and must not be used.
-- RevenueCat dashboard setup is partially complete: project, Android app,
-  entitlements, products, and empty `default` offering exist. Google Play
-  service-account credentials, offering packages, Render `RC_SECRET_KEY`, a
-  fresh AAB built after the EAS RevenueCat public Android key, and sandbox
-  purchase/restore tests are not complete yet.
+- Fresh AAB built after the EAS RevenueCat public Android key is not uploaded
+  yet.
+- Sandbox purchase/restore tests are not complete yet.
 - Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
   Confirm the final public terms URL before production submission.
 - Google Play subscription products and base plans were created and activated

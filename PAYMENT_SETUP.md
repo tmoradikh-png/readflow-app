@@ -48,21 +48,22 @@ Already present:
   `com.urmiaworks.readflow` with REST API identifier `appb8f9dbf896`.
 - RevenueCat entitlements `reader_plus`, `ai_pro`, and `power` exist.
 - All six Google Play subscription products were manually created in
-  RevenueCat and attached to the correct entitlement.
+  RevenueCat and attached to the correct entitlement. RevenueCat now reports
+  them as `Published`.
 - RevenueCat offering `default` exists with REST API identifier
-  `ofrng6b3bf29391`.
+  `ofrng6b3bf29391` and contains all six Android subscription packages.
+- Google Play service-account credentials were uploaded to RevenueCat on
+  2026-07-01 after enabling the required Google APIs and granting the service
+  account `Pub/Sub Editor` and `Monitoring Viewer` in Google Cloud.
+- Production Render has `RC_SECRET_KEY` set. A probe against
+  `/api/entitlements` using a random non-purchasing `x-app-user-id` returned
+  `source: "revenuecat"` and `tier: "free"` on 2026-07-01.
 
 Missing before paid launch:
 
 - Google Play subscription products are created and active, but sandbox purchase
   and restore testing is not complete yet.
 - Apple App Store in-app purchase products are not created/tested.
-- RevenueCat offering packages are not configured yet. The `default` offering
-  exists, but it has no packages.
-- RevenueCat Google Play service-account credentials are not uploaded yet.
-  Because of that, product status shows `Could not check` and the offering
-  package product picker only shows `No product`.
-- The backend still needs the production RevenueCat secret key in Render.
 - The RevenueCat Android public SDK key is set in EAS project environments
   `production`, `preview`, and `development`, but no new AAB has been built
   with it yet. The iOS public SDK key is not set yet.
@@ -226,7 +227,7 @@ Offering:
 
 | Offering id | Display name | REST id | Package status |
 | --- | --- | --- | --- |
-| `default` | Default | `ofrng6b3bf29391` | Created, no packages yet |
+| `default` | Default | `ofrng6b3bf29391` | Six Android packages configured |
 
 EAS public key status:
 
@@ -239,15 +240,20 @@ EAS public key status:
 - `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` is still unset until the iOS RevenueCat
   app is created.
 
-Current blocker:
+2026-07-01 Google Play credentials / package status:
 
-RevenueCat needs the Google Play service-account credentials JSON uploaded on
-the `readFlow (Play Store)` app before it can validate products. Until then,
-RevenueCat shows product status `Could not check`, product import is disabled,
-and the offering package picker does not expose the six products. The next
-dashboard step is to create/download the Google Play service-account JSON,
-upload it to RevenueCat, save the app configuration, then add six custom
-packages to the `default` offering:
+- Google Cloud project: `readflow-revenuecat`.
+- Service account:
+  `readflow-revenuecat@readflow-revenuecat.iam.gserviceaccount.com`.
+- Required Google APIs were enabled: Google Play Android Developer API, Google
+  Play Developer Reporting API, and Cloud Pub/Sub API.
+- Google Cloud IAM roles granted to the service account: `Pub/Sub Editor` and
+  `Monitoring Viewer`.
+- The same service account is active in Play Console Users and permissions.
+- A fresh service-account JSON was uploaded to RevenueCat. The JSON itself must
+  never be committed or pasted into chat/docs.
+- RevenueCat Products now show all six Android products as `Published`.
+- The `default` offering now contains these packages:
 
 | Package id | Product |
 | --- | --- |
@@ -257,6 +263,10 @@ packages to the `default` offering:
 | `ai_pro_yearly` | `readflow_ai_pro_yearly:uw-baseplan04` |
 | `power_monthly` | `readflow_power_monthly:uw-baseplan05` |
 | `power_yearly` | `readflow_power_yearly:uw-baseplan06` |
+
+RevenueCat app settings may still show `Credentials need attention` while
+Google/RevenueCat background validation catches up, but product import and
+package selection worked after the setup above.
 
 1. Create a RevenueCat project for readFlow.
 2. Add the Android app package `com.urmiaworks.readflow`.
@@ -332,9 +342,6 @@ Mobile RevenueCat wiring status as of source `1.0.24`:
 
 Still required before paid launch:
 
-- Set `RC_SECRET_KEY` on Render production.
-- Upload Google Play service-account credentials to RevenueCat.
-- Add the six custom packages listed above to the `default` RevenueCat offering.
 - Build a fresh Android AAB after the public key and offering packages are ready.
 - Upload a billing-capable AAB (`1.0.24` or later) to Play internal testing.
 - Complete sandbox purchase and restore tests on a Play license tester account.
@@ -359,6 +366,8 @@ Before paid production:
   account.
 - Backend quota uses the RevenueCat app-user id, not `anonymous`.
 - Public builds cannot accidentally use internal/dev Render entitlement override.
+- Random non-buyer entitlement probe returns `tier: free` and
+  `source: revenuecat`.
 
 ## Release Decision
 
