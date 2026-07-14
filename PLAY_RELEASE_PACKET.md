@@ -53,15 +53,16 @@ Verified for paid launch prep:
   Play required the foreground service declaration for media playback and data
   sync; source now strips unused foreground-service/microphone declarations and
   review-support videos are in `docs/play-review/`.
-- Last observed Play publishing state in this Codex session: release changes
-  were in review, quick checks had no blocking issue, and managed publishing was
-  off. Use `GOOGLE_PLAY_HANDOFF.md` for account URLs and exact support answers
-  if Google asks follow-up questions.
+- Last observed Play production state on 2026-07-14: release `1.0.27 (33)` is
+  active on production, with 177 countries/regions. Public listing:
+  `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
+  Use `GOOGLE_PLAY_HANDOFF.md` for account URLs and exact support answers if
+  Google asks follow-up questions.
 
 Known post-submit follow-ups:
 
-- Sandbox purchase/restore tests should be run as soon as the Play build is
-  available to testers or after approval.
+- Sandbox/license-tester purchase and restore tests should be run now that the
+  Play build is active.
 - Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
   Confirm the final public terms URL before iOS submission or wider marketing.
 - Google Play subscription products and base plans were created and activated

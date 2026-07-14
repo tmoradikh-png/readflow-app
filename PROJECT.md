@@ -7,7 +7,7 @@ accounts, services, release status, and operational habits. Then use
 `README.md` for local setup, `RELEASE_GUIDE.md` for Android builds,
 `IOS_RELEASE_GUIDE.md` for iOS/TestFlight builds, `PAYMENT_SETUP.md` for
 store billing/RevenueCat, `PLAY_RELEASE_PACKET.md` for Play submission text,
-`GOOGLE_PLAY_HANDOFF.md` for the submitted Android release/account handoff,
+`GOOGLE_PLAY_HANDOFF.md` for the live Android release/account handoff,
 `APP_STORE_RELEASE_PACKET.md` for App Store submission text,
 `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`, and
 `PLAY_DATA_SAFETY_DRAFT.md` for legal/app-content drafts,
@@ -142,10 +142,10 @@ Current Play release prep in source `1.0.27`:
 - Play Advertising ID declaration was completed on 2026-07-01 with `No` because
   readFlow does not use ads or advertising ID.
 - Google Play production release `1.0.27` / code `33` was submitted for review
-  on 2026-07-01. Last observed Play state in this session: "Your changes are
-  now in review"; managed publishing was off. See `GOOGLE_PLAY_HANDOFF.md` for
-  account URLs, Review Q&A, service credentials, and what to tell Google if they
-  ask for clarification.
+  on 2026-07-01 and was active on production by 2026-07-14. Public listing:
+  `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
+  See `GOOGLE_PLAY_HANDOFF.md` for account URLs, Review Q&A, service
+  credentials, and what to tell Google if they ask for clarification.
 
 Current iOS release prep in source `1.0.27`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
@@ -454,6 +454,8 @@ Known public URLs and IDs:
   `appb8f9dbf896`
 - Google Play release/account handoff:
   `GOOGLE_PLAY_HANDOFF.md`
+- Public Google Play listing:
+  `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`
 
 ## Secret Handling
 

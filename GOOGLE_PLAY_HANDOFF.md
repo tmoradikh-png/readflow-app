@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-07-01
+Updated: 2026-07-14
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -9,10 +9,13 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 ## Current Play Status
 
 - Google Play production release `1.0.27` / version code `33` was submitted for
-  review on 2026-07-01.
-- Last observed Play Console state in this Codex session: "Your changes are now
-  in review." Managed publishing was off, so approval should publish
-  automatically unless Google flags an issue.
+  review on 2026-07-01 and approved/released by 2026-07-14.
+- Last observed Play Console state on 2026-07-14: Production track is active
+  with latest release `1.0.27 (33)`, 177 countries/regions, and 0 installs.
+- Managed publishing was off, so Google published the approved production
+  release automatically.
+- Public Play Store page verified on 2026-07-14:
+  `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
 - The submitted AAB was built by EAS:
   `6bee8c21-d52c-4e4f-8622-0dc992a5f2f2`.
 - Artifact URL:
@@ -42,6 +45,8 @@ Important URLs:
   `https://play.google.com/console/u/0/developers/5814875347439289711/app/4975304972724343415/publishing`
 - Play subscriptions:
   `https://play.google.com/console/u/0/developers/5814875347439289711/app/4975304972724343415/subscriptions`
+- Public Play Store listing:
+  `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`
 - RevenueCat project:
   `https://app.revenuecat.com/projects/d73a07a4`
 - RevenueCat Android app:
@@ -236,11 +241,15 @@ production.
 - Random non-buyer entitlement probe returned free tier through RevenueCat.
 - Play Console quick checks completed with no blocking issue before submission.
 - Raw foreground-service review video URLs returned HTTP 200 before submission.
+- Public Play Store listing loaded successfully on 2026-07-14 with title
+  `readFlow PDF Reader with AI`, publisher `Urmia Works`, in-app purchases, and
+  an Install button.
 
 ## Known Follow Ups
 
-- Run sandbox purchase, restore, upgrade, downgrade, cancel, and entitlement
-  expiry checks once the Play build is available to testers.
+- Run purchase, restore, upgrade, downgrade, cancel, and entitlement expiry
+  checks now that production is active. Prefer Play license testing first; avoid
+  accidental real purchases from non-test accounts.
 - Improve over-limit paywall prompts. Current backlog item: after a user hits
   quota/file-too-long, show a themed upgrade prompt instead of only the raw
   quota message.
