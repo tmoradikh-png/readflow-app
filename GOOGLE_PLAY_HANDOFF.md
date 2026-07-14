@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-07-14
+Updated: 2026-07-15
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -12,6 +12,9 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
   review on 2026-07-01 and approved/released by 2026-07-14.
 - Last observed Play Console state on 2026-07-14: Production track is active
   with latest release `1.0.27 (33)`, 177 countries/regions, and 0 installs.
+  A `0` install/download display is not proof that nobody installed the app:
+  Play acquisition metrics and public download badges can lag, and internal
+  tester installs may not appear like public production acquisitions.
 - Managed publishing was off, so Google published the approved production
   release automatically.
 - Public Play Store page verified on 2026-07-14:
@@ -23,6 +26,35 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 - Local artifact copy: `artifacts/readflow-1.0.27-33.aab`.
 - The next Android build must use version code `34` or higher after checking EAS
   and Play for any consumed build codes.
+
+2026-07-15 hotfix build:
+
+- A connected-phone crash was reproduced when pressing Play for generated audio.
+  Android logcat showed `Permission Denial: startForeground ... requires
+  android.permission.FOREGROUND_SERVICE` from
+  `expo.modules.audio.service.AudioControlsService`.
+- Source was bumped to `1.0.28` / Android version code `34`.
+- EAS build `d973d085-0e86-4818-9d48-f5e68aa157d4` finished successfully.
+- Artifact URL:
+  `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`.
+- Local artifact copy: `artifacts/readflow-1.0.28-34.aab`.
+- Bundletool manifest verification confirmed foreground media-playback/data-sync
+  permissions and service types are present, while `RECORD_AUDIO` is absent.
+- Manual Play Console upload was prepared because EAS Submit cannot set up the
+  Google service-account key in non-interactive mode.
+
+2026-07-14 connected-phone billing smoke:
+
+- Phone: Samsung SM-G975F, ADB serial `R58M168KTSZ`.
+- Installed package verified as Google Play install:
+  `installerPackageName=com.android.vending`.
+- Installed build verified as `1.0.27 (33)`.
+- Cloud AI opened the RevenueCat paywall, live products/prices loaded, and
+  Google Play checkout opened for `AI Pro Yearly`.
+- Checkout showed a real saved card, not a test instrument, so testing stopped
+  before pressing `Subscribe`. No purchase was made.
+- Do not press `Subscribe` while a real card is shown unless the owner
+  explicitly approves a real purchase/refund test.
 
 ## Accounts And Consoles
 
@@ -61,6 +93,10 @@ Important URLs:
   `https://console.cloud.google.com/iam-admin/serviceaccounts?project=readflow-revenuecat`
 - EAS builds:
   `https://expo.dev/accounts/tohid123/projects/readflow/builds`
+
+Current start-here handoff:
+
+- `HANDOVER_CURRENT.md`
 
 ## What Was Submitted To Google
 
@@ -113,6 +149,22 @@ RevenueCat offering:
 - REST id: `ofrng6b3bf29391`.
 - All six Android packages are configured and products were shown as
   `Published` in RevenueCat.
+
+License testing notes:
+
+- Internal testing and license testing are separate. Internal testing allows the
+  tester to install the app; license testing is what makes Google Play purchases
+  use a test instrument.
+- Intended connected-phone tester account: `itohidmoradi@gmail.com`.
+- Play Console email list: `itohid, tohid`.
+- Email list currently contains `itohidmoradi@gmail.com` and
+  `t.moradi.kh@gmail.com`.
+- In Play Console -> Settings -> License testing, select Email lists, tick
+  `itohid, tohid`, leave License response as `RESPOND_NORMALLY`, and save.
+- On the phone, make sure Play Store is using `itohidmoradi@gmail.com`, clear
+  Play Store cache, reopen readFlow, and retry the purchase.
+- Safe checkout sign: Google Play shows a test instrument/test card. If it
+  shows a real saved card, stop before `Subscribe`.
 
 ## RevenueCat And Google Credentials
 
@@ -244,11 +296,14 @@ production.
 - Public Play Store listing loaded successfully on 2026-07-14 with title
   `readFlow PDF Reader with AI`, publisher `Urmia Works`, in-app purchases, and
   an Install button.
+- Connected Samsung SM-G975F verified Google Play build `1.0.27 (33)`, live
+  RevenueCat paywall product loading, and Google Play checkout opening. Purchase
+  was not completed because checkout showed a real card, not a test card.
 
 ## Known Follow Ups
 
 - Run purchase, restore, upgrade, downgrade, cancel, and entitlement expiry
-  checks now that production is active. Prefer Play license testing first; avoid
+  checks now that production is active. Finish Play license testing first; avoid
   accidental real purchases from non-test accounts.
 - Improve over-limit paywall prompts. Current backlog item: after a user hits
   quota/file-too-long, show a themed upgrade prompt instead of only the raw

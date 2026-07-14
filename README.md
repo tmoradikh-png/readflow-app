@@ -26,13 +26,14 @@ ReadFlow/
 
 ## Developer handoff
 
-Start with **[PROJECT.md](PROJECT.md)** when taking over the project. It records
-the service accounts, public URLs/IDs, current build state, icon process,
-backend deployment notes, paid-feature enforcement, pricing/cost notes, and
-release habits. Use **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** for Android,
+Start with **[HANDOVER_CURRENT.md](HANDOVER_CURRENT.md)** for the current
+production state, account map, billing-test status, and next actions. Then read
+**[PROJECT.md](PROJECT.md)** for the full architecture and operational history.
+Use **[RELEASE_GUIDE.md](RELEASE_GUIDE.md)** for Android,
 **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** for iOS/TestFlight,
-**[PAYMENT_SETUP.md](PAYMENT_SETUP.md)** before wiring store billing and
-RevenueCat, **[PLAY_RELEASE_PACKET.md](PLAY_RELEASE_PACKET.md)** for Play
+**[PAYMENT_SETUP.md](PAYMENT_SETUP.md)** for Play/RevenueCat billing,
+**[GOOGLE_PLAY_HANDOFF.md](GOOGLE_PLAY_HANDOFF.md)** for Play Console review and
+release details, **[PLAY_RELEASE_PACKET.md](PLAY_RELEASE_PACKET.md)** for Play
 submission text, **[APP_STORE_RELEASE_PACKET.md](APP_STORE_RELEASE_PACKET.md)**
 for App Store submission text, and **[COST_MODEL.md](COST_MODEL.md)** before
 changing paid tiers, free limits, AI features, or cloud voice allowances. Legal
@@ -92,7 +93,7 @@ at the top is the step‑by‑step routine (bump `versionCode`, regenerate the i
 > reusing one wastes a paid EAS build. Always pick the next free code (see the guide).
 
 For iOS/TestFlight, use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)**. The
-current iOS source candidate is `1.0.25` / buildNumber `25`, and EAS returned
+current iOS source candidate is `1.0.28` / buildNumber `28`, and EAS returned
 no prior iOS builds on 2026-06-29.
 
 ## Voice
@@ -123,7 +124,7 @@ builds. If the model is missing, the reader stops rF AI playback and shows the
 download/upgrade explanation instead of silently switching voices.
 
 ## Roadmap (after the prototype feels right)
-- RevenueCat mobile SDK + production subscriptions
+- Finish Android license-tester purchase/restore/cancel/expiry QA
 - OCR quality/performance tuning for scanned/image PDFs
 - Per-document AI cache in a real DB/Redis
 - Exact word-level highlighting if the TTS provider returns timestamps

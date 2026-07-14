@@ -4,9 +4,6 @@ const { withAndroidManifest, withDangerousMod } = require("@expo/config-plugins"
 
 const REMOVE_PERMISSIONS = new Set([
   "android.permission.RECORD_AUDIO",
-  "android.permission.FOREGROUND_SERVICE",
-  "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
-  "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
   "android.permission.FOREGROUND_SERVICE_MICROPHONE",
 ]);
 
@@ -19,11 +16,12 @@ const REMOVE_SERVICE_NAMES = [
   "expo.modules.audio.service.AudioRecordingService",
 ];
 
-const STRIP_FOREGROUND_TYPE_SERVICE_NAMES = [
-  "com.eko.ResumableDownloadService",
-  "expo.modules.audio.service.AudioControlsService",
-  "com.google.android.play.core.assetpacks.ExtractionForegroundService",
-];
+const FOREGROUND_SERVICE_TYPES = new Map([
+  [".service.AudioControlsService", "mediaPlayback"],
+  ["expo.modules.audio.service.AudioControlsService", "mediaPlayback"],
+  [".ResumableDownloadService", "dataSync"],
+  ["com.eko.ResumableDownloadService", "dataSync"],
+]);
 
 function cleanManifestText(text) {
   let cleaned = text;
@@ -38,14 +36,28 @@ function cleanManifestText(text) {
     /\s*<service\b(?=[^>]*android:name="\.service\.AudioRecordingService")[^>]*(?:\/>|>[\s\S]*?<\/service>)/g,
     ""
   );
-  cleaned = cleaned.replace(/\s+android:foregroundServiceType="[^"]*"/g, "");
   return cleaned;
+}
+
+function ensureServiceForegroundType(text, serviceName, foregroundType) {
+  const escapedName = serviceName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(
+    new RegExp(`<service\\b(?=[^>]*android:name="${escapedName}")(?![^>]*android:foregroundServiceType=)[^>]*(?:/>|>)`, "g"),
+    (tag) => {
+      const selfClosing = /\/\s*>$/.test(tag);
+      const tagWithoutClose = tag.replace(/\s*\/?>$/, "");
+      return `${tagWithoutClose}\n      android:foregroundServiceType="${foregroundType}"${selfClosing ? " />" : ">"}`;
+    }
+  );
 }
 
 function cleanManifestFile(filePath) {
   if (!fs.existsSync(filePath)) return;
   const original = fs.readFileSync(filePath, "utf8");
-  const cleaned = cleanManifestText(original);
+  let cleaned = cleanManifestText(original);
+  for (const [serviceName, foregroundType] of FOREGROUND_SERVICE_TYPES) {
+    cleaned = ensureServiceForegroundType(cleaned, serviceName, foregroundType);
+  }
   if (cleaned !== original) {
     fs.writeFileSync(filePath, cleaned);
   }
@@ -114,19 +126,6 @@ module.exports = function withAndroidReleaseManifestCleanup(config) {
             $: {
               "android:name": name,
               "tools:node": "remove",
-            },
-          });
-        }
-      }
-      for (const name of STRIP_FOREGROUND_TYPE_SERVICE_NAMES) {
-        const alreadyDeclared = application.service.some(
-          (service) => service?.$?.["android:name"] === name && service?.$?.["tools:remove"] === "android:foregroundServiceType"
-        );
-        if (!alreadyDeclared) {
-          application.service.push({
-            $: {
-              "android:name": name,
-              "tools:remove": "android:foregroundServiceType",
             },
           });
         }

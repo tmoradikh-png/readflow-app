@@ -2,7 +2,7 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.27",
+    "version": "1.0.28",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
@@ -20,22 +20,22 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urmiaworks.readflow",
-      "buildNumber": "27",
+      "buildNumber": "28",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 33,
+      "versionCode": 34,
       "permissions": [
         "INTERNET",
-        "com.android.vending.BILLING"
-      ],
-      "blockedPermissions": [
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "com.android.vending.BILLING"
+      ],
+      "blockedPermissions": [
         "android.permission.FOREGROUND_SERVICE_MICROPHONE",
         "android.permission.RECORD_AUDIO"
       ],

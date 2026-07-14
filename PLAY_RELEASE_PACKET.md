@@ -1,6 +1,6 @@
 # readFlow Play Release Packet
 
-Updated: 2026-07-01
+Updated: 2026-07-15
 
 This packet gathers the launch text and review checklist for Google Play. Keep
 it in sync with `PAYMENT_SETUP.md`, `PRIVACY_POLICY_DRAFT.md`,
@@ -17,17 +17,20 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.27 / versionCode 33`.
+- Source release candidate is `1.0.28 / versionCode 34`.
 - Release checker passes for the current source configuration.
-- Android permissions are minimal plus billing for subscriptions: `INTERNET`
-  and `com.android.vending.BILLING`.
+- Android permissions include the minimum required for subscriptions plus
+  generated-audio playback/model download services: `INTERNET`,
+  `com.android.vending.BILLING`, `FOREGROUND_SERVICE`,
+  `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, and `FOREGROUND_SERVICE_DATA_SYNC`.
+  Microphone/recording permissions remain blocked.
 - Background audio has been removed; reading should stop when leaving the app.
 - Free tier is a limited manual preview with no read-aloud, OCR, AI, rF AI, or
   Cloud AI.
 - RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
   Google Play products are published in RevenueCat, and the `default` offering
-  has all six paid packages. Build `1.0.27` / code `33` is the current Play
-  production candidate.
+  has all six paid packages. Build `1.0.28` / code `34` is the current hotfix
+  Play production candidate.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, Advertising ID (`No`), foreground services, government apps, financial
   features, health, content rating, target audience, Data Safety, and app
@@ -45,9 +48,13 @@ Verified for paid launch prep:
   service-account credentials, and all six `default` offering packages exist.
   Render production has `RC_SECRET_KEY` set and a random non-buyer entitlement
   probe returned `source: revenuecat`, `tier: free`.
-- Android AAB `1.0.27` / code `33` finished on EAS with artifact
-  `https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab`.
-  Local copy: `artifacts/readflow-1.0.27-33.aab`.
+- Android AAB `1.0.28` / code `34` finished on EAS with artifact
+  `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`.
+  Local copy: `artifacts/readflow-1.0.28-34.aab`.
+- Hotfix reason: Android crash on generated-audio Play caused by
+  `AudioControlsService` needing foreground-service permission. Bundletool
+  manifest verification confirmed the hotfix AAB has media-playback/data-sync
+  foreground service declarations and no `RECORD_AUDIO` permission.
 - Play production release `33 (1.0.27)` was uploaded through the Android
   Publisher API and sent to Google for review on 2026-07-01. Before submission,
   Play required the foreground service declaration for media playback and data
@@ -62,7 +69,10 @@ Verified for paid launch prep:
 Known post-submit follow-ups:
 
 - Sandbox/license-tester purchase and restore tests should be run now that the
-  Play build is active.
+  Play build is active. On 2026-07-14 the connected phone verified paywall and
+  checkout opening, but checkout showed a real saved card, so the test stopped
+  before `Subscribe`. Finish Play License testing first; the safe checkout
+  should show a test instrument/test card.
 - Privacy policy is live at `https://www.urmiaworks.com/readflow/privacy`.
   Confirm the final public terms URL before iOS submission or wider marketing.
 - Google Play subscription products and base plans were created and activated

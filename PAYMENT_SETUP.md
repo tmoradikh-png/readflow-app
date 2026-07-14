@@ -1,11 +1,11 @@
 # readFlow Payment Setup
 
-Updated: 2026-07-01
+Updated: 2026-07-15
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer
-should be able to open this file and know what still has to be done before
-readFlow can sell paid plans.
+should be able to open this file and know what is live, what was tested, and
+what still has to be verified before scaling paid plans.
 
 Policy sources checked on 2026-06-29:
 
@@ -30,7 +30,10 @@ Policy sources checked on 2026-06-29:
 
 ## Current Status
 
-Payment is partially wired, but not ready for public paid release yet.
+Android payment is wired in production, but the end-to-end sandbox purchase
+test is not complete yet. Do not treat paid launch QA as complete until a Play
+license-tester purchase, restore, cancellation, expiry, and backend entitlement
+refresh have been verified.
 
 Already present:
 
@@ -58,17 +61,23 @@ Already present:
 - Production Render has `RC_SECRET_KEY` set. A probe against
   `/api/entitlements` using a random non-purchasing `x-app-user-id` returned
   `source: "revenuecat"` and `tier: "free"` on 2026-07-01.
+- Google Play production release `1.0.27` / version code `33` is live as of
+  2026-07-14. Hotfix build `1.0.28` / code `34` was produced on 2026-07-15 to
+  fix generated-audio playback crash before paid voice QA continues.
+- A connected-phone smoke test on 2026-07-14 verified that the Google Play
+  build opens the RevenueCat paywall and Google Play checkout for `AI Pro
+  Yearly`.
 
-Missing before paid launch:
+Remaining before paid QA is complete:
 
-- Google Play subscription products are created and active, but sandbox purchase
-  and restore testing is not complete yet.
+- Google Play subscription products are created and active, but sandbox
+  purchase and restore testing is not complete yet.
 - Apple App Store in-app purchase products are not created/tested.
 - The RevenueCat Android public SDK key is set in EAS project environments
-  `production`, `preview`, and `development`, and Android build `1.0.25` /
-  code `25` was built with it and published to Play internal testing. The build
-  still needs sandbox purchase/restore QA. The iOS public SDK key is not set
-  yet.
+  `production`, `preview`, and `development`, and Android build `1.0.27` /
+  code `33` is live on Play. Use hotfix `1.0.28` / code `34` for the next Play
+  rollout before finishing sandbox purchase/restore QA.
+  The iOS public SDK key is not set yet.
 - The production backend service has been converted from the old internal
   service. Current reachable URL:
   `https://readflow-backend-internal.onrender.com`. The service name is
@@ -76,9 +85,39 @@ Missing before paid launch:
   `https://readflow-backend.onrender.com` URL returned Render's
   `Service Suspended` page on 2026-06-29 and must not be used by Play builds.
 
-Until these are complete, Android and iOS can be released only as free previews
-with paid features locked. If the RevenueCat public key or offering is missing,
-the paywall CTA remains disabled as "Setting up purchases".
+If the RevenueCat public key or offering is missing in a future build, the
+paywall CTA remains disabled as "Setting up purchases". If the purchase sheet
+shows a real card during QA, stop before `Subscribe`.
+
+## 2026-07-14 Android Purchase Smoke
+
+Connected phone:
+
+- Samsung SM-G975F, ADB serial `R58M168KTSZ`.
+- Installed package: `com.urmiaworks.readflow`.
+- Version verified: `1.0.27 (33)`.
+- Installer verified: `com.android.vending`.
+
+Result:
+
+- Cloud AI paywall opens from the live Play build.
+- Annual products/prices load from RevenueCat/Google Play.
+- `Upgrade to AI Pro` opens Google Play checkout for `AI Pro Yearly`.
+- Checkout showed a real saved card, not a test instrument, so the test was
+  stopped before `Subscribe`. No purchase was made.
+
+License-testing setup to finish before retry:
+
+1. Play Console -> Settings -> License testing.
+2. Select Email lists.
+3. Tick email list `itohid, tohid`.
+4. Leave License response as `RESPOND_NORMALLY`.
+5. Save.
+6. On the phone, Play Store must use `itohidmoradi@gmail.com`.
+7. Clear Play Store cache, reopen readFlow, and retry.
+
+Only complete the purchase test if Google Play shows a test instrument/test
+card. If it still shows a real saved card, stop.
 
 ## Product IDs
 
@@ -348,13 +387,13 @@ Mobile RevenueCat wiring status as of source `1.0.25`:
    and missing offerings show themed in-app messages.
 8. Free still cannot call OCR, AI text, Cloud AI voice, rF AI, or read-aloud.
 
-Still required before paid launch:
+Still required before marking paid QA complete:
 
 - Complete sandbox purchase and restore tests on a Play license tester account.
 
 ## Sandbox Test Matrix
 
-Before paid production:
+Before considering paid QA complete:
 
 - Fresh install with no purchase: tier is Free, read-aloud locked, OCR locked,
   AI locked, Cloud AI locked, rF AI locked.
@@ -377,7 +416,9 @@ Before paid production:
 
 ## Release Decision
 
-Do not submit a paid Play release until all of these are true:
+The Android app is live on Play with billing products available. Do not run a
+paid marketing push, increase allowances, or declare billing QA complete until
+all of these are true:
 
 - Production backend health is green.
 - RevenueCat SDK purchase and restore flows work on connected Android and iOS

@@ -1,10 +1,10 @@
 # readFlow Developer Handoff
 
-Updated: 2026-07-01
+Updated: 2026-07-15
 
-Read this file first when taking over the project. It is the high-level map of
-accounts, services, release status, and operational habits. Then use
-`README.md` for local setup, `RELEASE_GUIDE.md` for Android builds,
+Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
+file for the fuller map of accounts, services, release status, and operational
+habits. Use `README.md` for local setup, `RELEASE_GUIDE.md` for Android builds,
 `IOS_RELEASE_GUIDE.md` for iOS/TestFlight builds, `PAYMENT_SETUP.md` for
 store billing/RevenueCat, `PLAY_RELEASE_PACKET.md` for Play submission text,
 `GOOGLE_PLAY_HANDOFF.md` for the live Android release/account handoff,
@@ -36,21 +36,24 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.27`
-- Current source Android `versionCode`: `33`
-- Current source iOS `buildNumber`: `27`
-- Latest finished Android EAS build: `1.0.27` / code `33`
-- Latest finished Android EAS build id: `6bee8c21-d52c-4e4f-8622-0dc992a5f2f2`
+- Current source version: `1.0.28`
+- Current source Android `versionCode`: `34`
+- Current source iOS `buildNumber`: `28`
+- Latest finished Android EAS build: `1.0.28` / code `34`
+- Latest finished Android EAS build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`
 - Latest finished Android AAB:
-  `https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab`
+  `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`
 - Latest finished Android AAB local copy:
-  `artifacts/readflow-1.0.27-33.aab`.
+  `artifacts/readflow-1.0.28-34.aab`.
+- Android production status: Google Play release `1.0.27 (33)` is live. Public
+  listing:
+  `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build should use code `34` unless another EAS
+- Next Android build should use code `35` unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
-- Next iOS build should use buildNumber `27` unless an iOS EAS build has already
+- Next iOS build should use buildNumber `28` unless an iOS EAS build has already
   consumed it. Run the EAS `build:list --platform ios` command in
   `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 
@@ -71,7 +74,9 @@ Changes included in the latest finished EAS build:
   `readflow-backend`, dev override is off, and `/api/entitlements` returns Free
   for the current app key.
 - Android release config has no microphone permission and no background audio
-  declaration. It now includes Play Billing permission for subscription builds.
+  declaration. It includes Play Billing plus foreground media-playback/data-sync
+  service permissions required by `expo-audio` lock-screen controls and rF AI
+  model downloads.
 - Build 25 was the first AAB created after EAS production loaded
   `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY`, so it is the candidate for paid
   internal testing.
@@ -83,7 +88,7 @@ Important: build `178c888f` / `1.0.18` was canceled because a stale generated
 and `RECORD_AUDIO`. The folder was moved to
 `tmp/android-local-backup-20260629-1`, and the release checker now blocks this.
 
-Current Play release prep in source `1.0.27`:
+Current Play release prep in source `1.0.28`:
 - `mobile/app.json` now points at the public backend host
   `https://readflow-backend-internal.onrender.com`. This is the converted
   production Render service: the service name is `readflow-backend`, but Render
@@ -93,11 +98,14 @@ Current Play release prep in source `1.0.27`:
   The old `https://readflow-backend.onrender.com` URL still returns Render's
   `Service Suspended` owner-state page and must not be used by Play builds
   unless that old service is recovered or replaced.
-- Android permissions are `INTERNET` and `com.android.vending.BILLING`;
+- Android permissions are `INTERNET`, `com.android.vending.BILLING`,
+  `android.permission.FOREGROUND_SERVICE`,
+  `android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK`, and
+  `android.permission.FOREGROUND_SERVICE_DATA_SYNC`;
   `expo-audio` is configured with `recordAudioAndroid: false` and
   `microphonePermission: false`. The release manifest cleanup plugin removes
-  unused microphone and foreground-service declarations from library manifests
-  before EAS/Play review.
+  microphone/recording declarations, keeps audio media-playback foreground
+  service metadata, and keeps downloader data-sync foreground service metadata.
 - iOS background audio mode and Expo foreground/background playback flags are
   disabled for the current foreground-only product behavior.
 - Mobile now creates a stable local `rf_...` install id and sends it as
@@ -117,10 +125,10 @@ Current Play release prep in source `1.0.27`:
   `Published`, all six packages are in the `default` offering, EAS has the
   Android public SDK key, and production Render has `RC_SECRET_KEY` set. A
   random non-buyer entitlement probe returned `source: revenuecat`,
-  `tier: free`. Build 33 is the current Play production candidate and was
-  uploaded as a production-track draft and sent to Google for review on
-  2026-07-01. Build 25 was created after the EAS key existed and was published
-  to Play internal testing on
+  `tier: free`. Build 33 is the live Play production build and was uploaded as
+  a production-track draft and sent to Google for review on 2026-07-01; build
+  34 is the current hotfix candidate. Build 25 was created after the EAS key
+  existed and was published to Play internal testing on
   2026-07-01; Play shows `Available to internal testers`. Build 24 is
   billing-capable but was started before the EAS key existed, so purchase
   buttons stay disabled as "Setting up purchases" in that build.
@@ -146,10 +154,22 @@ Current Play release prep in source `1.0.27`:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
   See `GOOGLE_PLAY_HANDOFF.md` for account URLs, Review Q&A, service
   credentials, and what to tell Google if they ask for clarification.
+- 2026-07-14 connected-phone smoke verified that the live Google Play build
+  opens the RevenueCat paywall and Google Play checkout. The purchase was not
+  completed because checkout showed a real saved card, not a test instrument.
+  Finish Play license testing before pressing `Subscribe`.
+- 2026-07-15 hotfix `1.0.28 (34)` was built after a crash was reproduced from
+  generated-audio playback. Logcat root cause:
+  `AudioControlsService` attempted `startForeground` without
+  `android.permission.FOREGROUND_SERVICE`. Bundletool verification confirmed
+  the hotfix AAB contains foreground media-playback/data-sync permissions and
+  service types, and no `RECORD_AUDIO` permission. EAS Submit could not submit
+  non-interactively because Google service-account keys are not configured in
+  EAS Submit, so Play Console manual upload is the current path.
 
-Current iOS release prep in source `1.0.27`:
+Current iOS release prep in source `1.0.28`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
-  `27`, and `ITSAppUsesNonExemptEncryption=false`.
+  `28`, and `ITSAppUsesNonExemptEncryption=false`.
 - `mobile/eas.json` now has explicit iOS settings for development/preview
   device builds and App Store/TestFlight archive builds.
 - `npm run check:release` now checks iOS bundle id, build number, no generated
@@ -905,8 +925,10 @@ Later multilingual backlog:
 - The release app now requests only `INTERNET`, but keep `npm run check:release`
   as a hard gate because a generated native `mobile/android/` folder can
   reintroduce stale permissions or version codes.
-- Public paid subscriptions are not fully wired until RevenueCat production
-  setup and mobile RevenueCat SDK/user id headers are complete.
+- Android paid subscriptions are wired through RevenueCat/Google Play and the
+  live build reaches checkout, but the full sandbox purchase/restore/cancel/
+  expiry matrix is still pending. Do not press `Subscribe` during QA if Google
+  Play shows a real card instead of a test instrument.
 - iOS/TestFlight is prepared in config/docs but not built or device-tested yet.
   Verify Apple Developer/App Store Connect access, EAS iOS credentials, and
   rF AI/Sherpa behavior on a real iPhone before any public App Store submission.
@@ -920,9 +942,8 @@ Later multilingual backlog:
   Starter/Standard over Free.
 - OpenAI usage costs money. Monitor backend logs and rate limits when broadening
   testing.
-- AI voice packs/top-ups are only a product path today. Store billing/RevenueCat
-  purchases are not wired in this build, so the app must not present a fake paid
-  purchase button.
+- AI voice packs/top-ups are only a product path today. Subscription billing is
+  wired, but consumable top-ups are not implemented yet.
 - Current free-tier code/config does not yet match the latest product intent of
   1 free book and about 100 pages. See `COST_MODEL.md`.
 - UI exposes OCR languages beyond the `.traineddata` packs committed into the

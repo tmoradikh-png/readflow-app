@@ -30,9 +30,9 @@ const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
 const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.27";
-const EXPECTED_ANDROID_VERSION_CODE = 33;
-const EXPECTED_IOS_BUILD_NUMBER = "27";
+const EXPECTED_VERSION = "1.0.28";
+const EXPECTED_ANDROID_VERSION_CODE = 34;
+const EXPECTED_IOS_BUILD_NUMBER = "28";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
 // 0) This repo releases as a managed Expo app. A local generated android/
@@ -127,20 +127,30 @@ if (permissions.includes("com.android.vending.BILLING")) {
 }
 
 const blockedPermissions = Array.isArray(android.blockedPermissions) ? android.blockedPermissions : [];
-const foregroundPermissions = [
+const requiredForegroundPermissions = [
   "android.permission.FOREGROUND_SERVICE",
   "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
   "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+];
+const missingForegroundPermissions = requiredForegroundPermissions.filter(
+  (permission) => !permissions.includes(permission)
+);
+if (missingForegroundPermissions.length === 0) {
+  pass("Foreground-service permissions are present for media controls and model downloads");
+} else {
+  fail(`Required foreground-service permissions are missing: ${missingForegroundPermissions.join(", ")}`);
+}
+const requiredBlockedPermissions = [
   "android.permission.FOREGROUND_SERVICE_MICROPHONE",
   "android.permission.RECORD_AUDIO",
 ];
-const missingBlockedForegroundPermissions = foregroundPermissions.filter(
+const missingBlockedPermissions = requiredBlockedPermissions.filter(
   (permission) => !blockedPermissions.includes(permission)
 );
-if (missingBlockedForegroundPermissions.length === 0) {
-  pass("Foreground-service permissions are blocked for the foreground-only reader");
+if (missingBlockedPermissions.length === 0) {
+  pass("Microphone and recording permissions are blocked");
 } else {
-  fail(`Block foreground-service permissions before Play release: ${missingBlockedForegroundPermissions.join(", ")}`);
+  fail(`Block microphone/recording permissions before Play release: ${missingBlockedPermissions.join(", ")}`);
 }
 
 function pluginConfig(name) {
