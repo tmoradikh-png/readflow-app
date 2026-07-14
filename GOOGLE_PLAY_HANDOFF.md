@@ -40,8 +40,14 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 - Local artifact copy: `artifacts/readflow-1.0.28-34.aab`.
 - Bundletool manifest verification confirmed foreground media-playback/data-sync
   permissions and service types are present, while `RECORD_AUDIO` is absent.
-- Manual Play Console upload was prepared because EAS Submit cannot set up the
+- Manual Play Console upload was used because EAS Submit could not set up the
   Google service-account key in non-interactive mode.
+- The `1.0.28 (34)` AAB was uploaded to the production track, saved on the
+  release review page, then sent from Publishing overview on 2026-07-15.
+  Last observed Play Console state: `Changes in review`, with quick checks
+  still running and Play saying changes will be sent for review as soon as
+  checks complete successfully. Do not remove this change unless canceling the
+  hotfix is intentional.
 
 2026-07-14 connected-phone billing smoke:
 
@@ -101,6 +107,8 @@ Current start-here handoff:
 ## What Was Submitted To Google
 
 - Production release `1.0.27` / code `33` for full rollout.
+- Production hotfix `1.0.28` / code `34` for full rollout was submitted from
+  Publishing overview on 2026-07-15; it is pending Play quick checks/review.
 - App title/store listing: `readFlow PDF Reader with AI`.
 - Brand casing inside docs and app: `readFlow`.
 - Category: Books & Reference.

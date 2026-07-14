@@ -15,7 +15,12 @@ keys, or recovery codes.
 - Android package: `com.urmiaworks.readflow`
 - Current live production version: `1.0.27`
 - Current live production version code: `33`
-- Hotfix AAB ready for next Play release: `1.0.28` / version code `34`.
+- Hotfix `1.0.28` / version code `34` was uploaded to the Play production
+  track and sent from Publishing overview on 2026-07-15.
+- Last observed Play Console state for `1.0.28 (34)`: `Changes in review`;
+  Google quick checks were still running and Play said the change would be sent
+  for review as soon as checks complete successfully. It is not live until Play
+  shows the production release as active.
 - Latest EAS Android build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`.
 - Latest EAS Android artifact:
   `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`
@@ -30,6 +35,9 @@ audio because Android denied `expo.modules.audio.service.AudioControlsService`
 without `android.permission.FOREGROUND_SERVICE`. Build `1.0.28 (34)` restores
 the required foreground media-playback/data-sync permissions and service types
 while still blocking microphone/recording permissions.
+
+Do not click `Remove changes` for the `1.0.28 (34)` production change unless
+the owner intentionally wants to cancel the submitted hotfix.
 
 Play Console may show `0` downloads shortly after real installs. Use Play
 Console Statistics and Release dashboard for install metrics; the public store

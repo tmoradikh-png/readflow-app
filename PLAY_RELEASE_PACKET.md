@@ -55,6 +55,10 @@ Verified for paid launch prep:
   `AudioControlsService` needing foreground-service permission. Bundletool
   manifest verification confirmed the hotfix AAB has media-playback/data-sync
   foreground service declarations and no `RECORD_AUDIO` permission.
+- `1.0.28 (34)` was uploaded to Play production and sent from Publishing
+  overview on 2026-07-15. Last observed state: `Changes in review`; Play quick
+  checks were still running and the change would be sent for review as soon as
+  checks complete successfully.
 - Play production release `33 (1.0.27)` was uploaded through the Android
   Publisher API and sent to Google for review on 2026-07-01. Before submission,
   Play required the foreground service declaration for media playback and data

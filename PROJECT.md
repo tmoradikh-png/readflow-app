@@ -45,8 +45,10 @@ Current shape:
   `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`
 - Latest finished Android AAB local copy:
   `artifacts/readflow-1.0.28-34.aab`.
-- Android production status: Google Play release `1.0.27 (33)` is live. Public
-  listing:
+- Android production status: Google Play release `1.0.27 (33)` is live. Hotfix
+  `1.0.28 (34)` was uploaded to production and sent from Publishing overview on
+  2026-07-15; last observed Play Console state was `Changes in review` with
+  quick checks still running. Public listing:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
@@ -165,7 +167,9 @@ Current Play release prep in source `1.0.28`:
   the hotfix AAB contains foreground media-playback/data-sync permissions and
   service types, and no `RECORD_AUDIO` permission. EAS Submit could not submit
   non-interactively because Google service-account keys are not configured in
-  EAS Submit, so Play Console manual upload is the current path.
+  EAS Submit, so Play Console manual upload was used. On 2026-07-15 the release
+  was saved, sent from Publishing overview, and Play showed `Changes in review`
+  while quick checks continued.
 
 Current iOS release prep in source `1.0.28`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
