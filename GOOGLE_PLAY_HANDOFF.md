@@ -30,14 +30,24 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 2026-07-20 reader repair candidate:
 
 - Source is `1.0.29` / Android version code `35`.
+- EAS build `51a83cdf-12d6-4692-a589-2de95fee28f2` finished successfully from
+  commit `d73084b` on 2026-07-20.
+- Artifact URL:
+  `https://expo.dev/artifacts/eas/8mCk29evi4lil-XgvjdOfx25sPS2955W7_PXh-ZGSO0.aab`.
+- Local artifact copy: `artifacts/readflow-1.0.29-35.aab` (135.04 MiB).
+- SHA-256:
+  `3FFE6ED7A3EAD29AD5DC2F391848E4A411D397502660B60B2EC551CA7045D5C6`.
+- Bundletool verified package `com.urmiaworks.readflow`, version `1.0.29 (35)`,
+  foreground media playback/data-sync permissions, and no `RECORD_AUDIO`.
 - Repairs visible-position bookmarks/resume/page navigation, lock/unlock and
   rotation recovery, long-document windowing, smooth manual scrolling, and
   chapter heading layout.
 - Adds a 10-minute daily Free preview of on-device rF AI.
 - Adds a hidden Reviewer access path for unlimited no-vendor-cost features.
   Reviewer cannot use OCR, text AI, or Cloud AI voice.
-- It has passed automated source and bundle checks but has not passed connected
-  phone QA yet. Do not promote it to production before that QA.
+- It has passed automated source, build, and signed-bundle checks but has not
+  passed connected phone QA yet. Upload it to an internal track first; do not
+  promote it to production before that QA.
 
 2026-07-15 hotfix build:
 

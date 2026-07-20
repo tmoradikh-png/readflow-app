@@ -42,9 +42,10 @@ What is already prepared in source:
 - Android permissions are intentionally minimal for Play review plus billing:
   `INTERNET` and `com.android.vending.BILLING`. `expo-audio` is configured
   with `recordAudioAndroid:false` and `microphonePermission:false`.
-- Free tier is a limited manual-reading preview: 1 document/month, first 100
-  pages of native-text documents, no Listen/read-aloud, no OCR, no rF AI, no
-  Cloud AI, and no AI Q&A.
+- Free tier is a limited reading preview: 1 document/month, first 100 pages of
+  native-text documents, no OCR, Cloud AI, or AI Q&A. It includes up to 10
+  minutes/day of on-device rF AI so users can sample read-aloud without vendor
+  cost; the voice model downloads on demand and uses phone CPU/battery.
 - The mobile app sends a locally generated `x-app-user-id` so free backend
   quotas are per install instead of one global `"anonymous"` bucket.
 
@@ -574,7 +575,8 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 32 | 1.0.27 | 5b058155 | finished | Release cleanup iteration; superseded by code 33. AAB: https://expo.dev/artifacts/eas/JIb-McpvkB6YFWx9qqIDbBEJcNOp4h75zu4UrO1TtwM.aab |
 | 33 | 1.0.27 | 6bee8c21 | finished | Current Play production candidate. Adds Android manifest cleanup to remove unused microphone/foreground-service declarations and includes Play review declaration videos. AAB: https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab |
 | 34 | 1.0.28 | d973d085 | finished | Hotfix for generated-audio crash: restore required foreground media-playback/data-sync permissions and service types while keeping microphone/recording blocked. AAB: https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab |
-| 34 | 1.0.28 | 46806d5f | canceled | Duplicate build started by CLI timeout retry; canceled to avoid wasting build minutes. |
+| 34 | 1.0.28 | 46806d5f | finished; do not upload | Duplicate build started by CLI timeout retry. It finished with the same consumed version code; keep it out of Play. |
+| 35 | 1.0.29 | 51a83cdf | finished; phone QA pending | Reader stability repair: visible-position bookmarks/resume/navigation, stable long-book scrolling and lock recovery, chapter heading layout, Free 10-minute/day rF AI preview, and hidden no-vendor-cost Reviewer access. Manifest verified without `RECORD_AUDIO`. AAB: https://expo.dev/artifacts/eas/8mCk29evi4lil-XgvjdOfx25sPS2955W7_PXh-ZGSO0.aab |
 
 **Next source candidate after 1.0.29: versionCode 36 or higher.** Before starting any later
 EAS build, run `eas build:list` and pick a higher code if any account build has

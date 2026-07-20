@@ -17,12 +17,18 @@ keys, or recovery codes.
 - Current source candidate: `1.0.29` / version code `35`. It contains the reader
   stability and reviewer-access repair described below and is not public until
   a new AAB passes phone QA and is promoted in Play Console.
-- Latest EAS Android build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`.
+- Latest EAS Android build id: `51a83cdf-12d6-4692-a589-2de95fee28f2`.
 - Latest EAS Android artifact:
-  `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`
-- Local AAB copy: `artifacts/readflow-1.0.28-34.aab`
-- Next Android build uses version code `35`; later builds must use `36` or
-  higher after checking EAS and Play for consumed codes.
+  `https://expo.dev/artifacts/eas/8mCk29evi4lil-XgvjdOfx25sPS2955W7_PXh-ZGSO0.aab`
+- Local AAB copy: `artifacts/readflow-1.0.29-35.aab` (135.04 MiB)
+- SHA-256:
+  `3FFE6ED7A3EAD29AD5DC2F391848E4A411D397502660B60B2EC551CA7045D5C6`
+- Build `1.0.29 (35)` finished on 2026-07-20 from commit `d73084b` with
+  Play Store distribution. Bundletool verified package
+  `com.urmiaworks.readflow`, version `1.0.29 (35)`, required foreground audio
+  permissions, and no `RECORD_AUDIO` permission.
+- The next Android build must use version code `36` or higher after checking
+  EAS and Play for consumed codes.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
@@ -60,7 +66,8 @@ The 2026-07-20 repair addresses release-blocking reading defects:
 
 Automated verification passed for TypeScript, backend build, release config,
 Metro Android bundling, stable-position migration, heading parsing, 500-page
-indexing, and reviewer cost guards. ADB did not see a connected phone during
+indexing, reviewer cost guards, and the final signed AAB manifest. ADB did not
+see a connected phone during
 the final pass, so manual lock/unlock, rotation, long-book scrolling, bookmark,
 resume, and rF AI quota QA remains required before Play promotion.
 
@@ -208,8 +215,9 @@ Rules:
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
-- Connect and authorize an Android phone, install `1.0.29 (35)`, and complete
-  the reader regression checklist before public promotion.
+- Upload `artifacts/readflow-1.0.29-35.aab` to a Play internal track, install it
+  through Google Play on an authorized phone, and complete the reader
+  regression checklist before public promotion.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
 - Add a custom API domain instead of the confusing Render legacy subdomain.
