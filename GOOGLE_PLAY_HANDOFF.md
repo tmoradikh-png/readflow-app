@@ -26,6 +26,10 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 - Local artifact copy: `artifacts/readflow-1.0.27-33.aab`.
 - The current repair candidate uses version code `35`. Any later Android build
   must use `36` or higher after checking EAS and Play for consumed codes.
+- A post-build 2026-07-20 source patch adds immediate RevenueCat/backend
+  entitlement reconciliation, bounded backward reader-window expansion, and
+  distinct spoken-title treatment. It is not in the existing `1.0.29 (35)` AAB;
+  the next internal/production candidate must use code `36` or higher.
 
 2026-07-20 reader repair candidate:
 
@@ -350,6 +354,9 @@ Cloud AI voice, or AI questions, so it cannot create OpenAI or OCR charges.
 - Run purchase, restore, upgrade, downgrade, cancel, and entitlement expiry
   checks now that production is active. Finish Play license testing first; avoid
   accidental real purchases from non-test accounts.
+- Deploy the backend entitlement-cache bypass before testing the matching new
+  mobile build. Confirm a completed sandbox purchase changes the shelf plan
+  badge from Free without restarting the app.
 - Improve over-limit paywall prompts. Current backlog item: after a user hits
   quota/file-too-long, show a themed upgrade prompt instead of only the raw
   quota message.

@@ -3,6 +3,8 @@ import Purchases, {
   LOG_LEVEL,
   PURCHASES_ERROR_CODE,
   type PurchasesError,
+  type CustomerInfo,
+  type CustomerInfoUpdateListener,
   type PurchasesOffering,
   type PurchasesPackage,
 } from "react-native-purchases";
@@ -32,6 +34,12 @@ const PRODUCT_IDS: Record<PurchaseTierKey, Record<PurchaseBilling, string>> = {
     monthly: "readflow_power_monthly",
     annual: "readflow_power_yearly",
   },
+};
+
+const PURCHASE_TIER_RANK: Record<PurchaseTierKey, number> = {
+  reader_plus: 1,
+  ai_pro: 2,
+  power: 3,
 };
 
 type PackageKey = `${PurchaseTierKey}:${PurchaseBilling}`;
@@ -161,6 +169,34 @@ export async function restoreRevenueCatPurchases() {
     throw new Error("Purchases are not configured in this build yet.");
   }
   return Purchases.restorePurchases();
+}
+
+export function activeRevenueCatTier(customerInfo: CustomerInfo): PurchaseTierKey | null {
+  let best: PurchaseTierKey | null = null;
+  for (const id of Object.keys(customerInfo.entitlements.active || {})) {
+    if (!(id in PURCHASE_TIER_RANK)) continue;
+    const tier = id as PurchaseTierKey;
+    if (!best || PURCHASE_TIER_RANK[tier] > PURCHASE_TIER_RANK[best]) best = tier;
+  }
+  return best;
+}
+
+export async function refreshRevenueCatCustomerInfo(): Promise<CustomerInfo | null> {
+  const configured = await configureRevenueCat();
+  if (!configured) return null;
+  await Purchases.invalidateCustomerInfoCache();
+  return Purchases.getCustomerInfo();
+}
+
+export async function subscribeRevenueCatCustomerInfoUpdates(
+  listener: CustomerInfoUpdateListener
+): Promise<() => void> {
+  const configured = await configureRevenueCat();
+  if (!configured) return () => {};
+  Purchases.addCustomerInfoUpdateListener(listener);
+  return () => {
+    Purchases.removeCustomerInfoUpdateListener(listener);
+  };
 }
 
 export function isRevenueCatCancellation(error: unknown): boolean {

@@ -1,6 +1,6 @@
 # readFlow Payment Setup
 
-Updated: 2026-07-15
+Updated: 2026-07-20
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer
@@ -34,6 +34,14 @@ Android payment is wired in production, but the end-to-end sandbox purchase
 test is not complete yet. Do not treat paid launch QA as complete until a Play
 license-tester purchase, restore, cancellation, expiry, and backend entitlement
 refresh have been verified.
+
+The 2026-07-20 source repair addresses a confirmed stale-Free failure mode:
+RevenueCat CustomerInfo updates are now observed after purchase, restore, and
+app resume; the SDK cache is invalidated; and the mobile app requests a forced
+backend RevenueCat lookup with bounded retries. The backend cache bypass applies
+only when the entitlement endpoint receives the explicit refresh header. Deploy
+the backend and create a new Android build before retesting. The existing
+`1.0.29 (35)` AAB predates this repair.
 
 Already present:
 

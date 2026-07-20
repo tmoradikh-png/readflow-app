@@ -78,7 +78,10 @@ async function fetchActiveEntitlements(appUserId: string): Promise<string[]> {
  * safe default (dev tier in dev, otherwise free), so a RevenueCat outage can't
  * take the API down. Paid work still rechecks quotas separately.
  */
-export async function resolveEntitlement(req: Request): Promise<Entitlement> {
+export async function resolveEntitlement(
+  req: Request,
+  options: { forceRefresh?: boolean } = {}
+): Promise<Entitlement> {
   const appUserId = appUserIdFromRequest(req);
 
   if (
@@ -105,7 +108,9 @@ export async function resolveEntitlement(req: Request): Promise<Entitlement> {
   }
 
   const cached = cache.get(appUserId);
-  if (cached && cached.expires > Date.now()) return cached.entitlement;
+  if (!options.forceRefresh && cached && cached.expires > Date.now()) {
+    return cached.entitlement;
+  }
 
   let tier: Tier = FREE_TIER;
   let source: Entitlement["source"] = "free";

@@ -11,7 +11,7 @@
 import { Router } from "express";
 import { publicConfig } from "../config/plans";
 import { getUsage, currentMonth } from "../services/usage";
-import { appUserIdFromRequest } from "../services/entitlements";
+import { appUserIdFromRequest, resolveEntitlement } from "../services/entitlements";
 import {
   createReviewerToken,
   reviewerAccessConfigured,
@@ -42,8 +42,12 @@ configRouter.post("/reviewer/access", requireAppKey, (req, res) => {
   res.json({ token: createReviewerToken(appUserId), tier: "reviewer" });
 });
 
-configRouter.get("/entitlements", (req, res) => {
-  const ent = req.entitlement!;
+configRouter.get("/entitlements", async (req, res) => {
+  const forceRefresh = req.header("x-readflow-entitlement-refresh") === "1";
+  const ent = forceRefresh
+    ? await resolveEntitlement(req, { forceRefresh: true })
+    : req.entitlement!;
+  req.entitlement = ent;
   res.json({
     tier: ent.tier.key,
     name: ent.tier.name,

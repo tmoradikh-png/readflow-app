@@ -88,11 +88,13 @@ export interface UsageSnapshot {
   };
 }
 
-export async function fetchEntitlement(): Promise<EntitlementSnapshot> {
+export async function fetchEntitlement(forceRefresh = false): Promise<EntitlementSnapshot> {
   try {
     await Promise.all([loadAppUserId(), loadReviewerToken()]);
     const res = await fetch(`${API_BASE}/api/entitlements`, {
-      headers: apiHeaders(),
+      headers: apiHeaders(
+        forceRefresh ? { "x-readflow-entitlement-refresh": "1" } : undefined
+      ),
     });
     if (!res.ok) return FREE_ENTITLEMENT;
     const data = (await res.json()) as Partial<EntitlementSnapshot>;

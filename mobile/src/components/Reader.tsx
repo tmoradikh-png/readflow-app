@@ -103,7 +103,9 @@ const LOCAL_AI_MAX_SENTENCES = 2;
 const KEEP_AWAKE_TAG = "readflow-reading";
 const READER_WINDOW_BEFORE = 12;
 const READER_WINDOW_AFTER = 180;
-const READER_WINDOW_EXPAND = 120;
+const READER_WINDOW_BACKWARD_EXPAND = 12;
+const READER_WINDOW_FORWARD_EXPAND = 120;
+const TITLE_PAUSE_MS = 420;
 
 type RuntimeVoiceMode = "natural" | "device" | "local";
 
@@ -154,6 +156,46 @@ function voiceLabelFor(mode: RuntimeVoiceMode): string {
   if (mode === "natural") return "Cloud AI";
   if (mode === "local") return "rF AI";
   return "Device voice";
+}
+
+const TITLE_CUES: Record<string, string> = {
+  ar: "العنوان",
+  da: "Titel",
+  de: "Titel",
+  en: "Title",
+  es: "Título",
+  fa: "عنوان",
+  fi: "Otsikko",
+  fr: "Titre",
+  hi: "शीर्षक",
+  id: "Judul",
+  it: "Titolo",
+  ja: "タイトル",
+  ko: "제목",
+  nb: "Tittel",
+  nl: "Titel",
+  no: "Tittel",
+  pt: "Título",
+  ru: "Заголовок",
+  sv: "Titel",
+  tr: "Başlık",
+  vi: "Tiêu đề",
+  zh: "标题",
+};
+
+function titleCueFor(language: string): string {
+  return TITLE_CUES[language.toLowerCase().split("-")[0]] || TITLE_CUES.en;
+}
+
+function speechForChunk(chunk: SpeechChunk, language: string, rate: number) {
+  const isHeading = chunk.spans.some((span) => span.sentence.kind === "heading");
+  const prefix = isHeading ? `${titleCueFor(language)}. ` : "";
+  return {
+    text: `${prefix}${chunk.text}`,
+    prefixLength: prefix.length,
+    rate: isHeading ? Math.max(0.5, rate * 0.88) : rate,
+    isHeading,
+  };
 }
 
 function voiceEngineForMode(mode: RuntimeVoiceMode): VoiceEngine {
@@ -324,6 +366,8 @@ export function Reader({
   const windowStartRef = useRef(windowStart);
   const windowEndRef = useRef(windowEnd);
   const suppressBackwardExpansionRef = useRef(initialSentenceIndex > 0);
+  const pendingBackwardSeedRef = useRef(initialSentenceIndex > 0);
+  const backwardSeedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const cloudVoiceLimitWarnedRef = useRef(false);
@@ -366,6 +410,10 @@ export function Reader({
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [loadingPageMsg, setLoadingPageMsg] = useState<string | null>(null);
   useEffect(() => {
+    if (backwardSeedTimerRef.current) {
+      clearTimeout(backwardSeedTimerRef.current);
+      backwardSeedTimerRef.current = null;
+    }
     ocrOfflineRef.current = false;
     pendingJumpRef.current = null;
     anchorRef.current = null;
@@ -684,6 +732,7 @@ export function Reader({
       if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
       if (scrollInteractionTimerRef.current) clearTimeout(scrollInteractionTimerRef.current);
       if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
+      if (backwardSeedTimerRef.current) clearTimeout(backwardSeedTimerRef.current);
       flushLocalVoiceUsage();
       saveLastReadRef.current();
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
@@ -735,6 +784,7 @@ export function Reader({
     windowStartRef.current = nextStart;
     windowEndRef.current = nextEnd;
     suppressBackwardExpansionRef.current = start > 0;
+    pendingBackwardSeedRef.current = start > 0;
     setWindowStart(nextStart);
     setWindowEnd(nextEnd);
     setWindowFocusIndex(start);
@@ -851,7 +901,8 @@ export function Reader({
     const first = list[startIndex];
     if (!first) return null;
 
-    const maxSentences = mode === "local" ? LOCAL_AI_MAX_SENTENCES : 1;
+    const maxSentences =
+      first.kind === "heading" ? 1 : mode === "local" ? LOCAL_AI_MAX_SENTENCES : 1;
     const maxChars = mode === "local" ? LOCAL_AI_MAX_CHARS : Number.POSITIVE_INFINITY;
     const spans: SpeechChunkSpan[] = [];
     const parts: string[] = [];
@@ -862,6 +913,7 @@ export function Reader({
       const sentence = list[index];
       if (!sentence || sentence.page > freeCap()) break;
       if (sentence.page !== first.page) break;
+      if (sentence.kind !== first.kind) break;
 
       const sourceStart =
         index === startIndex
@@ -1028,6 +1080,7 @@ export function Reader({
     windowStartRef.current = nextStart;
     windowEndRef.current = nextEnd;
     suppressBackwardExpansionRef.current = target > 0;
+    pendingBackwardSeedRef.current = target > 0;
     setWindowStart(nextStart);
     setWindowEnd(nextEnd);
     setWindowFocusIndex(target);
@@ -1093,6 +1146,23 @@ export function Reader({
       const currentWindowStart = windowStartRef.current;
       const currentWindowEnd = windowEndRef.current;
       if (
+        pendingBackwardSeedRef.current &&
+        sentence.id === currentWindowStart &&
+        currentWindowStart > 0
+      ) {
+        pendingBackwardSeedRef.current = false;
+        if (backwardSeedTimerRef.current) clearTimeout(backwardSeedTimerRef.current);
+        backwardSeedTimerRef.current = setTimeout(() => {
+          backwardSeedTimerRef.current = null;
+          setWindowStart((start) => {
+            const next = Math.max(0, start - READER_WINDOW_BACKWARD_EXPAND);
+            windowStartRef.current = next;
+            return next;
+          });
+          suppressBackwardExpansionRef.current = false;
+        }, 0);
+      }
+      if (
         suppressBackwardExpansionRef.current &&
         sentence.id > currentWindowStart + 8
       ) {
@@ -1104,7 +1174,7 @@ export function Reader({
         currentWindowStart > 0
       ) {
         setWindowStart((start) => {
-          const next = Math.max(0, start - READER_WINDOW_EXPAND);
+          const next = Math.max(0, start - READER_WINDOW_BACKWARD_EXPAND);
           windowStartRef.current = next;
           return next;
         });
@@ -1115,7 +1185,7 @@ export function Reader({
         currentWindowEnd < flatRef.current.length
       ) {
         setWindowEnd((end) => {
-          const next = Math.min(flatRef.current.length, end + READER_WINDOW_EXPAND);
+          const next = Math.min(flatRef.current.length, end + READER_WINDOW_FORWARD_EXPAND);
           windowEndRef.current = next;
           return next;
         });
@@ -1190,7 +1260,8 @@ export function Reader({
       return;
     }
     const firstPosition = locateChunkPosition(chunk, 0);
-    const text = chunk.text;
+    const speech = speechForChunk(chunk, language, settingsRef.current.speed);
+    const text = speech.text;
     const spokenLength = Math.max(1, text.length);
     localVoiceProgressRef.current = 0;
 
@@ -1203,10 +1274,11 @@ export function Reader({
     for (let ahead = 1; ahead <= prefetchAhead; ahead++) {
       const nextChunk = buildSpeechChunk(nextIndex, f, voiceMode);
       if (!nextChunk) break;
+      const nextSpeech = speechForChunk(nextChunk, language, settingsRef.current.speed);
       ttsRef.current
-        .prefetch?.(nextChunk.text, {
+        .prefetch?.(nextSpeech.text, {
           language,
-          rate: settingsRef.current.speed,
+          rate: nextSpeech.rate,
           voiceId: voiceIdFor(voiceMode, preferences),
           fallbackVoiceId: preferences.deviceVoiceId,
         })
@@ -1219,12 +1291,17 @@ export function Reader({
     const advance = () => {
       flushLocalVoiceUsage();
       if (!playingRef.current || myEpoch !== epochRef.current) return;
-      speakAt(resolvePageWithinIndex(chunk.lastPage, chunk.lastWithin) + 1);
+      const continueReading = () => {
+        if (!playingRef.current || myEpoch !== epochRef.current) return;
+        speakAt(resolvePageWithinIndex(chunk.lastPage, chunk.lastWithin) + 1);
+      };
+      if (speech.isHeading) setTimeout(continueReading, TITLE_PAUSE_MS);
+      else continueReading();
     };
 
     ttsRef.current.speak(text, {
       language,
-      rate: settingsRef.current.speed,
+      rate: speech.rate,
       voiceId: voiceIdFor(voiceMode, preferences),
       fallbackVoiceId: preferences.deviceVoiceId,
       lockScreenTitle: docRef.current.fileName || "readFlow",
@@ -1276,7 +1353,11 @@ export function Reader({
         trackLocalVoiceProgress(currentTime);
         if (!playingRef.current || myEpoch !== epochRef.current) return;
         const ratio = Math.max(0, Math.min(0.999, currentTime / duration));
-        const position = locateChunkPosition(chunk, Math.floor(spokenLength * ratio));
+        const spokenOffset = Math.floor(spokenLength * ratio);
+        const position = locateChunkPosition(
+          chunk,
+          Math.max(0, spokenOffset - speech.prefixLength)
+        );
         if (!position) return;
         indexRef.current = position.sentence.id;
         if (currentIdRef.current !== position.sentence.id) {
@@ -1703,7 +1784,7 @@ export function Reader({
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         onEndReached={() =>
           setWindowEnd((end) => {
-            const next = Math.min(flatRef.current.length, end + READER_WINDOW_EXPAND);
+            const next = Math.min(flatRef.current.length, end + READER_WINDOW_FORWARD_EXPAND);
             windowEndRef.current = next;
             return next;
           })

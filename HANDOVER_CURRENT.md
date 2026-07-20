@@ -59,6 +59,15 @@ The 2026-07-20 repair addresses release-blocking reading defects:
 - Chapter headings retain paragraph boundaries and render on a separate line
   with a distinct typeface, size, and spacing. Multilingual chapter markers are
   recognized without flattening the surrounding text.
+- Read-aloud isolates headings from body text, announces a localized `Title`
+  cue, slows the heading slightly, and pauses before the first body sentence.
+- RevenueCat purchase and restore updates now invalidate the SDK cache, listen
+  for CustomerInfo changes, and force a short backend refresh/retry sequence.
+  This repairs the case where Google Play completed a subscription but the app
+  continued to display Free because of the backend entitlement cache.
+- Backward reader-window expansion is limited to 12 sentences at a time. This
+  prevents variable-height rows from producing large backward jumps such as
+  page 38 to page 9.
 - Free includes a 10-minute-per-day on-device rF AI preview. This uses phone
   CPU, battery, and the downloaded model; it makes no OpenAI call.
 - An internal Reviewer tier grants unlimited no-vendor-cost reading features
@@ -66,10 +75,17 @@ The 2026-07-20 repair addresses release-blocking reading defects:
 
 Automated verification passed for TypeScript, backend build, release config,
 Metro Android bundling, stable-position migration, heading parsing, 500-page
-indexing, reviewer cost guards, and the final signed AAB manifest. ADB did not
-see a connected phone during
-the final pass, so manual lock/unlock, rotation, long-book scrolling, bookmark,
-resume, and rF AI quota QA remains required before Play promotion.
+indexing, reviewer cost guards, and the final signed AAB manifest. On 2026-07-20
+the side-by-side QA APK was installed on Samsung SM-G975F. An 8-page retained
+document resumed on page 3 after force-stop/relaunch, then scrolled backward to
+page 2 without jumping; focused AndroidRuntime/ReactNativeJS logs contained no
+crash. Long-book page-39 regression, audible heading quality, paid lock-screen
+playback, and sandbox purchase/restore still require owner-observed QA.
+
+The existing `artifacts/readflow-1.0.29-35.aab` was built before the entitlement
+refresh, 12-row backward expansion, and spoken-title changes. Do not use that
+artifact to verify these fixes. The next Play candidate must be rebuilt with
+version code `36` or higher.
 
 Play Console may show `0` downloads shortly after real installs. Use Play
 Console Statistics and Release dashboard for install metrics; the public store
@@ -119,6 +135,10 @@ backend.
 - RevenueCat Android app: `readFlow (Play Store)`.
 - RevenueCat offering id: `default`.
 - Entitlements: `reader_plus`, `ai_pro`, `power`.
+- Source after the 2026-07-20 repair immediately reconciles RevenueCat
+  CustomerInfo with a forced backend lookup after purchase, restore, app resume,
+  or SDK entitlement notification. Deploy the matching backend before testing
+  this mobile fix.
 - Google Play products and base plans are active:
 
 | Product id | Base plan id | Tier |
@@ -215,9 +235,10 @@ Rules:
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
-- Upload `artifacts/readflow-1.0.29-35.aab` to a Play internal track, install it
-  through Google Play on an authorized phone, and complete the reader
-  regression checklist before public promotion.
+- Build a new Android candidate with version code `36` or higher after the
+  entitlement/title/navigation repair, upload it to a Play internal track, and
+  complete the reader regression checklist before public promotion. The older
+  `artifacts/readflow-1.0.29-35.aab` does not contain the final repair.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
 - Add a custom API domain instead of the confusing Render legacy subdomain.
