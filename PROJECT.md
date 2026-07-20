@@ -108,16 +108,18 @@ Current Play release prep in source `1.0.28`:
   `microphonePermission: false`. The release manifest cleanup plugin removes
   microphone/recording declarations, keeps audio media-playback foreground
   service metadata, and keeps downloader data-sync foreground service metadata.
-- iOS background audio mode and Expo foreground/background playback flags are
-  disabled for the current foreground-only product behavior.
+- iOS background audio mode remains disabled pending separate iOS QA. Android
+  enables background audio only for rF AI/Cloud AI on Reviewer, AI Pro, and
+  Power; Free, Reader Plus, and Device voice stop outside readFlow.
 - Mobile now creates a stable local `rf_...` install id and sends it as
   `x-app-user-id` so public free users do not all share the backend
   `"anonymous"` usage/quota bucket. RevenueCat is also configured with this same
   id, so store entitlements and backend quotas resolve to one customer identity
   without requiring login.
-- Free is enforced as a limited manual-reading preview: page cap from
-  `perDocPageCap`, no Listen/read-aloud, no OCR, no rF AI, no Cloud AI, and no
-  AI questions. Reader Plus and higher unlock device read-aloud.
+- Free is one native-text import up to 300 pages, with no OCR, Cloud AI, or AI
+  questions and a 5-minute/day downloaded rF AI preview. Reader Plus keeps
+  native-text reading free of vendor AI/OCR cost and includes unlimited
+  downloaded rF AI during beta.
 - `npm run check:release` now fails if the build points away from the converted
   production backend, asks for microphone permission, declares background audio,
   omits app-user-id support, or has public Render blueprints with
@@ -269,11 +271,10 @@ Changes after the latest finished build and included in source `1.0.18`:
 - Important: rF AI voice is a native dependency. It needs a new EAS/native
   build to run on the phone; Expo Go or an older installed build will fall back
   to device voice.
-- Playback policy is currently foreground-only for every voice engine. While a
-  book is reading, readFlow keeps the screen awake; if the user locks the phone,
-  presses Home, or app-switches away, audio stops instead of finishing the
-  paragraph/chunk. A future lock-screen audiobook mode would need explicit
-  native media-session controls and product approval.
+- While a book is reading, readFlow keeps the screen awake. On Android,
+  Reviewer, AI Pro, and Power can keep rF AI/Cloud AI playing through lock,
+  Home, and app switching with media controls. Free, Reader Plus, and Device
+  voice stop when readFlow leaves the foreground.
 - Reader jumps now land directly instead of animating through pages. Resume,
   page navigation, bookmark jumps, rotation re-anchors, and follow corrections
   should not visibly scroll through the book.
@@ -326,11 +327,10 @@ Changes after the latest finished build and included in source `1.0.18`:
 - Reader page changes now show a very faded divider line only when moving from
   one PDF page to the next; it does not add text to the spoken content or AI
   context.
-- 2026-06-29 product boundary update: Free is 1 native-text PDF/month with the
-  first 100 pages returned; Reader Plus is full/ad-free native-text reading with
-  device voice and no OCR/AI/cloud voice cost. OCR now starts at AI Pro
-  (750 pages/month) and Power (2,500 pages/month). Do not put OCR back into
-  Reader Plus unless the cost model is intentionally changed.
+- The 2026-06-29 100-page Free limit is superseded by the `1.0.30` beta plan:
+  one native-text book up to 300 pages and 5 downloaded-rF-AI minutes/day.
+  Reader Plus has no OCR, text AI, or Cloud AI allowance; OCR remains AI Pro
+  and Power only.
 - 2026-06-29 Persian book check from the owner's Downloads: `zayesh-tragedy-az-jan`
   is a good Persian text-layer PDF and imports as native text. `Tabar_Shenasiye_Akhlagh`
   and `Dayeratol_Maaref_Sotoon_Panjom` are scanned/image PDFs; they must show an
@@ -597,8 +597,12 @@ Mobile:
   generated `android/app/build.gradle` so Sherpa codegen runs before app CMake.
 - `mobile/src/services/TextReflow.ts`: turns extracted page text into readable
   sentence units.
+- `mobile/src/services/SpeechChunk.ts`: testable voice-unit builder, including
+  unfinished sentence continuity across visual PDF page boundaries.
 - `mobile/src/services/tts/*`: device, cloud natural voice, and local neural
   voice providers.
+- `READER_REGRESSION_CHECKLIST.md`: permanent resolved-bug ledger and mandatory
+  connected-phone release matrix.
 - `mobile/src/services/Entitlements.ts`: reads backend entitlement response and
   exposes feature flags to the app.
 - `mobile/gen-clean-icons.js`: regenerates mobile icon assets from the clean
@@ -787,8 +791,8 @@ Cloud voice:
 - Uses the selected cloud voice from shelf preferences.
 - Falls back to the selected device voice if cloud voice is offline or over
   quota, and shows a one-time allowance message.
-- Uses `expo-audio` with `shouldPlayInBackground: false`; all reading audio is
-  foreground-only in the current product.
+- Uses `expo-audio` with background playback enabled only for rF AI/Cloud AI
+  when the entitlement is Reviewer, AI Pro, or Power.
 - Keeps the native player alive between clips to avoid unnecessary handoff
   pauses.
 - Has a short tail guard to avoid cutting off final words.
@@ -796,12 +800,11 @@ Cloud voice:
 Leaving the app/reader:
 - The reader explicitly stops playback on back/unmount so voice does not keep
   reading after returning to the library.
-- Current source treats all reading audio as foreground-only. The reader keeps
-  the screen awake while playback is active, and stops playback when the app
-  leaves the foreground, which covers screen lock, Home, and app switch.
-- Lock-screen audiobook mode is intentionally not active right now. If product
-  later allows lock-screen playback, add explicit native media-session controls
-  and QA the distinction between lock, Home, and app switch.
+- The reader keeps the screen awake while playback is active. It stops Free,
+  Reader Plus, and Device playback when the app leaves the foreground. Reviewer,
+  AI Pro, and Power retain rF AI/Cloud AI in Android's foreground media service,
+  including lock-screen controls. QA lock, Home, and app-switch behavior each
+  candidate.
 - Large scanned books can continue OCR across multiple months: the app keeps the
   original file in local library storage, caches OCR'd pages, saves pending OCR
   pages, pauses with an explanation when monthly OCR quota is reached, and can

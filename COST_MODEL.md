@@ -72,13 +72,14 @@ Current cloud voice implementation:
   the first 20 MB Piper test voice because the smaller model sounded too robotic
   and paused too noticeably for book reading.
 - Free-tier source now follows the latest product decision: 1 imported PDF per
-  month and the first 100 pages of a native-text document. The backend returns
+  month and the first 300 pages of a native-text document. The backend returns
   `truncated/pageCap` so the reader can show a page-limit message instead of
-  mistaking page 101 for a scanned page. Source `1.0.29` allows a 10-minute
+  mistaking page 301 for a scanned page. Source `1.0.30` allows a 5-minute
   daily preview of downloaded on-device rF AI. The timer uses actual local
   playback progress and makes no OpenAI request.
-- Reader Plus is now intentionally non-OCR: ad-free/full native-text reading,
-  larger imports, and device voice. Scanned/image PDFs require AI Pro or Power.
+- Reader Plus is intentionally non-OCR: ad-free/full native-text reading,
+  larger imports, device voice, and unlimited downloaded rF AI during beta.
+  Scanned/image PDFs require AI Pro or Power.
 - Cloud AI voice is language-quality gated. Persian, Arabic, Russian, Hindi,
   Chinese, Japanese, and Korean are blocked from Cloud AI voice until voice QA
   passes; the app falls back to Phone voice instead of letting paid users hear a
@@ -97,7 +98,7 @@ The free tier must have no marginal API cost to us.
 Allowed in free:
 - Native text preview for a small number of pages/books.
 - Local reading, bookmarks, and basic settings.
-- Up to 10 minutes/day of downloaded on-device rF AI. This uses the user's CPU,
+- Up to 5 minutes/day of downloaded on-device rF AI. This uses the user's CPU,
   battery, storage, and bandwidth for the model download; it has no per-character
   vendor charge to Urmia Works.
 - Ads if the product uses ads later.
@@ -495,13 +496,13 @@ force a larger instance if public usage grows.
 ## Recommended Plan Shape
 
 This is the conservative, profit-protecting plan shape as of 2026-06-29.
-It intentionally makes Reader Plus a strong non-AI reading product while keeping
-OCR, rF AI, Cloud AI, and AI questions as clear upgrade reasons.
+It makes Reader Plus a strong no-vendor-cost reading product while keeping OCR,
+Cloud AI, and AI questions as clear upgrade reasons.
 
 | Tier | Suggested price | What should be included | Cost risk |
 | --- | ---: | --- | --- |
-| Free | $0 | 1 saved book, about 100 pages, native text preview, bookmarks/basic settings, no read-aloud | Render CPU/bandwidth only |
-| Reader Plus | $4.99/mo | Ad-free full native-text reading, larger library, device read-aloud, themes, bookmarks, focus/follow, good multilingual text-layer PDFs | Render import CPU/bandwidth |
+| Free | $0 | 1 saved native-text book, up to 300 pages, bookmarks/basic settings, 5 rF AI minutes/day | Render CPU/bandwidth only |
+| Reader Plus | $4.99/mo | Ad-free full native-text reading, larger library, device read-aloud, unlimited downloaded rF AI during beta, themes, bookmarks, focus/follow | Render import CPU/bandwidth |
 | AI Pro | $12.99/mo, $119.99/yr | Everything in Reader Plus, OCR, rF AI voice, limited AI Q&A/summaries, small Cloud AI voice allowance | Direct AI vendor cost stays under 20% |
 | Power | $29.99/mo, $279.99/yr | Higher OCR/AI/cloud voice limits, larger books, exports/batch tools, priority heavy-reader features | Direct AI vendor cost stays under 20% |
 | AI voice / OCR packs | Separate add-on | Extra Cloud AI voice characters or extra OCR pages after monthly limits | Best match to real marginal cost |
@@ -510,8 +511,8 @@ Recommended starting limits:
 
 | Tier | OCR pages / month | AI actions / month | Cloud AI voice / month | rF AI |
 | --- | ---: | ---: | ---: | --- |
-| Free | 0 | 0 | 0 | No |
-| Reader Plus | 0 | 0 | 0 | No |
+| Free | 0 | 0 | 0 | 5 minutes/day, English pack initially |
+| Reader Plus | 0 | 0 | 0 | Unlimited during beta, English pack initially |
 | AI Pro | 750 | 150 | 45k chars | Yes, initially English |
 | Power | 2,500 | 400 | 100k chars | Yes, with future language packs |
 
@@ -538,30 +539,28 @@ If cloud voice must be high quality (`tts-1-hd`), keep allowances very small:
 If using cheaper/lower-latency `tts-1`, allowances can be larger but still need
 hard caps. Do not allow 12 hours/day cloud listening in normal paid tiers.
 
-## Pending Owner-Directed Plan Revision (Not Implemented)
+## Owner-Directed Beta Plan Revision (Implemented In 1.0.30 Source)
 
-Recorded on 2026-07-20 for the next entitlement/pricing pass. This is product
-direction only. It does not describe the current app, backend, RevenueCat
-offering, or store listing, and must not be marketed until implementation and
-QA are complete.
+Recorded and implemented in mobile/backend source on 2026-07-20. Production
+behavior changes only after the matching backend is deployed and `1.0.30 (36)`
+is installed. Store copy must wait for connected-phone and entitlement QA.
 
-| Tier | Proposed next behavior | Direct vendor-cost rule |
+| Tier | Beta behavior | Direct vendor-cost rule |
 | --- | --- | --- |
 | Free | Up to 1 imported book and at most 300 pages; no OCR; 5 minutes/day of downloaded on-device rF AI | No OpenAI/OCR/cloud-voice cost. Only shared Render import traffic is acceptable. |
 | Reader Plus | Unlimited supported native-text PDF import and reading; no OCR; unlimited downloaded on-device rF AI during beta/testing | No OpenAI/OCR/cloud-voice cost. rF AI runs on the user's phone. Reassess the unlimited allowance before final public pricing. |
 | AI Pro | Unlimited supported native-text PDF import; unlimited downloaded on-device rF AI; a limited monthly OCR allowance; a very small monthly Cloud AI voice allowance | Keep hard backend caps and retain the direct AI vendor-cost guardrail. |
 | Power | AI Pro capabilities with materially higher OCR and Cloud AI voice limits | Higher hard caps, still sized so the customer pays comfortably above marginal cost. |
 
-Open decisions for that pass:
+Open decisions:
 
 - Choose the exact AI Pro and Power OCR/Cloud AI allowances only after checking
   current provider prices and the existing 20% direct-vendor-cost guardrail.
 - Decide whether Free contains ads. Ads are optional, not approved yet. Adding
   them requires corresponding privacy, consent, Data Safety, store-listing, and
   dependency review; the current Play declaration says the app has no ads.
-- Define whether the 300-page Free limit is a per-book ceiling, a total account
-  allowance, or both. The owner's current intent is one book with a maximum of
-  300 pages.
+- Free uses one monthly import and a 300-page per-document/server ceiling. A
+  later account system may enforce a lifetime one-book rule across reinstalls.
 - Reader Plus should use unlimited rF AI during beta so paid-plan and authorized
   reviewers can test long playback. Decide before final pricing whether this
   remains unlimited or becomes a daily allowance.
@@ -570,7 +569,7 @@ Open decisions for that pass:
 
 ## Free Tier Abuse Guard
 
-The desired free limit of 1 book / about 100 pages needs a stable user identity.
+The Free limit of 1 book / 300 pages needs a stable user identity.
 
 Options:
 
@@ -597,10 +596,10 @@ are also weak and can punish shared networks. For public release, send a stable
 5. DONE in source: first rF AI voice uses Sherpa-ONNX plus on-demand
    Supertonic Reader, outside cloud voice quota. Needs native phone QA before
    product claims.
-6. Product recommendation: rF AI starts at AI Pro, not Free/Reader Plus. It has
-   no vendor bill, but it is a premium-feeling feature and a strong upgrade
-   reason.
-7. DONE in source: Free is 1 book/about 100 pages with no read-aloud.
+6. DONE in `1.0.30` source: Free receives 5 rF AI minutes/day and Reader Plus
+   receives unlimited downloaded rF AI during beta. Both remain free of OCR,
+   text-AI, and Cloud-AI vendor cost.
+7. DONE in source: Free is 1 book/up to 300 pages.
 8. Wire RevenueCat production SDK/user id so paid limits follow the store
    account / RevenueCat customer, not only a local device install id.
 9. Move OpenAI production billing to a dedicated readFlow project/key with spend

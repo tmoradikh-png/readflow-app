@@ -69,6 +69,14 @@ export const REVENUECAT_IOS_API_KEY: string =
   ((Constants.expoConfig as any)?.extra?.revenueCatIosApiKey as string | undefined) ||
   "";
 
+/**
+ * Used only by a separately packaged local QA build. It exposes the
+ * cost-free Reviewer tier without depending on a live reviewer token.
+ * Production app.json does not set this flag.
+ */
+export const REVIEWER_QA_MODE =
+  (Constants.expoConfig as any)?.extra?.qaReviewerMode === true;
+
 /** Merge the app-key header into any request headers. */
 export function apiHeaders(extra?: Record<string, string>): Record<string, string> {
   const h: Record<string, string> = { ...(extra || {}) };

@@ -68,7 +68,7 @@ The 2026-07-20 repair addresses release-blocking reading defects:
 - Backward reader-window expansion is limited to 12 sentences at a time. This
   prevents variable-height rows from producing large backward jumps such as
   page 38 to page 9.
-- Free includes a 10-minute-per-day on-device rF AI preview. This uses phone
+- Free includes a 5-minute-per-day on-device rF AI preview. This uses phone
   CPU, battery, and the downloaded model; it makes no OpenAI call.
 - An internal Reviewer tier grants unlimited no-vendor-cost reading features
   and rF AI. It cannot use OCR, text AI, or Cloud AI voice.
@@ -104,15 +104,54 @@ AndroidRuntime/ReactNativeJS errors, and timed screenshots confirmed that one
 wrapped line at a time carried the coral highlight during automatic scrolling.
 The same retained book displayed the source text `communities.2` as a small
 raised `2`. A direct speech-pipeline check produced `communities. The evidence`,
-confirming that the marker is not sent to any TTS engine. The QA APK uses a
-temporary Reviewer entitlement only in its generated workspace; that override
-is not present in tracked source and cannot enter a Play build.
+confirming that the marker is not sent to any TTS engine. The QA APK enables
+the tracked `expo.extra.qaReviewerMode` build flag in its generated workspace.
+That flag grants only the cost-free Reviewer tier and is absent from production
+`app.json` and Play builds.
 
 The existing `artifacts/readflow-1.0.29-35.aab` was built before the entitlement
 refresh, 12-row backward expansion, spoken-title treatment, Sherpa initialization
 patch, independent active-line rows, and silent reference markers. Do not use
 that artifact to verify these fixes. The next Play candidate must be rebuilt
 with version code `36` or higher.
+
+## 1.0.30 Regression Repair Source
+
+The tracked source is now `1.0.30 (36)`. It adds a pure/testable speech-chunk
+pipeline that keeps unfinished sentences continuous across PDF page boundaries
+without removing the visual page divider. rF AI speech normalization now makes
+auxiliary pairs such as `would have` explicit and bumps the generated-audio
+cache key to `ss0.21`, preventing stale audio from hiding the repair.
+
+AI Pro, Power, and cost-free Reviewer access now permit downloaded rF AI and
+Cloud AI audio to continue after screen lock or app switching, using Expo Audio
+lock-screen controls. Free, Reader Plus, and Device voice remain foreground-
+only. The plan source of truth also applies the owner-directed beta limits:
+Free is one native-text import, 300 pages and 5 rF AI minutes/day; Reader Plus
+has unlimited supported native-text reading and unlimited downloaded rF AI
+during beta, with no OCR, text AI, or Cloud AI allowance.
+
+The permanent bug ledger and release matrix is
+`READER_REGRESSION_CHECKLIST.md`. `npm run check:release` now executes its pure
+reader assertions. Manual connected-phone results must be added there or here;
+do not consider source-level checks sufficient for audio quality/background QA.
+
+### 2026-07-21 Connected-Phone QA Record
+
+The standalone reviewer build `com.urmiaworks.readflow.qa` version `1.0.30`
+(code `36`) was installed on Samsung SM-S918B. It opens the retained 133-page
+book directly at the persisted reading position (page 39 during the check),
+without a visible journey from page 1. rF AI successfully entered Android media
+`PLAYING` state, created the foreground audio service and media notification,
+and continued after a Home/app-switch check. The production package was removed
+from Android user 0, leaving only the intended QA package there.
+
+The build uses the cost-free **QA Reviewer** entitlement: no OCR, Cloud AI,
+text AI, or paid quota can be consumed, while local downloaded rF AI and
+background-media behavior can be tested. The voice sheet explicitly says that
+Reviewer, AI Pro, and Power keep rF AI reading after screen lock with
+lock-screen controls. A human still needs to listen to the revised `would have`
+render and a real PDF page-boundary sentence before a production promotion.
 
 Play Console may show `0` downloads shortly after real installs. Use Play
 Console Statistics and Release dashboard for install metrics; the public store
@@ -148,8 +187,11 @@ Reviewer access requires two Render secrets that must never be committed:
 In the app, the reviewer opens `Shelf -> ? -> App review access`, enters the
 access code once, and taps Activate. The backend returns a signed, app-install
 bound reviewer token. Reviewer access is hidden from public pricing and cannot
-call OpenAI, OCR, or Cloud AI voice. Rotate both secrets if the access code is
-shared outside the intended review group.
+call OpenAI, OCR, or Cloud AI voice. A separately packaged local QA build may
+set `expo.extra.qaReviewerMode=true`; it grants the same cost-free Reviewer
+tier without a token and must use `com.urmiaworks.readflow.qa`, never the
+production package. Rotate both secrets if the access code is shared outside
+the intended review group.
 
 Google Play internal/closed tester membership does not itself create a
 `reader_plus` RevenueCat entitlement. For beta access, prefer the existing
@@ -269,24 +311,15 @@ Rules:
 
 ## Current Follow-Ups
 
-Owner's numbered next-session priorities:
+Owner's numbered priorities are implemented in `1.0.30 (36)` source. The
+standalone reviewer build passed resume and Home/app-switch background checks;
+these items remain for human audible/lifecycle verification before production:
 
-1. Apply the pending subscription-plan revision documented in `COST_MODEL.md`.
-   This is recorded direction only and is not current app behavior. During beta,
-   Reader Plus should include unlimited downloaded rF AI rather than the earlier
-   proposed 10-minute daily allowance.
-2. Fix and regression-test an rF AI spoken-word omission in the retained
-   `book.pdf`: page 39, first paragraph, sentence `In a very small community,
-   dependence would have been difficult to escape.` The current QA voice omits
-   `would have`. First confirm those words reach `buildSpeechChunk`, then test
-   local synthesis/chunking and cached audio. Completion requires an audible
-   connected-phone check, not only a text-pipeline assertion.
-3. Enable background/locked-screen reading for AI Pro and Power. Reading must
-   continue when those subscribers lock the screen or leave readFlow, with
-   notification/lock-screen play, pause, and stop controls. Free and Reader Plus
-   must stop when readFlow leaves the foreground. Test entitlement changes,
-   screen lock/unlock, app switching, headset controls, and Android process
-   recreation without weakening the existing no-microphone permission rule.
+1. Confirm Free/Reader Plus beta limits against the production backend after it
+   is deployed.
+2. Audibly confirm the page-39 `would have` sentence with a fresh `ss0.21` render.
+3. Test AI Pro/Power lock, Home, notification controls, headset controls, and
+   process recreation; also confirm Free/Reader Plus stop outside the app.
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
@@ -297,12 +330,8 @@ Owner's numbered next-session priorities:
   final repair.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
-- Apply the owner-directed next tier revision recorded in `COST_MODEL.md` only
-  after the current reader QA session. It proposes Free at 1 book/300 pages and
-  5 rF AI minutes/day; Reader Plus with unlimited native-text PDF reading, no
-  OCR, and unlimited rF AI during beta; AI Pro with unlimited rF AI plus limited
-  OCR and very limited Cloud AI; and Power with higher hard limits. This is not
-  yet current app behavior. Free-tier ads remain an undecided follow-up.
+- Deploy the `1.0.30` canonical plan changes before relying on the revised Free
+  and Reader Plus limits. Free-tier ads remain an undecided follow-up.
 - Add a custom API domain instead of the confusing Render legacy subdomain.
 - Commit or organize Play listing graphics from `pic/` if they should be kept.
 - Build iOS only after App Store Connect products and RevenueCat iOS app setup.

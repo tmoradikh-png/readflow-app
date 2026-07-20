@@ -14,19 +14,19 @@ import { loadAppUserId } from "../AppIdentity";
  * on-device voice so reading never goes silent.
  */
 
-let audioModeReady = false;
-async function ensureAudioMode() {
-  if (audioModeReady) return;
+let audioModeBackground: boolean | null = null;
+async function ensureAudioMode(allowBackgroundPlayback = false) {
+  if (audioModeBackground === allowBackgroundPlayback) return;
   try {
     await setAudioModeAsync({
       playsInSilentMode: true,
-      shouldPlayInBackground: false,
+      shouldPlayInBackground: allowBackgroundPlayback,
       interruptionMode: "duckOthers",
     });
+    audioModeBackground = allowBackgroundPlayback;
   } catch {
     /* non-fatal */
   }
-  audioModeReady = true;
 }
 
 const CLOUD_VOICES = new Set([
@@ -167,7 +167,7 @@ export class CloudTTSProvider implements TTSProvider {
       return;
     }
 
-    await ensureAudioMode();
+    await ensureAudioMode(Boolean(opts.allowBackgroundPlayback));
 
     let uri: string;
     try {

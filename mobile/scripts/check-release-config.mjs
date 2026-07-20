@@ -30,9 +30,9 @@ const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
 const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.29";
-const EXPECTED_ANDROID_VERSION_CODE = 35;
-const EXPECTED_IOS_BUILD_NUMBER = "29";
+const EXPECTED_VERSION = "1.0.30";
+const EXPECTED_ANDROID_VERSION_CODE = 36;
+const EXPECTED_IOS_BUILD_NUMBER = "30";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
 // 0) This repo releases as a managed Expo app. A local generated android/
@@ -177,9 +177,9 @@ if (pluginConfig("./plugins/withAndroidReleaseManifestCleanup")) {
 
 const backgroundModes = ios.infoPlist?.UIBackgroundModes;
 if (Array.isArray(backgroundModes) && backgroundModes.includes("audio")) {
-  fail("iOS background audio mode is enabled even though readFlow is foreground-only");
+  fail("iOS background audio mode is enabled before the separate iOS lifecycle QA pass");
 } else {
-  pass("No background-audio mode declared");
+  pass("iOS background-audio mode remains disabled pending separate iOS QA");
 }
 if (ios.infoPlist?.NSMicrophoneUsageDescription) {
   fail("iOS microphone usage description is present but readFlow does not record audio");

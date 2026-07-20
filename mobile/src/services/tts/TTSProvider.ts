@@ -17,6 +17,8 @@ export interface SpeakOptions {
   lockScreenTitle?: string;
   lockScreenSubtitle?: string;
   lockScreenAlbum?: string;
+  /** Keep generated audio active after locking/leaving the app on eligible plans. */
+  allowBackgroundPlayback?: boolean;
   /** Provider-specific voice identifier. Device uses OS voice ids; cloud uses OpenAI voice ids. */
   voiceId?: string;
   /** Device voice to use if a paid/cloud provider falls back locally. */

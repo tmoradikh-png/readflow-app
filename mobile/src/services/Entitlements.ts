@@ -1,4 +1,4 @@
-import { API_BASE, apiHeaders } from "../config";
+import { API_BASE, apiHeaders, REVIEWER_QA_MODE } from "../config";
 import { loadAppUserId } from "./AppIdentity";
 import { loadReviewerToken } from "./ReviewerToken";
 
@@ -34,7 +34,7 @@ export interface EntitlementSnapshot {
 }
 
 const FREE_FEATURES: PlanFeatures = {
-  ads: true,
+  ads: false,
   ai: false,
   ocr: false,
   serverExtract: true,
@@ -50,9 +50,9 @@ export const FREE_LIMITS: PlanLimits = {
   cloudVoiceCharsPerMonth: 0,
   pdfsPerMonth: 1,
   maxFileSizeMb: 20,
-  maxPages: 2000,
-  perDocPageCap: 100,
-  localVoiceSecondsPerDay: 10 * 60,
+  maxPages: 300,
+  perDocPageCap: 300,
+  localVoiceSecondsPerDay: 5 * 60,
 };
 
 export const FREE_ENTITLEMENT: EntitlementSnapshot = {
@@ -61,6 +61,32 @@ export const FREE_ENTITLEMENT: EntitlementSnapshot = {
   features: FREE_FEATURES,
   limits: FREE_LIMITS,
   source: "free",
+};
+
+const QA_REVIEWER_ENTITLEMENT: EntitlementSnapshot = {
+  tier: "reviewer",
+  name: "QA Reviewer",
+  features: {
+    ads: false,
+    ai: false,
+    ocr: false,
+    serverExtract: true,
+    export: true,
+    cloudVoice: false,
+    unlimitedLibrary: true,
+    localVoice: true,
+  },
+  limits: {
+    ocrPagesPerMonth: 0,
+    aiActionsPerMonth: 0,
+    cloudVoiceCharsPerMonth: 0,
+    pdfsPerMonth: 10_000,
+    maxFileSizeMb: 200,
+    maxPages: 5000,
+    perDocPageCap: 0,
+    localVoiceSecondsPerDay: 0,
+  },
+  source: "dev-override",
 };
 
 export interface UsageSnapshot {
@@ -89,6 +115,7 @@ export interface UsageSnapshot {
 }
 
 export async function fetchEntitlement(forceRefresh = false): Promise<EntitlementSnapshot> {
+  if (REVIEWER_QA_MODE) return QA_REVIEWER_ENTITLEMENT;
   try {
     await Promise.all([loadAppUserId(), loadReviewerToken()]);
     const res = await fetch(`${API_BASE}/api/entitlements`, {

@@ -17,16 +17,17 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.28 / versionCode 34`.
+- Source release candidate is `1.0.30 / versionCode 36`.
 - Release checker passes for the current source configuration.
 - Android permissions include the minimum required for subscriptions plus
   generated-audio playback/model download services: `INTERNET`,
   `com.android.vending.BILLING`, `FOREGROUND_SERVICE`,
   `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, and `FOREGROUND_SERVICE_DATA_SYNC`.
   Microphone/recording permissions remain blocked.
-- Background audio has been removed; reading should stop when leaving the app.
-- Free tier is a limited manual preview with no read-aloud, OCR, AI, rF AI, or
-  Cloud AI.
+- Free, Reader Plus, and Device voice stop when leaving the app. AI Pro/Power
+  may continue rF AI or Cloud AI audio with media controls.
+- Free tier is one native-text book up to 300 pages plus 5 minutes/day of
+  downloaded rF AI. It has no OCR, text AI, or Cloud AI allowance.
 - RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
   Google Play products are published in RevenueCat, and the `default` offering
   has all six paid packages. Build `1.0.28` / code `34` is the current hotfix

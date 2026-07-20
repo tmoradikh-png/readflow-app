@@ -255,6 +255,21 @@ export const TextReflow = {
     return { text: output, sourceOffsets };
   },
 
+  /** True when adjacent visual rows are one sentence split by a PDF page turn. */
+  continuesAcrossPage(previous: Sentence, next: Sentence): boolean {
+    if (!previous || !next) return false;
+    if (previous.kind !== "body" || next.kind !== "body") return false;
+    if (next.page !== previous.page + 1 || next.pageSentenceIndex !== 0) return false;
+
+    const previousText = previous.text.trim().replace(/["'”’)}\]]+$/g, "");
+    if (!previousText || /[.!?。！？؟…:;؛]$/.test(previousText)) return false;
+
+    const nextText = next.text.trim();
+    if (!nextText) return false;
+    if (/^(?:[-*•·]|\d{1,3}[.)]|[A-Za-z][.)])\s+/.test(nextText)) return false;
+    return true;
+  },
+
   /** Find the chunk index that contains a given 1-based page number. */
   chunkIndexForPage(chunks: ReflowChunk[], page: number): number {
     for (let i = 0; i < chunks.length; i++) {

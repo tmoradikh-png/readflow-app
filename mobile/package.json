@@ -8,7 +8,8 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "check:release": "node ./scripts/check-release-config.mjs",
+    "check:reader-regressions": "node ./scripts/check-reader-regressions.mjs",
+    "check:release": "node ./scripts/check-release-config.mjs && npm run check:reader-regressions",
     "build:android:internal": "npm run check:release && eas build -p android --profile internal",
     "build:ios:internal": "npm run check:release && eas build -p ios --profile internal"
   },

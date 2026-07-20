@@ -35,6 +35,10 @@ import {
   resolveReadingPosition,
 } from "../services/ReadingPosition";
 import {
+  buildSpeechChunk as createSpeechChunk,
+  SpeechChunk,
+} from "../services/SpeechChunk";
+import {
   addLocalVoiceSeconds,
   formatLocalVoiceRemaining,
   getLocalVoiceSecondsToday,
@@ -81,26 +85,8 @@ interface LineSegment extends LineRange {
   text: string;
 }
 
-interface SpeechChunkSpan {
-  sentence: Sentence;
-  start: number;
-  end: number;
-  sourceStart: number;
-  sourceOffsets: number[];
-}
-
-interface SpeechChunk {
-  text: string;
-  spans: SpeechChunkSpan[];
-  nextIndex: number;
-  lastPage: number;
-  lastWithin: number;
-}
-
 const TTS_PREFETCH_AHEAD = 8;
 const LOCAL_AI_PREFETCH_AHEAD = 6;
-const LOCAL_AI_MAX_CHARS = 420;
-const LOCAL_AI_MAX_SENTENCES = 2;
 const KEEP_AWAKE_TAG = "readflow-reading";
 const READER_WINDOW_BEFORE = 12;
 const READER_WINDOW_AFTER = 180;
@@ -371,6 +357,7 @@ export function Reader({
   const backwardSeedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const backgroundPlaybackAllowedRef = useRef(false);
   const cloudVoiceLimitWarnedRef = useRef(false);
   const cloudVoiceLanguageWarnedRef = useRef(false);
   const localVoiceWarnedRef = useRef(false);
@@ -408,6 +395,12 @@ export function Reader({
   const flatRef = useRef<Sentence[]>([]);
   const docRef = useRef(doc); // current doc for stable callbacks
   docRef.current = doc;
+  const backgroundPlaybackAllowed =
+    (entitlement.tier === "reviewer" ||
+      entitlement.tier === "ai_pro" ||
+      entitlement.tier === "power") &&
+    (voiceMode === "local" || voiceMode === "natural");
+  backgroundPlaybackAllowedRef.current = backgroundPlaybackAllowed;
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [loadingPageMsg, setLoadingPageMsg] = useState<string | null>(null);
   useEffect(() => {
@@ -528,8 +521,9 @@ export function Reader({
       flushLocalVoiceUsage();
       if (!playingRef.current) return;
 
-      // Reading is foreground-only for now. The app keeps the screen awake while
-      // reading, and any Home/app-switch/background transition hard-stops audio.
+      // AI Pro and Power can continue generated audio with lock-screen controls.
+      // Free and Reader Plus remain foreground-only, as does Android device TTS.
+      if (backgroundPlaybackAllowedRef.current) return;
       epochRef.current++;
       playingRef.current = false;
       setIsPlaying(false);
@@ -548,7 +542,7 @@ export function Reader({
     if (entitlement.features.localVoice && readingLanguage.rfAi) {
       openFeatureLock(
         "Try rF AI free",
-        "Free includes 10 minutes of rF AI reading each day. Return to the shelf, open Voice, choose rF AI, and download the optional offline voice pack."
+        "Free includes 5 minutes of rF AI reading each day. Return to the shelf, open Voice, choose rF AI, and download the optional offline voice pack."
       );
       return;
     }
@@ -574,7 +568,7 @@ export function Reader({
   function openLocalVoiceLimitOffer() {
     openFeatureLock(
       "Daily rF AI preview finished",
-      "Free includes 10 minutes of rF AI each day. Upgrade to AI Pro for unlimited downloaded rF AI reading, OCR, AI questions, and a Cloud AI allowance."
+      "Free includes 5 minutes of rF AI each day. Reader Plus includes unlimited downloaded rF AI during beta; AI Pro adds OCR, AI questions, and a Cloud AI allowance."
     );
   }
 
@@ -615,7 +609,7 @@ export function Reader({
     if (engine === "local_ai" && !entitlement.features.localVoice) {
       openFeatureLock(
         "Unlock rF AI voice",
-        "rF AI voice is included in AI Pro and Power. Free includes a 10-minute daily preview when rF AI is available for the book language."
+        "rF AI voice is included in Reader Plus, AI Pro, and Power. Free includes a 5-minute daily preview when rF AI is available for the book language."
       );
       return;
     }
@@ -673,7 +667,7 @@ export function Reader({
     if (!entitlement.features.localVoice) {
       openFeatureLock(
         "Unlock rF AI voice",
-        "rF AI voice is included in AI Pro and Power. Free includes a 10-minute daily preview when rF AI is available for the book language."
+        "rF AI voice is included in Reader Plus, AI Pro, and Power. Free includes a 5-minute daily preview when rF AI is available for the book language."
       );
       return true;
     }
@@ -899,60 +893,11 @@ export function Reader({
     mode: RuntimeVoiceMode,
     firstOffset = 0
   ): SpeechChunk | null {
-    const first = list[startIndex];
-    if (!first) return null;
-
-    const maxSentences =
-      first.kind === "heading" ? 1 : mode === "local" ? LOCAL_AI_MAX_SENTENCES : 1;
-    const maxChars = mode === "local" ? LOCAL_AI_MAX_CHARS : Number.POSITIVE_INFINITY;
-    const spans: SpeechChunkSpan[] = [];
-    const parts: string[] = [];
-    let charCursor = 0;
-    let index = startIndex;
-
-    while (index < list.length && spans.length < maxSentences) {
-      const sentence = list[index];
-      if (!sentence || sentence.page > freeCap()) break;
-      if (sentence.page !== first.page) break;
-      if (sentence.kind !== first.kind) break;
-
-      const sourceStart =
-        index === startIndex
-          ? Math.min(Math.max(0, firstOffset), sentence.text.length)
-          : 0;
-      const prepared = TextReflow.speechText(sentence.text, sentence.kind, sourceStart);
-      const sourceText = prepared.text;
-      if (!sourceText.trim()) {
-        index++;
-        continue;
-      }
-
-      const separator = parts.length > 0 ? " " : "";
-      const projectedLength = charCursor + separator.length + sourceText.length;
-      if (parts.length > 0 && projectedLength > maxChars) break;
-
-      if (separator) charCursor += separator.length;
-      spans.push({
-        sentence,
-        start: charCursor,
-        end: charCursor + sourceText.length,
-        sourceStart,
-        sourceOffsets: prepared.sourceOffsets,
-      });
-      parts.push(sourceText);
-      charCursor += sourceText.length;
-      index++;
-    }
-
-    if (!spans.length) return null;
-    const last = spans[spans.length - 1].sentence;
-    return {
-      text: parts.join(" "),
-      spans,
-      nextIndex: index,
-      lastPage: last.page,
-      lastWithin: pageWithinIndex(last, list),
-    };
+    return createSpeechChunk(startIndex, list, {
+      mode,
+      firstOffset,
+      pageCap: freeCap(),
+    });
   }
 
   function locateChunkPosition(chunk: SpeechChunk, charOffset: number) {
@@ -1311,6 +1256,7 @@ export function Reader({
       lockScreenTitle: docRef.current.fileName || "readFlow",
       lockScreenSubtitle: `Page ${s.page} - ${voiceLabelFor(voiceMode)}`,
       lockScreenAlbum: "readFlow",
+      allowBackgroundPlayback: backgroundPlaybackAllowedRef.current,
       onFallback: (info) => {
         if (info.reason === "quota" && !cloudVoiceLimitWarnedRef.current) {
           cloudVoiceLimitWarnedRef.current = true;

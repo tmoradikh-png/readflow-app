@@ -118,12 +118,13 @@ export const TIERS: Tier[] = [
       cloudVoiceCharsPerMonth: 0,
       pdfsPerMonth: 1,
       maxFileSizeMb: 20,
-      maxPages: 2000,
-      perDocPageCap: 100,
-      localVoiceSecondsPerDay: 10 * 60,
+      maxPages: 300,
+      perDocPageCap: 300,
+      localVoiceSecondsPerDay: 5 * 60,
     },
     features: {
-      ads: true,
+      // Ads are not integrated or declared in the current Play release.
+      ads: false,
       ai: false,
       ocr: false,
       serverExtract: true, // native text only; OCR stays off
@@ -136,7 +137,7 @@ export const TIERS: Tier[] = [
   {
     key: "reader_plus",
     name: "Reader Plus",
-    tagline: "Ad-free reading for full text PDFs.",
+    tagline: "Ad-free reading and unlimited offline rF AI during beta.",
     entitlementId: "reader_plus",
     products: {
       monthly: { productId: "readflow_reader_plus_monthly", priceUsd: 4.99 },
@@ -160,7 +161,7 @@ export const TIERS: Tier[] = [
       export: false,
       cloudVoice: false,
       unlimitedLibrary: true,
-      localVoice: false,
+      localVoice: true,
     },
   },
   {

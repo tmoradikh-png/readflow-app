@@ -189,7 +189,7 @@ export function LibraryScreen({
         if (cancelled || seen) return;
         setNotice({
           title: "Try rF AI free",
-          body: `Free includes 10 minutes of offline rF AI reading each day. The optional ${formatLocalModelSize(localStatus.modelSizeBytes)} voice pack downloads once, runs on this phone, and has no Cloud AI cost.`,
+          body: `Free includes 5 minutes of offline rF AI reading each day. The optional ${formatLocalModelSize(localStatus.modelSizeBytes)} voice pack downloads once, runs on this phone, and has no Cloud AI cost.`,
           secondary: { label: "Not now", tone: "secondary" },
           primary: { label: "Download", onPress: installLocalVoice },
         });
@@ -970,6 +970,10 @@ function VoiceSettingsSheet({
       entitlement.features.cloudVoice);
   const canUseRfVoice = Boolean(entitlement.features.localVoice);
   const rfVoiceDailyLimit = entitlement.limits.localVoiceSecondsPerDay || 0;
+  const canContinueRFAiInBackground =
+    entitlement.tier === "reviewer" ||
+    entitlement.tier === "ai_pro" ||
+    entitlement.tier === "power";
   const currentDeviceVoice = deviceVoices.find((v) => v.id === preferences.deviceVoiceId);
   const [voiceRegion, setVoiceRegion] = useState("recommended");
   const regionOptions = useMemo(() => {
@@ -1076,7 +1080,7 @@ function VoiceSettingsSheet({
                 title="rF AI"
                 detail={
                   entitlement.tier === "free" && rfVoiceDailyLimit > 0
-                    ? `10-minute daily preview. Downloads once and runs on this phone.`
+                    ? `5-minute daily preview. Downloads once and runs on this phone.`
                     : localStatus.engineInstalled
                     ? readingLanguage.rfAi
                       ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
@@ -1133,7 +1137,11 @@ function VoiceSettingsSheet({
                 </Text>
                 <Text style={styles.voiceBlockHint}>
                   {localStatus.engineInstalled
-                    ? `${localStatus.modelName} reads on this phone with no OpenAI cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. Reading stops when you leave readFlow.`
+                    ? `${localStatus.modelName} reads on this phone with no OpenAI cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. ${
+                        canContinueRFAiInBackground
+                          ? "This plan keeps rF AI reading on when the screen locks, with lock-screen controls."
+                          : "Reading stops when you leave readFlow."
+                      }`
                     : localStatus.nativeAvailable
                       ? `${localStatus.modelName} downloads once, about ${formatLocalModelSize(localStatus.modelSizeBytes)}.`
                       : localStatus.detail}
@@ -1403,7 +1411,7 @@ function HelpAboutSheet({
             <View style={styles.helpRows}>
               <HelpRow label="+" text="Add a PDF or Word document." />
               <HelpRow label="Lang" text="Sets OCR, phone voices, Cloud AI, and AI answer language." />
-              <HelpRow label="Voice" text="Choose Phone voice, capped Cloud AI, or downloaded rF AI. Free includes 10 rF AI minutes per day." />
+              <HelpRow label="Voice" text="Choose Phone voice, capped Cloud AI, or downloaded rF AI. Free includes 5 rF AI minutes per day." />
               <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
               <HelpRow label="Fix text" text="Rebuilds a bad PDF import with paid OCR." />
               <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />

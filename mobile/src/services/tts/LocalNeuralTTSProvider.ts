@@ -10,22 +10,23 @@ import {
   LOCAL_NEURAL_VOICE_ID,
 } from "../LocalNeuralVoice";
 import type { TtsEngine } from "react-native-sherpa-onnx/tts";
+import { normalizeLocalSpeechText } from "../SpeechNormalization";
 
-let audioModeReady = false;
-const LOCAL_TTS_RENDER_VERSION = "ss0.20";
+let audioModeBackground: boolean | null = null;
+const LOCAL_TTS_RENDER_VERSION = "ss0.21";
 
-async function ensureAudioMode() {
-  if (audioModeReady) return;
+async function ensureAudioMode(allowBackgroundPlayback = false) {
+  if (audioModeBackground === allowBackgroundPlayback) return;
   try {
     await setAudioModeAsync({
       playsInSilentMode: true,
-      shouldPlayInBackground: false,
+      shouldPlayInBackground: allowBackgroundPlayback,
       interruptionMode: "duckOthers",
     });
+    audioModeBackground = allowBackgroundPlayback;
   } catch {
     /* non-fatal */
   }
-  audioModeReady = true;
 }
 
 export class LocalNeuralTTSProvider implements TTSProvider {
@@ -141,7 +142,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       return;
     }
 
-    await ensureAudioMode();
+    await ensureAudioMode(Boolean(opts.allowBackgroundPlayback));
 
     let uri: string;
     try {
@@ -307,29 +308,6 @@ function clampSpeed(rate?: number): number {
 
 function tailGuardMs(speed: number): number {
   return Math.round(Math.max(80, Math.min(180, 140 / speed)));
-}
-
-function normalizeLocalSpeechText(value: string): string {
-  return (value || "")
-    .normalize("NFKC")
-    .replace(/\u00ad/g, "")
-    .replace(/[“”„‟]/g, '"')
-    .replace(/[‘’‚‛]/g, "'")
-    .replace(/[‐‑‒–—―]/g, "-")
-    .replace(/[…]/g, "...")
-    .replace(/&/g, " and ")
-    .replace(/%/g, " percent ")
-    .replace(/\bAI\b/g, "A I")
-    .replace(/\bOCR\b/g, "O C R")
-    .replace(/\bPDF\b/g, "P D F")
-    .replace(/\bDr\./g, "Doctor")
-    .replace(/\bMr\./g, "Mister")
-    .replace(/\bMrs\./g, "Missus")
-    .replace(/\bMs\./g, "Miss")
-    .replace(/\bProf\./g, "Professor")
-    .replace(/\s+/g, " ")
-    .replace(/\s+([,.;:!?])/g, "$1")
-    .trim();
 }
 
 function toNativePath(uri: string): string {

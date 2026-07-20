@@ -84,7 +84,7 @@ Free tier definition (from `src/config/plans.ts`):
     cloudVoice: false,   // ← TTS is blocked
     serverExtract: true, // ✓ PDF extraction allowed
     export: false,       // ← Export blocked
-    ads: true,           // Show ads to free users
+    ads: false,          // Ads are not integrated or declared in the current release
     unlimitedLibrary: false, // Cap library size
   },
   limits: {
@@ -93,8 +93,9 @@ Free tier definition (from `src/config/plans.ts`):
     ocrPagesPerMonth: 0,      // ← Cannot OCR any pages
     pdfsPerMonth: 1,          // ✓ Can extract 1 PDF
     maxFileSizeMb: 20,        // ✓ Max file size
-    maxPages: 2000,           // ✓ Doc page limit
-    perDocPageCap: 100,       // ✓ Show first 100 pages, then paywall
+    maxPages: 300,            // ✓ Doc page limit
+    perDocPageCap: 300,       // ✓ Full imported book within the cap
+    localVoiceSecondsPerDay: 5 * 60, // ✓ Downloaded rF AI preview
   },
 }
 ```
