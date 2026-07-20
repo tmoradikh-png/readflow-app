@@ -538,6 +538,33 @@ If cloud voice must be high quality (`tts-1-hd`), keep allowances very small:
 If using cheaper/lower-latency `tts-1`, allowances can be larger but still need
 hard caps. Do not allow 12 hours/day cloud listening in normal paid tiers.
 
+## Pending Owner-Directed Plan Revision (Not Implemented)
+
+Recorded on 2026-07-20 for the next entitlement/pricing pass. This is product
+direction only. It does not describe the current app, backend, RevenueCat
+offering, or store listing, and must not be marketed until implementation and
+QA are complete.
+
+| Tier | Proposed next behavior | Direct vendor-cost rule |
+| --- | --- | --- |
+| Free | Up to 1 imported book and at most 300 pages; no OCR; 5 minutes/day of downloaded on-device rF AI | No OpenAI/OCR/cloud-voice cost. Only shared Render import traffic is acceptable. |
+| Reader Plus | Unlimited supported native-text PDF import and reading; no OCR; 10 minutes/day of downloaded on-device rF AI | No OpenAI/OCR/cloud-voice cost. rF AI runs on the user's phone. |
+| AI Pro | Unlimited supported native-text PDF import; unlimited downloaded on-device rF AI; a limited monthly OCR allowance; a very small monthly Cloud AI voice allowance | Keep hard backend caps and retain the direct AI vendor-cost guardrail. |
+| Power | AI Pro capabilities with materially higher OCR and Cloud AI voice limits | Higher hard caps, still sized so the customer pays comfortably above marginal cost. |
+
+Open decisions for that pass:
+
+- Choose the exact AI Pro and Power OCR/Cloud AI allowances only after checking
+  current provider prices and the existing 20% direct-vendor-cost guardrail.
+- Decide whether Free contains ads. Ads are optional, not approved yet. Adding
+  them requires corresponding privacy, consent, Data Safety, store-listing, and
+  dependency review; the current Play declaration says the app has no ads.
+- Define whether the 300-page Free limit is a per-book ceiling, a total account
+  allowance, or both. The owner's current intent is one book with a maximum of
+  300 pages.
+- All exhausted limits should open a themed upgrade explanation rather than
+  showing only a quota error.
+
 ## Free Tier Abuse Guard
 
 The desired free limit of 1 book / about 100 pages needs a stable user identity.

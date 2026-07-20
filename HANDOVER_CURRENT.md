@@ -269,6 +269,12 @@ Rules:
   final repair.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
+- Apply the owner-directed next tier revision recorded in `COST_MODEL.md` only
+  after the current reader QA session. It proposes Free at 1 book/300 pages and
+  5 rF AI minutes/day; Reader Plus with unlimited native-text PDF reading, no
+  OCR, and 10 rF AI minutes/day; AI Pro with unlimited rF AI plus limited OCR
+  and very limited Cloud AI; and Power with higher hard limits. This is not yet
+  current app behavior. Free-tier ads remain an undecided follow-up.
 - Add a custom API domain instead of the confusing Render legacy subdomain.
 - Commit or organize Play listing graphics from `pic/` if they should be kept.
 - Build iOS only after App Store Connect products and RevenueCat iOS app setup.
