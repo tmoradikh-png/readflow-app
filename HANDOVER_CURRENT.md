@@ -270,6 +270,12 @@ Owner's numbered next-session priorities:
    `would have`. First confirm those words reach `buildSpeechChunk`, then test
    local synthesis/chunking and cached audio. Completion requires an audible
    connected-phone check, not only a text-pipeline assertion.
+3. Enable background/locked-screen reading for AI Pro and Power. Reading must
+   continue when those subscribers lock the screen or leave readFlow, with
+   notification/lock-screen play, pause, and stop controls. Free and Reader Plus
+   must stop when readFlow leaves the foreground. Test entitlement changes,
+   screen lock/unlock, app switching, headset controls, and Android process
+   recreation without weakening the existing no-microphone permission rule.
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
