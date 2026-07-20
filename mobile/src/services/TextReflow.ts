@@ -24,6 +24,18 @@ export interface ReflowChunk {
   sentences: Sentence[];
 }
 
+export interface ReferenceMarker {
+  start: number;
+  end: number;
+  text: string;
+}
+
+export interface SpeechTextMap {
+  text: string;
+  /** Source character offset for each character retained in `text`. */
+  sourceOffsets: number[];
+}
+
 /**
  * TextReflow — turns raw page text into clean, sentence-level units that the
  * Reader renders. Sentences are the unit of highlighting AND the unit we feed
@@ -195,6 +207,54 @@ export const TextReflow = {
     return tokens;
   },
 
+  /** Inline citation/footnote markers that should be shown as superscripts and not spoken. */
+  referenceMarkers(text: string, kind: Sentence["kind"] = "body"): ReferenceMarker[] {
+    return findReferenceMarkers(text, kind);
+  },
+
+  /**
+   * Prepare text for every voice engine while retaining a map back to the
+   * displayed sentence. This keeps line highlighting aligned after silent
+   * citation markers are removed.
+   */
+  speechText(
+    text: string,
+    kind: Sentence["kind"] = "body",
+    sourceStart = 0
+  ): SpeechTextMap {
+    const markers = findReferenceMarkers(text, kind);
+    const sourceOffsets: number[] = [];
+    let output = "";
+    let markerIndex = markers.findIndex((marker) => marker.end > sourceStart);
+    if (markerIndex < 0) markerIndex = markers.length;
+
+    for (let index = Math.max(0, sourceStart); index < text.length; index++) {
+      const marker = markers[markerIndex];
+      if (marker && index >= marker.start && index < marker.end) {
+        index = marker.end - 1;
+        markerIndex++;
+        continue;
+      }
+
+      const char = text[index];
+      if (/\s/.test(char)) {
+        if (!output || output.endsWith(" ")) continue;
+        output += " ";
+        sourceOffsets.push(index);
+        continue;
+      }
+
+      output += char;
+      sourceOffsets.push(index);
+    }
+
+    if (output.endsWith(" ")) {
+      output = output.slice(0, -1);
+      sourceOffsets.pop();
+    }
+    return { text: output, sourceOffsets };
+  },
+
   /** Find the chunk index that contains a given 1-based page number. */
   chunkIndexForPage(chunks: ReflowChunk[], page: number): number {
     for (let i = 0; i < chunks.length; i++) {
@@ -203,6 +263,49 @@ export const TextReflow = {
     return -1;
   },
 };
+
+const SUPERSCRIPT_REFERENCE_RE = /[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g;
+const BRACKETED_REFERENCE_RE = /\[(?:\d{1,3})(?:\s*[,;\-–—]\s*\d{1,3})*\]/g;
+const PUNCTUATION_REFERENCE_RE = /[.!?;:](\d{1,3})(?=\s|$)/g;
+const ATTACHED_REFERENCE_RE = /[a-z\u00c0-\u024f]{4,}(\d{1,2})(?=\s|[,.;:!?)]|$)/g;
+
+function findReferenceMarkers(text: string, kind: Sentence["kind"]): ReferenceMarker[] {
+  if (!text) return [];
+  const ranges: ReferenceMarker[] = [];
+  const add = (start: number, end: number) => {
+    if (start < 0 || end <= start || ranges.some((range) => start < range.end && end > range.start)) {
+      return;
+    }
+    ranges.push({ start, end, text: text.slice(start, end) });
+  };
+
+  for (const match of text.matchAll(SUPERSCRIPT_REFERENCE_RE)) {
+    add(match.index, match.index + match[0].length);
+  }
+  for (const match of text.matchAll(BRACKETED_REFERENCE_RE)) {
+    add(match.index, match.index + match[0].length);
+  }
+  for (const match of text.matchAll(PUNCTUATION_REFERENCE_RE)) {
+    const digits = match[1];
+    const punctuationIndex = match.index;
+    if (text[punctuationIndex] === "." && /\d/.test(text[punctuationIndex - 1] || "")) continue;
+    const start = match.index + match[0].length - digits.length;
+    add(start, start + digits.length);
+  }
+
+  // A lost PDF superscript often arrives attached to the preceding word. Keep
+  // this conservative and body-only so headings, model names, dates and short
+  // forms such as MP3 are not silently changed.
+  if (kind === "body") {
+    for (const match of text.matchAll(ATTACHED_REFERENCE_RE)) {
+      const digits = match[1];
+      const start = match.index + match[0].length - digits.length;
+      add(start, start + digits.length);
+    }
+  }
+
+  return ranges.sort((a, b) => a.start - b.start);
+}
 
 function nativeStructuredUnits(
   raw: string,

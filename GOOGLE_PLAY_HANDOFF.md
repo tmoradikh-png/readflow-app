@@ -27,9 +27,13 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 - The current repair candidate uses version code `35`. Any later Android build
   must use `36` or higher after checking EAS and Play for consumed codes.
 - A post-build 2026-07-20 source patch adds immediate RevenueCat/backend
-  entitlement reconciliation, bounded backward reader-window expansion, and
-  distinct spoken-title treatment. It is not in the existing `1.0.29 (35)` AAB;
-  the next internal/production candidate must use code `36` or higher.
+  entitlement reconciliation, bounded backward reader-window expansion,
+  distinct spoken-title treatment, safe Sherpa rF AI initialization, and an
+  independently rendered active-line highlight. It also renders PDF footnote
+  markers as small raised digits and removes them from every voice mode. It is
+  not in the existing
+  `1.0.29 (35)` AAB; the next internal/production candidate must use code `36`
+  or higher.
 
 2026-07-20 reader repair candidate:
 
@@ -52,6 +56,26 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 - It has passed automated source, build, and signed-bundle checks but has not
   passed connected phone QA yet. Upload it to an internal track first; do not
   promote it to production before that QA.
+
+2026-07-20 post-build rF AI QA:
+
+- The side-by-side QA package reproduced a Sherpa crash on Samsung SM-S918B:
+  React Native passed absent optional Supertonic tuning numbers as `null`, while
+  the Android bridge required Kotlin `Double` values.
+- `patch-package` now changes `react-native-sherpa-onnx@0.4.3` to pass
+  `Number.NaN`; the native module uses the model defaults for these values.
+- A rebuilt QA APK played rF AI without AndroidRuntime/ReactNativeJS errors.
+  Android MediaSession reported `PLAYING`, and timed screenshots confirmed the
+  coral highlight was visible and advanced one wrapped line at a time without
+  retaining earlier lines in the paragraph.
+- The retained book's `communities.2` marker displayed as a small raised `2`.
+  The shared speech preparation path produced `communities. The evidence`, so
+  Device, rF AI, and Cloud AI do not speak the reference index. Decimal values
+  and terms such as `1.2`, `CO2`, and `MP3` remain ordinary readable text.
+- The QA-only Reviewer override is confined to a generated temporary workspace.
+  Tracked release source still requires the configured Reviewer access flow.
+- These rF AI repairs are newer than `artifacts/readflow-1.0.29-35.aab`; rebuild
+  with Android version code `36` or higher before internal or production use.
 
 2026-07-15 hotfix build:
 
@@ -344,13 +368,19 @@ Cloud AI voice, or AI questions, so it cannot create OpenAI or OCR charges.
 - Connected Samsung SM-G975F verified Google Play build `1.0.27 (33)`, live
   RevenueCat paywall product loading, and Google Play checkout opening. Purchase
   was not completed because checkout showed a real card, not a test card.
+- Connected Samsung SM-S918B verified the post-build rF AI dependency patch:
+  local neural playback remained alive, MediaSession reported `PLAYING`, and the
+  active-line highlight advanced one independently rendered line at a time.
+  The same QA pass verified small raised PDF reference digits and silent
+  citation removal before speech.
 
 ## Known Follow Ups
 
 - Add the reviewer access code and exact in-app navigation to Play Console App
   access before submitting `1.0.29`; never put the signing secret there.
 - Complete phone regression QA for lock/unlock, rotation, long-book scrolling,
-  bookmark/resume/page navigation, headings, and Free rF AI daily quota.
+  bookmark/resume/page navigation, audible headings, and the Free rF AI daily
+  quota. rF AI startup and active-line highlighting passed connected-phone QA.
 - Run purchase, restore, upgrade, downgrade, cancel, and entitlement expiry
   checks now that production is active. Finish Play license testing first; avoid
   accidental real purchases from non-test accounts.

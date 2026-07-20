@@ -72,6 +72,21 @@ The 2026-07-20 repair addresses release-blocking reading defects:
   CPU, battery, and the downloaded model; it makes no OpenAI call.
 - An internal Reviewer tier grants unlimited no-vendor-cost reading features
   and rF AI. It cannot use OCR, text AI, or Cloud AI voice.
+- rF AI initialization no longer sends missing optional Supertonic tuning values
+  as JavaScript `undefined`. `patch-package` now supplies `Number.NaN`, which the
+  Android Sherpa bridge interprets as "use the model default" instead of crashing
+  while casting `null` to Kotlin `Double`. The reproducible dependency patch is
+  `mobile/patches/react-native-sherpa-onnx+0.4.3.patch` and runs on `postinstall`.
+- The current sentence plus the next three sentences are measured before they
+  become active. Active wrapped lines render as separate React Native `Text`
+  rows, so Android/Fabric cannot retain the background from earlier lines in a
+  paragraph. Audio chunk and buffer sizes are unchanged.
+- Inline footnote/reference markers are recognized in common PDF forms such as
+  superscript digits, `[2]`, `communities.2`, and `communities2`. They render as
+  small raised digits and are removed before Device, rF AI, or Cloud AI speech.
+  A retained source-offset map keeps the spoken position and line highlight in
+  sync after those silent markers are removed. Decimal values and names such as
+  `1.2`, `CO2`, and `MP3` are deliberately preserved.
 
 Automated verification passed for TypeScript, backend build, release config,
 Metro Android bundling, stable-position migration, heading parsing, 500-page
@@ -82,10 +97,22 @@ page 2 without jumping; focused AndroidRuntime/ReactNativeJS logs contained no
 crash. Long-book page-39 regression, audible heading quality, paid lock-screen
 playback, and sandbox purchase/restore still require owner-observed QA.
 
+On 2026-07-20 the newer source was also installed as side-by-side package
+`com.urmiaworks.readflow.qa` on Samsung SM-S918B. A retained 133-page book opened
+at page 38. rF AI reached Android `PLAYING`, remained alive without
+AndroidRuntime/ReactNativeJS errors, and timed screenshots confirmed that one
+wrapped line at a time carried the coral highlight during automatic scrolling.
+The same retained book displayed the source text `communities.2` as a small
+raised `2`. A direct speech-pipeline check produced `communities. The evidence`,
+confirming that the marker is not sent to any TTS engine. The QA APK uses a
+temporary Reviewer entitlement only in its generated workspace; that override
+is not present in tracked source and cannot enter a Play build.
+
 The existing `artifacts/readflow-1.0.29-35.aab` was built before the entitlement
-refresh, 12-row backward expansion, and spoken-title changes. Do not use that
-artifact to verify these fixes. The next Play candidate must be rebuilt with
-version code `36` or higher.
+refresh, 12-row backward expansion, spoken-title treatment, Sherpa initialization
+patch, independent active-line rows, and silent reference markers. Do not use
+that artifact to verify these fixes. The next Play candidate must be rebuilt
+with version code `36` or higher.
 
 Play Console may show `0` downloads shortly after real installs. Use Play
 Console Statistics and Release dashboard for install metrics; the public store
@@ -236,9 +263,10 @@ Rules:
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
 - Build a new Android candidate with version code `36` or higher after the
-  entitlement/title/navigation repair, upload it to a Play internal track, and
-  complete the reader regression checklist before public promotion. The older
-  `artifacts/readflow-1.0.29-35.aab` does not contain the final repair.
+  entitlement/title/navigation/rF AI repair, upload it to a Play internal track,
+  and complete the remaining reader regression checklist before public
+  promotion. The older `artifacts/readflow-1.0.29-35.aab` does not contain the
+  final repair.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
 - Add a custom API domain instead of the confusing Render legacy subdomain.

@@ -86,6 +86,7 @@ interface SpeechChunkSpan {
   start: number;
   end: number;
   sourceStart: number;
+  sourceOffsets: number[];
 }
 
 interface SpeechChunk {
@@ -919,7 +920,8 @@ export function Reader({
         index === startIndex
           ? Math.min(Math.max(0, firstOffset), sentence.text.length)
           : 0;
-      const sourceText = sentence.text.slice(sourceStart);
+      const prepared = TextReflow.speechText(sentence.text, sentence.kind, sourceStart);
+      const sourceText = prepared.text;
       if (!sourceText.trim()) {
         index++;
         continue;
@@ -935,6 +937,7 @@ export function Reader({
         start: charCursor,
         end: charCursor + sourceText.length,
         sourceStart,
+        sourceOffsets: prepared.sourceOffsets,
       });
       parts.push(sourceText);
       charCursor += sourceText.length;
@@ -958,9 +961,10 @@ export function Reader({
       chunk.spans.find((candidate) => bounded <= candidate.end) ||
       chunk.spans[chunk.spans.length - 1];
     if (!span) return null;
+    const localOffset = Math.max(0, Math.min(span.sourceOffsets.length - 1, bounded - span.start));
     return {
       sentence: span.sentence,
-      charOffset: Math.max(0, span.sourceStart + bounded - span.start),
+      charOffset: span.sourceOffsets[localOffset] ?? span.sourceStart,
     };
   }
 
@@ -1758,6 +1762,9 @@ export function Reader({
           <SentenceRow
             sentence={item}
             active={item.id === currentId}
+            measureForHighlight={
+              currentId != null && item.id >= currentId && item.id <= currentId + 3
+            }
             activeLineIndex={item.id === activeLine.sentenceId ? activeLine.lineIndex : null}
             fontSize={settings.fontSize}
             lineHeight={lineHeight}
@@ -1881,6 +1888,7 @@ export function Reader({
 interface SentenceRowProps {
   sentence: Sentence;
   active: boolean;
+  measureForHighlight: boolean;
   activeLineIndex: number | null;
   fontSize: number;
   lineHeight: number;
@@ -1893,6 +1901,7 @@ interface SentenceRowProps {
 const SentenceRow = React.memo(function SentenceRow({
   sentence,
   active,
+  measureForHighlight,
   activeLineIndex,
   fontSize,
   lineHeight,
@@ -1903,6 +1912,10 @@ const SentenceRow = React.memo(function SentenceRow({
   showPageDivider,
 }: SentenceRowProps) {
   const tokens = useMemo(() => TextReflow.tokenizeWords(sentence.text), [sentence.text]);
+  const referenceMarkers = useMemo(
+    () => TextReflow.referenceMarkers(sentence.text, sentence.kind),
+    [sentence.kind, sentence.text]
+  );
   const [lines, setLines] = useState<LineSegment[] | null>(null);
 
   useEffect(() => {
@@ -1910,7 +1923,7 @@ const SentenceRow = React.memo(function SentenceRow({
   }, [sentence.text, fontSize, lineHeight, layoutKey]);
 
   function handleTextLayout(e: any) {
-    if (!active) return;
+    if (!measureForHighlight) return;
     const next = buildLineSegments(sentence.text, e?.nativeEvent?.lines || []);
     if (next.length === 0) return;
     setLines((prev) => (sameLineSegments(prev, next) ? prev : next));
@@ -1920,10 +1933,39 @@ const SentenceRow = React.memo(function SentenceRow({
     );
   }
 
+  function renderWordText(word: string, absoluteStart: number) {
+    const absoluteEnd = absoluteStart + word.length;
+    const markers = referenceMarkers.filter(
+      (marker) => marker.start < absoluteEnd && marker.end > absoluteStart
+    );
+    if (!markers.length) return word;
+
+    const parts: React.ReactNode[] = [];
+    let cursor = absoluteStart;
+    for (const marker of markers) {
+      const markerStart = Math.max(absoluteStart, marker.start);
+      const markerEnd = Math.min(absoluteEnd, marker.end);
+      if (markerStart > cursor) {
+        parts.push(sentence.text.slice(cursor, markerStart));
+      }
+      parts.push(
+        <Text
+          key={`reference-${markerStart}`}
+          style={[styles.referenceMarker, { fontSize: Math.max(9, Math.round(fontSize * 0.62)) }]}
+        >
+          {formatReferenceMarker(sentence.text.slice(markerStart, markerEnd))}
+        </Text>
+      );
+      cursor = markerEnd;
+    }
+    if (cursor < absoluteEnd) parts.push(sentence.text.slice(cursor, absoluteEnd));
+    return parts;
+  }
+
   function renderTokenText(tokenSource: { word: string; offset: number }[], baseOffset = 0) {
     return tokenSource.map((t, wi) => (
       <Text key={`${baseOffset}-${wi}`} onPress={() => onTapWord(sentence.id, baseOffset + t.offset)}>
-        {t.word}
+        {renderWordText(t.word, baseOffset + t.offset)}
         {wi < tokenSource.length - 1 ? " " : ""}
       </Text>
     ));
@@ -1936,17 +1978,34 @@ const SentenceRow = React.memo(function SentenceRow({
     writingDirection: rtl ? "rtl" : "ltr",
   } as const;
   function renderMeasuredLines(measuredLines: LineSegment[]) {
-    return measuredLines.map((line, lineIndex) => {
-      const lineTokens = TextReflow.tokenizeWords(line.text);
-      return (
-        <React.Fragment key={`${line.start}-${lineIndex}`}>
-          {lineIndex > 0 ? "\n" : null}
-          <Text style={activeLineIndex === lineIndex ? styles.activeLine : undefined}>
-            {renderTokenText(lineTokens, line.start)}
-          </Text>
-        </React.Fragment>
-      );
-    });
+    return (
+      <View
+        style={[
+          styles.measuredBlock,
+          sentence.kind === "heading" && styles.measuredHeadingBlock,
+          rtl && styles.measuredBlockRtl,
+        ]}
+      >
+        {measuredLines.map((line, lineIndex) => {
+          const lineTokens = TextReflow.tokenizeWords(line.text);
+          const isActiveLine = activeLineIndex === lineIndex;
+          return (
+            <Text
+              key={`${line.start}-${lineIndex}:${isActiveLine ? "active" : "idle"}`}
+              style={[
+                styles.row,
+                sentence.kind === "heading" && styles.headingRow,
+                textStyle,
+                styles.measuredLine,
+                isActiveLine ? styles.activeLine : styles.inactiveLine,
+              ]}
+            >
+              {renderTokenText(lineTokens, line.start)}
+            </Text>
+          );
+        })}
+      </View>
+    );
   }
 
   return (
@@ -1958,12 +2017,17 @@ const SentenceRow = React.memo(function SentenceRow({
           <View style={styles.pageDividerLine} />
         </View>
       ) : null}
-      <Text
-        style={[styles.row, sentence.kind === "heading" && styles.headingRow, textStyle]}
-        onTextLayout={active ? handleTextLayout : undefined}
-      >
-        {active && lines?.length ? renderMeasuredLines(lines) : renderTokenText(tokens)}
-      </Text>
+      {active && lines?.length ? (
+        renderMeasuredLines(lines)
+      ) : (
+        <Text
+          key={`${layoutKey}:${active ? "active" : measureForHighlight ? "measure" : "idle"}`}
+          style={[styles.row, sentence.kind === "heading" && styles.headingRow, textStyle]}
+          onTextLayout={measureForHighlight && !lines?.length ? handleTextLayout : undefined}
+        >
+          {renderTokenText(tokens)}
+        </Text>
+      )}
     </View>
   );
 });
@@ -2005,6 +2069,29 @@ function sameLineSegments(prev: LineSegment[] | null, next: LineSegment[]): bool
       line.end === next[index].end &&
       line.text === next[index].text
   );
+}
+
+const SUPERSCRIPT_DIGITS: Record<string, string> = {
+  "0": "⁰",
+  "1": "¹",
+  "2": "²",
+  "3": "³",
+  "4": "⁴",
+  "5": "⁵",
+  "6": "⁶",
+  "7": "⁷",
+  "8": "⁸",
+  "9": "⁹",
+};
+
+function formatReferenceMarker(value: string): string {
+  const bracketed = value.startsWith("[") && value.endsWith("]");
+  const core = bracketed ? value.slice(1, -1) : value;
+  const superscript = core
+    .split("")
+    .map((char) => SUPERSCRIPT_DIGITS[char] || (char === "-" ? "⁻" : char))
+    .join("");
+  return bracketed ? `⁽${superscript}⁾` : superscript;
 }
 
 const styles = StyleSheet.create({
@@ -2188,6 +2275,22 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing(2.4),
     paddingBottom: theme.spacing(1.2),
   },
+  measuredBlock: {
+    alignItems: "flex-start",
+    paddingVertical: 3,
+  },
+  measuredHeadingBlock: {
+    paddingTop: theme.spacing(2.4),
+    paddingBottom: theme.spacing(1.2),
+  },
+  measuredBlockRtl: {
+    alignItems: "flex-end",
+  },
+  measuredLine: {
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingVertical: 0,
+  },
   rtlRowWrap: { alignItems: "stretch" },
   pageDivider: {
     flexDirection: "row",
@@ -2203,14 +2306,16 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.mono,
     letterSpacing: 0,
   },
-  activeSentence: {
-    backgroundColor: theme.colors.highlight,
-    color: theme.colors.text,
-    borderRadius: 6,
-  },
   activeLine: {
     backgroundColor: theme.colors.highlight,
     color: theme.colors.text,
+  },
+  inactiveLine: {
+    backgroundColor: "transparent",
+    color: theme.colors.text,
+  },
+  referenceMarker: {
+    color: theme.colors.textDim,
   },
   aiFab: {
     position: "absolute",

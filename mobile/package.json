@@ -4,6 +4,7 @@
   "private": true,
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
+    "postinstall": "patch-package",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
@@ -40,6 +41,7 @@
     "@babel/core": "^7.24.0",
     "@types/react": "~19.1.10",
     "babel-preset-expo": "54.0.11",
+    "patch-package": "^8.0.0",
     "typescript": "~5.9.2"
   }
 }

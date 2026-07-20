@@ -1,0 +1,47 @@
+diff --git a/node_modules/react-native-sherpa-onnx/lib/module/tts/index.js b/node_modules/react-native-sherpa-onnx/lib/module/tts/index.js
+index 399e39b..c26f0a7 100644
+--- a/node_modules/react-native-sherpa-onnx/lib/module/tts/index.js
++++ b/node_modules/react-native-sherpa-onnx/lib/module/tts/index.js
+@@ -157,7 +157,12 @@ export async function createTTS(options) {
+   }
+   const flat = flattenTtsModelOptionsForNative(modelType, modelOptions);
+   const resolvedPath = await resolveModelPath(modelPath);
+-  const result = await SherpaOnnx.initializeTts(instanceId, resolvedPath, modelType ?? 'auto', numThreads ?? 2, debug ?? false, flat.noiseScale, flat.noiseScaleW, flat.lengthScale, ruleFsts, ruleFars, maxNumSentences, silenceScale, provider);
++  // React Native's Android bridge cannot marshal null for nullable Double
++  // arguments. Native treats NaN as "use the model default".
++  const noiseScaleArg = flat.noiseScale ?? Number.NaN;
++  const noiseScaleWArg = flat.noiseScaleW ?? Number.NaN;
++  const lengthScaleArg = flat.lengthScale ?? Number.NaN;
++  const result = await SherpaOnnx.initializeTts(instanceId, resolvedPath, modelType ?? 'auto', numThreads ?? 2, debug ?? false, noiseScaleArg, noiseScaleWArg, lengthScaleArg, ruleFsts, ruleFars, maxNumSentences, silenceScale, provider);
+   if (!result.success) {
+     const nativeError = typeof result.error === 'string' ? result.error.trim() : '';
+     const detected = JSON.stringify(result.detectedModels ?? []);
+diff --git a/node_modules/react-native-sherpa-onnx/src/tts/index.ts b/node_modules/react-native-sherpa-onnx/src/tts/index.ts
+index b6c21b3..7fc6fcc 100644
+--- a/node_modules/react-native-sherpa-onnx/src/tts/index.ts
++++ b/node_modules/react-native-sherpa-onnx/src/tts/index.ts
+@@ -235,15 +235,21 @@ export async function createTTS(
+   const flat = flattenTtsModelOptionsForNative(modelType, modelOptions);
+   const resolvedPath = await resolveModelPath(modelPath);
+
++  // React Native's Android bridge cannot marshal null for nullable Double
++  // arguments. Native treats NaN as "use the model default".
++  const noiseScaleArg = flat.noiseScale ?? Number.NaN;
++  const noiseScaleWArg = flat.noiseScaleW ?? Number.NaN;
++  const lengthScaleArg = flat.lengthScale ?? Number.NaN;
++
+   const result = await SherpaOnnx.initializeTts(
+     instanceId,
+     resolvedPath,
+     modelType ?? 'auto',
+     numThreads ?? 2,
+     debug ?? false,
+-    flat.noiseScale,
+-    flat.noiseScaleW,
+-    flat.lengthScale,
++    noiseScaleArg,
++    noiseScaleWArg,
++    lengthScaleArg,
+     ruleFsts,
+     ruleFars,
+     maxNumSentences,

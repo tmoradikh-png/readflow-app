@@ -12,6 +12,8 @@ import {
 import type { TtsEngine } from "react-native-sherpa-onnx/tts";
 
 let audioModeReady = false;
+const LOCAL_TTS_RENDER_VERSION = "ss0.20";
+
 async function ensureAudioMode() {
   if (audioModeReady) return;
   try {
@@ -42,7 +44,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
   private prefetchTimers: ReturnType<typeof setTimeout>[] = [];
 
   private keyFor(text: string, speed: number) {
-    return `${LOCAL_NEURAL_MODEL_ID}|${speed.toFixed(2)}|${text}`;
+    return `${LOCAL_NEURAL_MODEL_ID}|${LOCAL_TTS_RENDER_VERSION}|${speed.toFixed(2)}|${text}`;
   }
 
   private async getEngine(): Promise<TtsEngine> {
@@ -63,7 +65,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       provider: "cpu",
       numThreads: 3,
       maxNumSentences: 2,
-      silenceScale: 0.1,
+      silenceScale: 0.2,
     });
   }
 
@@ -110,7 +112,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     const audio = await engine.generateSpeech(text, {
       sid: LOCAL_NEURAL_SPEAKER_ID,
       speed,
-      silenceScale: 0.08,
+      silenceScale: 0.2,
     });
     const saved = await saveAudioToFile(audio, toNativePath(uri));
     const fileUri = toFileUri(saved || uri);
