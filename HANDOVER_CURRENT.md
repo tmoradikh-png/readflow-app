@@ -260,6 +260,17 @@ Rules:
 
 ## Current Follow-Ups
 
+Owner's numbered next-session priorities:
+
+1. Apply the pending subscription-plan revision documented in `COST_MODEL.md`.
+   This is recorded direction only and is not current app behavior.
+2. Fix and regression-test an rF AI spoken-word omission in the retained
+   `book.pdf`: page 39, first paragraph, sentence `In a very small community,
+   dependence would have been difficult to escape.` The current QA voice omits
+   `would have`. First confirm those words reach `buildSpeechChunk`, then test
+   local synthesis/chunking and cached audio. Completion requires an audible
+   connected-phone check, not only a text-pipeline assertion.
+
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
 - Build a new Android candidate with version code `36` or higher after the
