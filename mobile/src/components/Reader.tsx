@@ -57,7 +57,7 @@ interface Props {
   /** Stable page-relative position to resume from (from the Library). */
   startPosition?: Partial<ReadingPosition>;
   /** Reports the latest reading position so the Library can persist it. */
-  onProgress?: (position: ReadingPosition, totalPages: number) => void;
+  onProgress?: (position: ReadingPosition, totalPages: number) => void | Promise<void>;
   purchasingAvailable?: boolean;
   purchaseSetupLoading?: boolean;
   purchasing?: boolean;
@@ -191,10 +191,16 @@ export function Reader({
     () => resolveReadingPosition(flat, startPosition),
     [flat, startPosition?.page, startPosition?.pageSentenceIndex, startPosition?.sentenceId, startPosition?.preview]
   );
-  const initialWindowStart = Math.max(0, initialSentenceIndex - READER_WINDOW_BEFORE);
+  // Start an explicit resume anchor at local row zero. FlatList cannot reliably
+  // estimate a distant row when paragraph heights vary, so an initial index in
+  // the middle of the window can land several pages early.
+  const initialWindowStart = initialSentenceIndex;
   const [windowStart, setWindowStart] = useState(initialWindowStart);
   const [windowEnd, setWindowEnd] = useState(
-    Math.min(flat.length, initialSentenceIndex + READER_WINDOW_AFTER)
+    Math.min(
+      flat.length,
+      initialSentenceIndex + READER_WINDOW_BEFORE + READER_WINDOW_AFTER
+    )
   );
   const [windowFocusIndex, setWindowFocusIndex] = useState(initialSentenceIndex);
   const [listGeneration, setListGeneration] = useState(0);
@@ -317,12 +323,16 @@ export function Reader({
   );
   const windowStartRef = useRef(windowStart);
   const windowEndRef = useRef(windowEnd);
+  const suppressBackwardExpansionRef = useRef(initialSentenceIndex > 0);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const cloudVoiceLimitWarnedRef = useRef(false);
   const cloudVoiceLanguageWarnedRef = useRef(false);
   const localVoiceWarnedRef = useRef(false);
-  const saveLastReadRef = useRef<(updateBookmark?: boolean) => void>(() => {});
+  const saveLastReadRef = useRef<(updateBookmark?: boolean) => Promise<void>>(
+    async () => {}
+  );
+  const leavingRef = useRef(false);
   const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const localVoiceSecondsRef = useRef(0);
   const localVoicePendingSecondsRef = useRef(0);
@@ -335,6 +345,8 @@ export function Reader({
   const scrollInteractionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollFailureCountRef = useRef(0);
   const layoutScrollQuietRef = useRef(false);
+  const layoutSignatureRef = useRef(`${Math.round(windowWidth)}:${lineHeight}`);
+  const layoutRestorePendingRef = useRef(false);
   const isUserScrollingRef = useRef(false);
   const settingsRef = useRef(settings);
   // Stable tap handler so memoized rows never re-render on scroll/highlight.
@@ -446,7 +458,20 @@ export function Reader({
     const sub = AppState.addEventListener("change", (nextState) => {
       const previous = appStateRef.current;
       appStateRef.current = nextState;
-      if (previous !== "active" || nextState === "active") return;
+      if (nextState === "active") {
+        if (previous !== "active" && layoutRestorePendingRef.current) {
+          scheduleLayoutRestore(240);
+        }
+        return;
+      }
+      if (previous !== "active") return;
+
+      if (layoutSettleTimerRef.current) {
+        clearTimeout(layoutSettleTimerRef.current);
+        layoutSettleTimerRef.current = null;
+        layoutRestorePendingRef.current = true;
+        layoutScrollQuietRef.current = false;
+      }
 
       // Save the visible reading position even when audio is off. Android can
       // terminate the app after this transition, so waiting for Back/Stop loses it.
@@ -685,7 +710,7 @@ export function Reader({
         setImmersive(false);
         return true;
       }
-      handleBack();
+      void handleBack();
       return true;
     });
     return () => sub.remove();
@@ -702,10 +727,14 @@ export function Reader({
     indexRef.current = start;
     visiblePositionRef.current = positionForSentence(sentence);
     setCurrent(sentence.id);
-    const nextStart = Math.max(0, start - READER_WINDOW_BEFORE);
-    const nextEnd = Math.min(f.length, start + READER_WINDOW_AFTER);
+    const nextStart = start;
+    const nextEnd = Math.min(
+      f.length,
+      start + READER_WINDOW_BEFORE + READER_WINDOW_AFTER
+    );
     windowStartRef.current = nextStart;
     windowEndRef.current = nextEnd;
+    suppressBackwardExpansionRef.current = start > 0;
     setWindowStart(nextStart);
     setWindowEnd(nextEnd);
     setWindowFocusIndex(start);
@@ -923,32 +952,48 @@ export function Reader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flat]);
 
+  function scheduleLayoutRestore(delay = 180) {
+    if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
+    layoutRestorePendingRef.current = true;
+    layoutScrollQuietRef.current = true;
+    layoutSettleTimerRef.current = setTimeout(() => {
+      layoutSettleTimerRef.current = null;
+      if (appStateRef.current !== "active") {
+        layoutScrollQuietRef.current = false;
+        return;
+      }
+
+      const target = playingRef.current && followRef.current
+        ? resolveAnchorIndex()
+        : resolveReadingPosition(flatRef.current, visiblePositionRef.current);
+      if (flatRef.current[target]) {
+        indexRef.current = target;
+        if (playingRef.current && followRef.current) {
+          currentIdRef.current = target;
+          setCurrentId(target);
+        }
+        scrollToIndexSafe(target, false);
+      }
+      layoutRestorePendingRef.current = false;
+      layoutScrollQuietRef.current = false;
+    }, delay);
+  }
+
   useEffect(() => {
+    const signature = `${Math.round(windowWidth)}:${lineHeight}`;
+    if (layoutSignatureRef.current === signature) return;
+    layoutSignatureRef.current = signature;
     lineRangesRef.current.clear();
     const activeChar = activeCharRef.current;
     if (activeChar) setActiveLineIndex(activeChar.sentenceId, 0);
-    const target = playingRef.current && followRef.current
-      ? resolveAnchorIndex()
-      : resolveReadingPosition(flatRef.current, visiblePositionRef.current);
-    if (!flatRef.current[target]) return;
-    indexRef.current = target;
-    if (playingRef.current && followRef.current) {
-      currentIdRef.current = target;
-      setCurrentId(target);
-    }
-    layoutScrollQuietRef.current = true;
-
-    if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
-    layoutSettleTimerRef.current = setTimeout(() => {
-      layoutSettleTimerRef.current = null;
-      scrollToIndexSafe(target, false);
-      layoutScrollQuietRef.current = false;
-    }, 120);
+    scheduleLayoutRestore(180);
 
     return () => {
       if (layoutSettleTimerRef.current) {
         clearTimeout(layoutSettleTimerRef.current);
         layoutSettleTimerRef.current = null;
+        layoutRestorePendingRef.current = true;
+        layoutScrollQuietRef.current = false;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -962,7 +1007,7 @@ export function Reader({
     if (idx >= 0) {
       pendingJumpRef.current = null;
       setLoadingPageMsg(null);
-      jumpToSentence(idx, false);
+      jumpToSentence(idx, false, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flat]);
@@ -972,10 +1017,17 @@ export function Reader({
   function resetWindowAround(globalIndex: number) {
     const f = flatRef.current;
     const target = Math.max(0, Math.min(globalIndex, Math.max(0, f.length - 1)));
-    const nextStart = Math.max(0, target - READER_WINDOW_BEFORE);
-    const nextEnd = Math.min(f.length, target + READER_WINDOW_AFTER);
+    // Put the requested anchor at local index zero. This avoids FlatList's
+    // approximate scroll-to-index fallback for unmeasured variable-height rows.
+    // Scrolling upward still prepends earlier rows through the expansion logic.
+    const nextStart = target;
+    const nextEnd = Math.min(
+      f.length,
+      target + READER_WINDOW_BEFORE + READER_WINDOW_AFTER
+    );
     windowStartRef.current = nextStart;
     windowEndRef.current = nextEnd;
+    suppressBackwardExpansionRef.current = target > 0;
     setWindowStart(nextStart);
     setWindowEnd(nextEnd);
     setWindowFocusIndex(target);
@@ -1040,7 +1092,17 @@ export function Reader({
       const last = visible[visible.length - 1]?.item as Sentence | undefined;
       const currentWindowStart = windowStartRef.current;
       const currentWindowEnd = windowEndRef.current;
-      if (sentence.id <= currentWindowStart + 8 && currentWindowStart > 0) {
+      if (
+        suppressBackwardExpansionRef.current &&
+        sentence.id > currentWindowStart + 8
+      ) {
+        suppressBackwardExpansionRef.current = false;
+      }
+      if (
+        !suppressBackwardExpansionRef.current &&
+        sentence.id <= currentWindowStart + 8 &&
+        currentWindowStart > 0
+      ) {
         setWindowStart((start) => {
           const next = Math.max(0, start - READER_WINDOW_EXPAND);
           windowStartRef.current = next;
@@ -1315,7 +1377,7 @@ export function Reader({
     }
     const idx = TextReflow.firstIndexOfPage(flat, p);
     if (idx >= 0) {
-      jumpToSentence(idx, false);
+      jumpToSentence(idx, false, true);
       return;
     }
     // The page has no text yet (scanned page not OCR'd). Never silently fail —
@@ -1386,32 +1448,36 @@ export function Reader({
   }
 
   // ----- bookmarks -----
-  function saveLastRead(updateBookmark = true) {
+  async function saveLastRead(updateBookmark = true): Promise<void> {
     const s = visibleSentence();
     if (!s) return;
     const position = positionForSentence(s);
-    onProgress?.(position, totalPages);
-    if (!updateBookmark) return;
-    Bookmarks.upsert({
-      tag: "Last read",
-      docId: doc.docId,
-      fileName: doc.fileName,
-      page: s.page,
-      chunkIndex: 0,
-      sentenceId: s.id,
-      pageSentenceIndex: s.pageSentenceIndex,
-      preview: s.text.slice(0, 60),
-    }).catch(() => {});
+    const progressWrite = Promise.resolve(onProgress?.(position, totalPages)).catch(() => {});
+    const bookmarkWrite = updateBookmark
+      ? Bookmarks.upsert({
+          tag: "Last read",
+          docId: doc.docId,
+          fileName: doc.fileName,
+          page: s.page,
+          chunkIndex: 0,
+          sentenceId: s.id,
+          pageSentenceIndex: s.pageSentenceIndex,
+          preview: s.text.slice(0, 60),
+        }).catch(() => {})
+      : Promise.resolve();
+    await Promise.all([progressWrite, bookmarkWrite]);
   }
   saveLastReadRef.current = saveLastRead;
 
-  function handleBack() {
+  async function handleBack() {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
     // Fully halt playback so the voice never keeps reading back on the Library.
     epochRef.current++;
     playingRef.current = false;
     setIsPlaying(false);
-    saveLastRead();
     ttsRef.current.stop();
+    await saveLastRead();
     onBack();
   }
 

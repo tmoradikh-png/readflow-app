@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { LogBox, View, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -59,6 +59,7 @@ export default function App() {
   const [purchasingAvailable, setPurchasingAvailable] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const progressWriteRef = useRef<Promise<void>>(Promise.resolve());
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
 
   const [fontsLoaded] = useFonts({
@@ -156,14 +157,19 @@ export default function App() {
 
   const handleProgress = useCallback(
     (position: ReadingPosition, totalPages: number) => {
-      if (!doc) return;
-      Library.updateProgress(doc.docId, {
-        lastPage: position.page,
-        lastSentenceId: position.sentenceId,
-        lastPageSentenceIndex: position.pageSentenceIndex,
-        lastPreview: position.preview,
-        totalPages,
-      }).catch(() => {});
+      if (!doc) return Promise.resolve();
+      const docId = doc.docId;
+      const write = progressWriteRef.current.then(() =>
+        Library.updateProgress(docId, {
+          lastPage: position.page,
+          lastSentenceId: position.sentenceId,
+          lastPageSentenceIndex: position.pageSentenceIndex,
+          lastPreview: position.preview,
+          totalPages,
+        })
+      );
+      progressWriteRef.current = write.catch(() => {});
+      return progressWriteRef.current;
     },
     [doc]
   );

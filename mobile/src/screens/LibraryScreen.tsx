@@ -292,9 +292,13 @@ export function LibraryScreen({
 
       doc.sourceUri = item.storedUri;
       doc.mimeType = item.mimeType || undefined;
-      await Library.saveOpened(doc, item.storedUri, item.mimeType || undefined);
+      const freshItem = await Library.saveOpened(
+        doc,
+        item.storedUri,
+        item.mimeType || undefined
+      );
       await refresh();
-      onOpen(doc, item);
+      onOpen(doc, freshItem);
     } catch (e: any) {
       setError(e?.message || "Could not reopen that document.");
     } finally {
