@@ -548,7 +548,7 @@ QA are complete.
 | Tier | Proposed next behavior | Direct vendor-cost rule |
 | --- | --- | --- |
 | Free | Up to 1 imported book and at most 300 pages; no OCR; 5 minutes/day of downloaded on-device rF AI | No OpenAI/OCR/cloud-voice cost. Only shared Render import traffic is acceptable. |
-| Reader Plus | Unlimited supported native-text PDF import and reading; no OCR; 10 minutes/day of downloaded on-device rF AI | No OpenAI/OCR/cloud-voice cost. rF AI runs on the user's phone. |
+| Reader Plus | Unlimited supported native-text PDF import and reading; no OCR; unlimited downloaded on-device rF AI during beta/testing | No OpenAI/OCR/cloud-voice cost. rF AI runs on the user's phone. Reassess the unlimited allowance before final public pricing. |
 | AI Pro | Unlimited supported native-text PDF import; unlimited downloaded on-device rF AI; a limited monthly OCR allowance; a very small monthly Cloud AI voice allowance | Keep hard backend caps and retain the direct AI vendor-cost guardrail. |
 | Power | AI Pro capabilities with materially higher OCR and Cloud AI voice limits | Higher hard caps, still sized so the customer pays comfortably above marginal cost. |
 
@@ -562,6 +562,9 @@ Open decisions for that pass:
 - Define whether the 300-page Free limit is a per-book ceiling, a total account
   allowance, or both. The owner's current intent is one book with a maximum of
   300 pages.
+- Reader Plus should use unlimited rF AI during beta so paid-plan and authorized
+  reviewers can test long playback. Decide before final pricing whether this
+  remains unlimited or becomes a daily allowance.
 - All exhausted limits should open a themed upgrade explanation rather than
   showing only a quota error.
 

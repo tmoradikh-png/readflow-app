@@ -151,6 +151,15 @@ bound reviewer token. Reviewer access is hidden from public pricing and cannot
 call OpenAI, OCR, or Cloud AI voice. Rotate both secrets if the access code is
 shared outside the intended review group.
 
+Google Play internal/closed tester membership does not itself create a
+`reader_plus` RevenueCat entitlement. For beta access, prefer the existing
+Reviewer code because it already grants unlimited native-text reading and rF AI
+without vendor-cost features. A tester can instead make a Google Play test
+purchase after being added to License testing, or an operator can grant a
+time-limited RevenueCat entitlement to a known app-user id, but neither option
+is automatic. Never enable the global development entitlement override on the
+production backend.
+
 ## Billing State
 
 Android billing is wired through Google Play Billing, RevenueCat, and the
@@ -263,7 +272,9 @@ Rules:
 Owner's numbered next-session priorities:
 
 1. Apply the pending subscription-plan revision documented in `COST_MODEL.md`.
-   This is recorded direction only and is not current app behavior.
+   This is recorded direction only and is not current app behavior. During beta,
+   Reader Plus should include unlimited downloaded rF AI rather than the earlier
+   proposed 10-minute daily allowance.
 2. Fix and regression-test an rF AI spoken-word omission in the retained
    `book.pdf`: page 39, first paragraph, sentence `In a very small community,
    dependence would have been difficult to escape.` The current QA voice omits
@@ -289,9 +300,9 @@ Owner's numbered next-session priorities:
 - Apply the owner-directed next tier revision recorded in `COST_MODEL.md` only
   after the current reader QA session. It proposes Free at 1 book/300 pages and
   5 rF AI minutes/day; Reader Plus with unlimited native-text PDF reading, no
-  OCR, and 10 rF AI minutes/day; AI Pro with unlimited rF AI plus limited OCR
-  and very limited Cloud AI; and Power with higher hard limits. This is not yet
-  current app behavior. Free-tier ads remain an undecided follow-up.
+  OCR, and unlimited rF AI during beta; AI Pro with unlimited rF AI plus limited
+  OCR and very limited Cloud AI; and Power with higher hard limits. This is not
+  yet current app behavior. Free-tier ads remain an undecided follow-up.
 - Add a custom API domain instead of the confusing Render legacy subdomain.
 - Commit or organize Play listing graphics from `pic/` if they should be kept.
 - Build iOS only after App Store Connect products and RevenueCat iOS app setup.
