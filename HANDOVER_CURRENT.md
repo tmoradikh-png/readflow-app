@@ -1,6 +1,6 @@
 # readFlow Current Handover
 
-Updated: 2026-07-20
+Updated: 2026-07-21
 
 Start here when taking over readFlow. This file is a short operational map. It
 does not contain passwords, API keys, service-account JSON contents, signing
@@ -14,9 +14,10 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source candidate: `1.0.29` / version code `35`. It contains the reader
-  stability and reviewer-access repair described below and is not public until
-  a new AAB passes phone QA and is promoted in Play Console.
+- Current source and side-by-side QA candidate: `1.0.30` / version code `36`.
+  It contains the reader stability, reviewer-access, page-continuity, title,
+  reference-marker, and speech-articulation repairs described below. It is not
+  public until a new AAB passes phone QA and is promoted in Play Console.
 - Latest EAS Android build id: `51a83cdf-12d6-4692-a589-2de95fee28f2`.
 - Latest EAS Android artifact:
   `https://expo.dev/artifacts/eas/8mCk29evi4lil-XgvjdOfx25sPS2955W7_PXh-ZGSO0.aab`
@@ -157,6 +158,22 @@ Play Console may show `0` downloads shortly after real installs. Use Play
 Console Statistics and Release dashboard for install metrics; the public store
 download badge and dashboard summaries can lag, and internal tester installs may
 not appear like public acquisitions.
+
+On 2026-07-21 the QA APK was rebuilt and reinstalled after comparing pages 42
+and 43 against readFlow's own backend extraction of the 133-page English
+manuscript. The extractor confirms the source contains `must not become`,
+`emperors, and people`, and the isolated title `Loyalty that refuses`. The app
+now recovers short sentence-case PDF headings even when the text layer loses
+blank lines, sends a stronger speech-only boundary for the repeated-subject
+conjunction, and adds a light articulation pause before `become`. Generated rF
+audio cache version `ss0.22` prevents older WAV files from masking the change.
+
+Automated release, TypeScript, exact manuscript regression, and backend build
+checks pass. Human QA is still required on the unlocked Samsung: verify page 43
+renders `Loyalty that refuses` as a separate heading and says `Title` before it;
+verify `emperors, and people inside` retains `and`; and verify page 42 says the
+complete phrase `must not become innocence`. Do not promote this candidate
+until those three audible checks pass.
 
 ## Accounts And Services
 

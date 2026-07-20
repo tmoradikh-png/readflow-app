@@ -100,6 +100,8 @@ export const TextReflow = {
         const heading = isHeadingLine(trimmed, {
           isolated: !previousText || !nextText,
           followsChapterMarker: Boolean(previousText && isChapterMarker(previousText)),
+          previousText,
+          nextText,
         });
         for (const text of this.splitSentences(trimmed)) {
           units.push({ text, kind: heading ? "heading" : "body" });
@@ -358,6 +360,8 @@ function nativeStructuredUnits(
     const heading = isHeadingLine(text, {
       isolated: previousBlank || nextBlank,
       followsChapterMarker: previousWasChapterMarker,
+      previousText: index > 0 ? lines[index - 1].trim() : "",
+      nextText: index < lines.length - 1 ? lines[index + 1].trim() : "",
     });
 
     if (heading) {
@@ -399,7 +403,12 @@ function isChapterMarker(text: string): boolean {
 
 function isHeadingLine(
   text: string,
-  context: { isolated: boolean; followsChapterMarker: boolean }
+  context: {
+    isolated: boolean;
+    followsChapterMarker: boolean;
+    previousText?: string;
+    nextText?: string;
+  }
 ): boolean {
   const value = text.trim();
   if (!value || value.length > 100) return false;
@@ -407,10 +416,26 @@ function isHeadingLine(
   if (context.followsChapterMarker && value.split(/\s+/).length <= 14 && !/[.!?؟]$/.test(value)) {
     return true;
   }
-  if (!context.isolated || /[.!?؟]$/.test(value)) return false;
-
   const words = value.split(/\s+/).filter(Boolean);
   if (words.length === 0 || words.length > 12) return false;
+
+  // PDF text layers often preserve visual line breaks but lose the blank
+  // space around a heading. A short sentence-case line between a completed
+  // body line and a new capitalized body line is still a heading. Requiring
+  // the next line to start with a capital avoids treating wrapped fragments
+  // such as "Human life is\nwritten ..." as headings.
+  const previousText = context.previousText?.trim() || "";
+  const nextText = context.nextText?.trim() || "";
+  const sentenceCaseHeading =
+    words.length <= 6 &&
+    value.length <= 60 &&
+    !/[,;:]/.test(value) &&
+    /^[A-Z\u00c0-\u00de\u0400-\u042f]/.test(value) &&
+    /[.!?]["'\u201d\u2019)]?$/.test(previousText) &&
+    /^["'\u201c\u2018([]?[A-Z\u00c0-\u00de\u0400-\u042f]/.test(nextText);
+  if (sentenceCaseHeading) return true;
+
+  if (!context.isolated || /[.!?؟]$/.test(value)) return false;
   if (/^[IVXLCDM\d\s.:-]+$/i.test(value)) return true;
 
   const latinWords = words.filter((word) => /[A-Za-z]/.test(word));

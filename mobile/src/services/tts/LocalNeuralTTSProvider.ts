@@ -13,7 +13,7 @@ import type { TtsEngine } from "react-native-sherpa-onnx/tts";
 import { normalizeLocalSpeechText } from "../SpeechNormalization";
 
 let audioModeBackground: boolean | null = null;
-const LOCAL_TTS_RENDER_VERSION = "ss0.21";
+const LOCAL_TTS_RENDER_VERSION = "ss0.22";
 
 async function ensureAudioMode(allowBackgroundPlayback = false) {
   if (audioModeBackground === allowBackgroundPlayback) return;

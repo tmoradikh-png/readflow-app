@@ -97,4 +97,34 @@ const auxiliary = normalizeLocalSpeechText(
 );
 assert.match(auxiliary, /dependence would, have been/, "rF AI must articulate both auxiliary words");
 
+const manuscriptPage43 = TextReflow.buildSentences([
+  {
+    page: 43,
+    source: "native",
+    text:
+      "People who lived under emperors were not simple believers in emperors, and people inside\n" +
+      "modern states are not identical with their governments. The powerful write in the language of\n" +
+      "national unity. Human life is written in smaller and less obedient sentences.\n" +
+      "Loyalty that refuses\n" +
+      "In April 1963, Martin Luther King Jr. sat in a jail cell in Birmingham, Alabama.",
+  },
+]);
+const loyaltyHeading = manuscriptPage43.find((sentence) => sentence.text === "Loyalty that refuses");
+assert.equal(loyaltyHeading?.kind, "heading", "page-43 sentence-case title must remain a heading");
+assert.equal(
+  manuscriptPage43.find((sentence) => sentence.text.startsWith("People who lived"))?.kind,
+  "body",
+  "page-43 body text must not become a heading"
+);
+
+const parallelClause = normalizeLocalSpeechText(
+  "People who lived under emperors were not simple believers in emperors, and people inside modern states are not identical with their governments."
+);
+assert.match(parallelClause, /emperors; and people inside/, "rF AI must retain the page-43 conjunction");
+
+const becomePhrase = normalizeLocalSpeechText(
+  "Compassion for the person must not become innocence for the institution."
+);
+assert.match(becomePhrase, /must not, become innocence/, "rF AI must articulate all of become");
+
 console.log("Reader regression checks passed.");
