@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-07-15
+Updated: 2026-07-20
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -24,8 +24,20 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 - Artifact URL:
   `https://expo.dev/artifacts/eas/nc3RoJjcCStaue6IRX9CMHeTsWFP68KpgnHyVTMsQRM.aab`.
 - Local artifact copy: `artifacts/readflow-1.0.27-33.aab`.
-- The next Android build must use version code `34` or higher after checking EAS
-  and Play for any consumed build codes.
+- The current repair candidate uses version code `35`. Any later Android build
+  must use `36` or higher after checking EAS and Play for consumed codes.
+
+2026-07-20 reader repair candidate:
+
+- Source is `1.0.29` / Android version code `35`.
+- Repairs visible-position bookmarks/resume/page navigation, lock/unlock and
+  rotation recovery, long-document windowing, smooth manual scrolling, and
+  chapter heading layout.
+- Adds a 10-minute daily Free preview of on-device rF AI.
+- Adds a hidden Reviewer access path for unlimited no-vendor-cost features.
+  Reviewer cannot use OCR, text AI, or Cloud AI voice.
+- It has passed automated source and bundle checks but has not passed connected
+  phone QA yet. Do not promote it to production before that QA.
 
 2026-07-15 hotfix build:
 
@@ -215,6 +227,8 @@ Important Render env vars:
 - `ENTITLEMENTS_DEV_OVERRIDE=false`
 - `RC_SECRET_KEY`
 - `OPENAI_API_KEY`
+- `REVIEWER_ACCESS_CODE` (secret; never place the value in Git or screenshots)
+- `REVIEWER_TOKEN_SECRET` (independent random signing secret, 32+ bytes)
 - AI/TTS/OCR provider settings listed in `render.yaml`
 
 AI and Cloud AI voice use the backend. The mobile app never receives the
@@ -293,6 +307,15 @@ tester app-user id. Do not enable Render ENTITLEMENTS_DEV_OVERRIDE in public
 production.
 ```
 
+How can Google review all no-cost reader features without creating charges?
+
+```text
+Open Shelf, tap ?, open App review access, enter the access code provided in
+Play Console App access instructions, and tap Activate. Reviewer mode unlocks
+full reading, library, export, and on-device rF AI. It does not unlock OCR,
+Cloud AI voice, or AI questions, so it cannot create OpenAI or OCR charges.
+```
+
 ## Verification Already Run
 
 - `npm run check:release` passed before the submitted production build.
@@ -310,6 +333,10 @@ production.
 
 ## Known Follow Ups
 
+- Add the reviewer access code and exact in-app navigation to Play Console App
+  access before submitting `1.0.29`; never put the signing secret there.
+- Complete phone regression QA for lock/unlock, rotation, long-book scrolling,
+  bookmark/resume/page navigation, headings, and Free rF AI daily quota.
 - Run purchase, restore, upgrade, downgrade, cancel, and entitlement expiry
   checks now that production is active. Finish Play license testing first; avoid
   accidental real purchases from non-test accounts.

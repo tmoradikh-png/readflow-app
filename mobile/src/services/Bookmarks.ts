@@ -8,6 +8,8 @@ export interface Bookmark {
   page: number;
   chunkIndex: number;
   sentenceId: number;
+  /** Stable position within page. Older saved bookmarks may not have it. */
+  pageSentenceIndex?: number;
   preview: string;
   updatedAt: number;
 }

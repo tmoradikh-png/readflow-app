@@ -1,6 +1,6 @@
 # readFlow Current Handover
 
-Updated: 2026-07-15
+Updated: 2026-07-20
 
 Start here when taking over readFlow. This file is a short operational map. It
 does not contain passwords, API keys, service-account JSON contents, signing
@@ -13,22 +13,19 @@ keys, or recovery codes.
 - App name on Play listing: `readFlow PDF Reader with AI`
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
-- Current live production version: `1.0.27`
-- Current live production version code: `33`
-- Hotfix `1.0.28` / version code `34` was uploaded to the Play production
-  track and sent from Publishing overview on 2026-07-15.
-- Last observed Play Console state for `1.0.28 (34)`: `Changes in review`;
-  Google quick checks were still running and Play said the change would be sent
-  for review as soon as checks complete successfully. It is not live until Play
-  shows the production release as active.
+- Last submitted production hotfix: `1.0.28` / version code `34`.
+- Current source candidate: `1.0.29` / version code `35`. It contains the reader
+  stability and reviewer-access repair described below and is not public until
+  a new AAB passes phone QA and is promoted in Play Console.
 - Latest EAS Android build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`.
 - Latest EAS Android artifact:
   `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`
 - Local AAB copy: `artifacts/readflow-1.0.28-34.aab`
-- Next Android build must use version code `35` or higher after checking EAS.
+- Next Android build uses version code `35`; later builds must use `36` or
+  higher after checking EAS and Play for consumed codes.
 - A duplicate `1.0.28` / code `34` EAS build
-  `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry
-  and canceled.
+  `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
+  also finished. Do not upload it as a separate release; it has the same code.
 
 Hotfix reason: the live Play build could crash when starting Cloud AI/rF AI
 audio because Android denied `expo.modules.audio.service.AudioControlsService`
@@ -38,6 +35,34 @@ while still blocking microphone/recording permissions.
 
 Do not click `Remove changes` for the `1.0.28 (34)` production change unless
 the owner intentionally wants to cancel the submitted hotfix.
+
+## 1.0.29 Reader Repair Candidate
+
+The 2026-07-20 repair addresses release-blocking reading defects:
+
+- Visible reading position is now the source for Last read, bookmarks, app
+  resume, and manual page jumps. Positions store page, sentence-within-page,
+  and a text preview so old records survive document reprocessing.
+- Opening or jumping to a saved location mounts a nearby window directly. It no
+  longer animates through every earlier page.
+- Screen lock, unlock, rotation, and height-only layout changes no longer start
+  repeated scroll recovery. Failed list jumps make one bounded recovery.
+- Long books use a stable, expanding render window and stable page/sentence
+  keys. This reduces shaky scrolling, prevents blocked page boundaries, and
+  avoids remounting the list during ordinary reading.
+- Chapter headings retain paragraph boundaries and render on a separate line
+  with a distinct typeface, size, and spacing. Multilingual chapter markers are
+  recognized without flattening the surrounding text.
+- Free includes a 10-minute-per-day on-device rF AI preview. This uses phone
+  CPU, battery, and the downloaded model; it makes no OpenAI call.
+- An internal Reviewer tier grants unlimited no-vendor-cost reading features
+  and rF AI. It cannot use OCR, text AI, or Cloud AI voice.
+
+Automated verification passed for TypeScript, backend build, release config,
+Metro Android bundling, stable-position migration, heading parsing, 500-page
+indexing, and reviewer cost guards. ADB did not see a connected phone during
+the final pass, so manual lock/unlock, rotation, long-book scrolling, bookmark,
+resume, and rF AI quota QA remains required before Play promotion.
 
 Play Console may show `0` downloads shortly after real installs. Use Play
 Console Statistics and Release dashboard for install metrics; the public store
@@ -63,6 +88,18 @@ Production backend:
 - Health check: `https://readflow-backend-internal.onrender.com/api/health`
 - The old `https://readflow-backend.onrender.com` URL was suspended and must
   not be used by app builds unless restored intentionally.
+
+Reviewer access requires two Render secrets that must never be committed:
+
+- `REVIEWER_ACCESS_CODE`: a strong code supplied only in Play App access
+  instructions or directly to trusted reviewers.
+- `REVIEWER_TOKEN_SECRET`: a separate random signing secret, at least 32 bytes.
+
+In the app, the reviewer opens `Shelf -> ? -> App review access`, enters the
+access code once, and taps Activate. The backend returns a signed, app-install
+bound reviewer token. Reviewer access is hidden from public pricing and cannot
+call OpenAI, OCR, or Cloud AI voice. Rotate both secrets if the access code is
+shared outside the intended review group.
 
 ## Billing State
 
@@ -169,6 +206,10 @@ Rules:
 
 ## Current Follow-Ups
 
+- Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
+  add the code and navigation path to Play Console App access instructions.
+- Connect and authorize an Android phone, install `1.0.29 (35)`, and complete
+  the reader regression checklist before public promotion.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
 - Add a custom API domain instead of the confusing Render legacy subdomain.

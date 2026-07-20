@@ -15,6 +15,7 @@
  */
 import type { Request } from "express";
 import { FREE_TIER, highestTier, tierByKey, Tier } from "../config/plans";
+import { validatesReviewerToken } from "./reviewerAccess";
 
 const RC_SECRET_KEY = process.env.RC_SECRET_KEY || "";
 const RC_API_BASE = process.env.RC_API_BASE || "https://api.revenuecat.com/v1";
@@ -28,7 +29,7 @@ export interface Entitlement {
   appUserId: string;
   tier: Tier;
   /** Where the decision came from (for debugging / headers). */
-  source: "revenuecat" | "dev-override" | "free";
+  source: "revenuecat" | "reviewer-access" | "dev-override" | "free";
 }
 
 /** Read the anonymous app-user id the client sends (RevenueCat $RCAnonymousID). */
@@ -79,6 +80,17 @@ async function fetchActiveEntitlements(appUserId: string): Promise<string[]> {
  */
 export async function resolveEntitlement(req: Request): Promise<Entitlement> {
   const appUserId = appUserIdFromRequest(req);
+
+  if (
+    appUserId &&
+    validatesReviewerToken(req.header("x-reviewer-token"), appUserId)
+  ) {
+    return {
+      appUserId,
+      tier: tierByKey("reviewer"),
+      source: "reviewer-access",
+    };
+  }
 
   // Local dev / RC not configured.
   if (!RC_SECRET_KEY || !appUserId) {

@@ -186,10 +186,10 @@ Current limits:
 
 - 1 imported PDF or Word `.docx` document/month.
 - First 100 pages of native-text documents.
-- Manual reading only; no read-aloud/listen mode.
+- Manual reading plus up to 10 minutes/day of downloaded on-device rF AI for
+  supported languages and phones.
 - No AI answers.
 - No OCR.
-- No rF AI voice.
 - No Cloud AI voice.
 
 ### Reader Plus
@@ -274,8 +274,10 @@ Features:
 - Replace fixed-page PDF reading with an ebook-style text view
 - Build a phone library for supported PDFs and Word `.docx` files
 - Read manually with clean typography, bookmarks, saved progress, and focus controls
+- Recognize common chapter headings and separate them from body text
 - Listen with Phone voice on eligible plans
-- Use rF AI voice on eligible phones after downloading the voice model
+- Try rF AI for 10 minutes/day on Free, or use it without a daily limit on
+  eligible AI plans and reviewer access after downloading the voice model
 - Use capped Cloud AI voice on supported paid plans and approved languages
 - Highlight text while listening
 - Ask AI for summaries, explanations, simplified passages, key points, and Q&A

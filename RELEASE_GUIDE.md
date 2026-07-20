@@ -26,7 +26,7 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ## Public Release Gate — 2026-07-01
 
-Current source release candidate: **1.0.28 / Android versionCode 34**.
+Current source release candidate: **1.0.29 / Android versionCode 35**.
 
 What is already prepared in source:
 - `mobile/app.json` points at the public backend host
@@ -407,7 +407,7 @@ eas build -p android --profile internal
 
 Confirmations (all already set in `app.json`):
 - ✅ applicationId / package: `com.urmiaworks.readflow` (permanent once uploaded)
-- ✅ versionCode/versionName: bump every release; current source is `34` / `1.0.28`
+- ✅ versionCode/versionName: bump every release; current source is `35` / `1.0.29`
 - ✅ Release signing: EAS‑managed keystore (or Play App Signing)
 - ✅ Target SDK: Expo SDK 54 → targetSdk 35 (Play‑accepted)
 - ✅ Permissions: `INTERNET` and Google Play Billing only (no location / contacts / SMS / microphone)
@@ -576,7 +576,7 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 34 | 1.0.28 | d973d085 | finished | Hotfix for generated-audio crash: restore required foreground media-playback/data-sync permissions and service types while keeping microphone/recording blocked. AAB: https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab |
 | 34 | 1.0.28 | 46806d5f | canceled | Duplicate build started by CLI timeout retry; canceled to avoid wasting build minutes. |
 
-**Next source candidate versionCode: 35 or higher.** Before starting any later
+**Next source candidate after 1.0.29: versionCode 36 or higher.** Before starting any later
 EAS build, run `eas build:list` and pick a higher code if any account build has
 consumed 35 or above.
 

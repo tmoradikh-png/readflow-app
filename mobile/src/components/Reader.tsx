@@ -30,6 +30,16 @@ import { EntitlementSnapshot } from "../services/Entitlements";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
 import { getReadingLanguage } from "../services/ReadingLanguages";
 import {
+  positionForSentence,
+  ReadingPosition,
+  resolveReadingPosition,
+} from "../services/ReadingPosition";
+import {
+  addLocalVoiceSeconds,
+  formatLocalVoiceRemaining,
+  getLocalVoiceSecondsToday,
+} from "../services/LocalVoiceUsage";
+import {
   getLocalNeuralVoiceStatus,
   loadLocalNeuralVoiceStatus,
   LocalNeuralVoiceStatus,
@@ -44,10 +54,10 @@ interface Props {
   language?: string; // BCP-47, e.g. "en-US"
   /** Pages readable for free before the subscribe gate. */
   freePageLimit?: number;
-  /** Sentence id to resume from (from the Library). */
-  startSentenceId?: number;
+  /** Stable page-relative position to resume from (from the Library). */
+  startPosition?: Partial<ReadingPosition>;
   /** Reports the latest reading position so the Library can persist it. */
-  onProgress?: (page: number, sentenceId: number, totalPages: number) => void;
+  onProgress?: (position: ReadingPosition, totalPages: number) => void;
   purchasingAvailable?: boolean;
   purchaseSetupLoading?: boolean;
   purchasing?: boolean;
@@ -91,6 +101,9 @@ const LOCAL_AI_PREFETCH_AHEAD = 6;
 const LOCAL_AI_MAX_CHARS = 420;
 const LOCAL_AI_MAX_SENTENCES = 2;
 const KEEP_AWAKE_TAG = "readflow-reading";
+const READER_WINDOW_BEFORE = 12;
+const READER_WINDOW_AFTER = 180;
+const READER_WINDOW_EXPAND = 120;
 
 type RuntimeVoiceMode = "natural" | "device" | "local";
 
@@ -101,8 +114,16 @@ function preferredVoiceMode(
 ): RuntimeVoiceMode {
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
   if (
+    entitlement.tier === "free" &&
+    entitlement.features.localVoice &&
+    readingLanguage.rfAi &&
+    localVoiceReady === true
+  ) {
+    return "local";
+  }
+  if (
     preferences.voiceEngine === "local_ai" &&
-    entitlement.features.ai &&
+    entitlement.features.localVoice &&
     readingLanguage.rfAi &&
     localVoiceReady !== false
   ) {
@@ -148,7 +169,7 @@ export function Reader({
   onPreferencesChange,
   language = "en-US",
   freePageLimit = 100,
-  startSentenceId = 0,
+  startPosition,
   onProgress,
   purchasingAvailable,
   purchaseSetupLoading,
@@ -166,10 +187,21 @@ export function Reader({
   }, [doc]);
   const flat = useMemo<Sentence[]>(() => TextReflow.buildSentences(pages), [pages]);
   const totalPages = doc.pageCount || (flat.length ? flat[flat.length - 1].page : 1);
-  const initialSentenceIndex = useMemo(() => {
-    if (!flat.length) return 0;
-    return Math.max(0, Math.min(startSentenceId, flat.length - 1));
-  }, [flat.length, startSentenceId]);
+  const initialSentenceIndex = useMemo(
+    () => resolveReadingPosition(flat, startPosition),
+    [flat, startPosition?.page, startPosition?.pageSentenceIndex, startPosition?.sentenceId, startPosition?.preview]
+  );
+  const initialWindowStart = Math.max(0, initialSentenceIndex - READER_WINDOW_BEFORE);
+  const [windowStart, setWindowStart] = useState(initialWindowStart);
+  const [windowEnd, setWindowEnd] = useState(
+    Math.min(flat.length, initialSentenceIndex + READER_WINDOW_AFTER)
+  );
+  const [windowFocusIndex, setWindowFocusIndex] = useState(initialSentenceIndex);
+  const [listGeneration, setListGeneration] = useState(0);
+  const renderedFlat = useMemo(
+    () => flat.slice(windowStart, Math.max(windowStart + 1, windowEnd)),
+    [flat, windowEnd, windowStart]
+  );
 
   const [settings, setSettings] = useState<ReadingSettings>({
     fontSize: 22,
@@ -187,6 +219,7 @@ export function Reader({
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [localVoiceStatus, setLocalVoiceStatus] = useState<LocalNeuralVoiceStatus | null>(null);
+  const [localVoiceSecondsToday, setLocalVoiceSecondsToday] = useState(0);
   const [voiceMode, setVoiceMode] = useState<RuntimeVoiceMode>(
     preferredVoiceMode(preferences, entitlement)
   );
@@ -206,7 +239,7 @@ export function Reader({
 
   const canUseAI = Boolean(entitlement.features.ai);
   const canUseOcr = Boolean(entitlement.features.ocr);
-  const canUseReadAloud =
+  const canUseDeviceReadAloud =
     entitlement.tier !== "free" &&
     (entitlement.features.unlimitedLibrary ||
       entitlement.features.ai ||
@@ -219,27 +252,33 @@ export function Reader({
       entitlement.limits.cloudVoiceCharsPerMonth > 0
   );
   const localVoiceReady = localVoiceStatus?.engineInstalled;
-  const canUseRfVoice = Boolean(entitlement.features.ai && readingLanguage.rfAi && localVoiceReady);
+  const canUseRfVoicePlan = Boolean(entitlement.features.localVoice && readingLanguage.rfAi);
+  const canUseRfVoice = Boolean(canUseRfVoicePlan && localVoiceReady);
+  const localVoiceDailyLimit = Number(entitlement.limits.localVoiceSecondsPerDay || 0);
+  const localVoiceRemainingLabel = formatLocalVoiceRemaining(
+    localVoiceDailyLimit,
+    localVoiceSecondsToday
+  );
   const desiredVoiceMode = preferredVoiceMode(preferences, entitlement, localVoiceReady);
   const readerVoiceOptions = useMemo(
     () => [
       {
         engine: "device" as const,
         label: "Device",
-        detail: canUseReadAloud ? "Included" : "Reader+",
-        locked: !canUseReadAloud,
+        detail: canUseDeviceReadAloud ? "Included" : "Reader+",
+        locked: !canUseDeviceReadAloud,
       },
       {
         engine: "local_ai" as const,
         label: "rF AI",
-        detail: !entitlement.features.ai
+        detail: !canUseRfVoicePlan
           ? "AI Pro"
           : !readingLanguage.rfAi
           ? "English"
           : localVoiceStatus == null
             ? "Checking"
             : localVoiceReady
-              ? "On phone"
+              ? localVoiceRemainingLabel
               : "Download",
         locked: !canUseRfVoice,
       },
@@ -253,8 +292,9 @@ export function Reader({
     [
       canUseCloudVoice,
       canUseRfVoice,
-      canUseReadAloud,
-      entitlement.features.ai,
+      canUseDeviceReadAloud,
+      canUseRfVoicePlan,
+      localVoiceRemainingLabel,
       localVoiceReady,
       localVoiceStatus,
       readingLanguage.cloudAiVoice,
@@ -263,7 +303,7 @@ export function Reader({
   );
 
   const insets = useSafeAreaInsets();
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
   const ttsRef = useRef(createTTSProvider(providerKindFor(voiceMode)));
   const playingRef = useRef(false);
   const indexRef = useRef(0); // global sentence index being read
@@ -272,17 +312,26 @@ export function Reader({
   const currentIdRef = useRef<number | null>(null);
   const activeLineRef = useRef<ActiveLine>({ sentenceId: null, lineIndex: 0 });
   const activeCharRef = useRef<{ sentenceId: number; charOffset: number } | null>(null);
+  const visiblePositionRef = useRef<ReadingPosition | null>(
+    flat[initialSentenceIndex] ? positionForSentence(flat[initialSentenceIndex]) : null
+  );
+  const windowStartRef = useRef(windowStart);
+  const windowEndRef = useRef(windowEnd);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const cloudVoiceLimitWarnedRef = useRef(false);
   const cloudVoiceLanguageWarnedRef = useRef(false);
   const localVoiceWarnedRef = useRef(false);
-  const saveLastReadRef = useRef<() => void>(() => {});
+  const saveLastReadRef = useRef<(updateBookmark?: boolean) => void>(() => {});
+  const progressSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localVoiceSecondsRef = useRef(0);
+  const localVoicePendingSecondsRef = useRef(0);
+  const localVoiceProgressRef = useRef(0);
+  const localVoiceWriteRef = useRef<Promise<number>>(Promise.resolve(0));
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
   const initialJumpRef = useRef(false);
   const layoutSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scrollRetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollInteractionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollFailureCountRef = useRef(0);
   const layoutScrollQuietRef = useRef(false);
@@ -322,6 +371,23 @@ export function Reader({
     settingsRef.current = settings;
   }, [settings]);
   useEffect(() => {
+    windowStartRef.current = windowStart;
+  }, [windowStart]);
+  useEffect(() => {
+    windowEndRef.current = windowEnd;
+  }, [windowEnd]);
+  useEffect(() => {
+    if (!flat.length) return;
+    setWindowEnd((end) => {
+      const next = Math.min(
+        flat.length,
+        Math.max(end, Math.min(flat.length, windowFocusIndex + READER_WINDOW_AFTER))
+      );
+      windowEndRef.current = next;
+      return next;
+    });
+  }, [flat.length, windowFocusIndex]);
+  useEffect(() => {
     let alive = true;
     loadLocalNeuralVoiceStatus()
       .then((status) => {
@@ -330,6 +396,19 @@ export function Reader({
       .catch(() => {
         if (alive) setLocalVoiceStatus((current) => current ?? getLocalNeuralVoiceStatus());
       });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    let alive = true;
+    getLocalVoiceSecondsToday()
+      .then((seconds) => {
+        if (!alive) return;
+        localVoiceSecondsRef.current = seconds;
+        setLocalVoiceSecondsToday(seconds);
+      })
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -368,6 +447,11 @@ export function Reader({
       const previous = appStateRef.current;
       appStateRef.current = nextState;
       if (previous !== "active" || nextState === "active") return;
+
+      // Save the visible reading position even when audio is off. Android can
+      // terminate the app after this transition, so waiting for Back/Stop loses it.
+      saveLastReadRef.current();
+      flushLocalVoiceUsage();
       if (!playingRef.current) return;
 
       // Reading is foreground-only for now. The app keeps the screen awake while
@@ -375,7 +459,6 @@ export function Reader({
       epochRef.current++;
       playingRef.current = false;
       setIsPlaying(false);
-      saveLastReadRef.current();
       ttsRef.current.stop();
     });
     return () => sub.remove();
@@ -388,6 +471,13 @@ export function Reader({
   }
 
   function openReadAloudOffer() {
+    if (entitlement.features.localVoice && readingLanguage.rfAi) {
+      openFeatureLock(
+        "Try rF AI free",
+        "Free includes 10 minutes of rF AI reading each day. Return to the shelf, open Voice, choose rF AI, and download the optional offline voice pack."
+      );
+      return;
+    }
     openFeatureLock(
       "Unlock read-aloud",
       "Listen mode starts with Reader Plus. Free keeps the reading preview manual, while Reader Plus unlocks device voice for full native-text books."
@@ -395,17 +485,63 @@ export function Reader({
   }
 
   function readAloudBlocked(): boolean {
-    if (canUseReadAloud) return false;
+    if (voiceMode !== "device" || canUseDeviceReadAloud) return false;
     openReadAloudOffer();
     return true;
   }
 
+  function localVoiceQuotaExhausted(): boolean {
+    return (
+      localVoiceDailyLimit > 0 &&
+      localVoiceSecondsRef.current + localVoicePendingSecondsRef.current >= localVoiceDailyLimit
+    );
+  }
+
+  function openLocalVoiceLimitOffer() {
+    openFeatureLock(
+      "Daily rF AI preview finished",
+      "Free includes 10 minutes of rF AI each day. Upgrade to AI Pro for unlimited downloaded rF AI reading, OCR, AI questions, and a Cloud AI allowance."
+    );
+  }
+
+  function flushLocalVoiceUsage() {
+    const seconds = Math.floor(localVoicePendingSecondsRef.current);
+    if (seconds <= 0) return;
+    localVoicePendingSecondsRef.current -= seconds;
+    localVoiceSecondsRef.current += seconds;
+    setLocalVoiceSecondsToday(localVoiceSecondsRef.current);
+    localVoiceWriteRef.current = localVoiceWriteRef.current
+      .then(() => addLocalVoiceSeconds(seconds))
+      .catch(() => localVoiceSecondsRef.current);
+  }
+
+  function trackLocalVoiceProgress(currentTime: number) {
+    if (voiceMode !== "local") return;
+    const current = Math.max(0, Number(currentTime) || 0);
+    const delta = Math.max(0, current - localVoiceProgressRef.current);
+    localVoiceProgressRef.current = current;
+    localVoicePendingSecondsRef.current += delta;
+    if (localVoicePendingSecondsRef.current >= 5) flushLocalVoiceUsage();
+    if (!localVoiceQuotaExhausted()) return;
+
+    flushLocalVoiceUsage();
+    epochRef.current++;
+    playingRef.current = false;
+    setIsPlaying(false);
+    ttsRef.current.stop();
+    saveLastReadRef.current();
+    openLocalVoiceLimitOffer();
+  }
+
   function selectVoiceEngine(engine: VoiceEngine) {
-    if (engine === "device" && readAloudBlocked()) return;
-    if (engine === "local_ai" && !entitlement.features.ai) {
+    if (engine === "device" && !canUseDeviceReadAloud) {
+      openReadAloudOffer();
+      return;
+    }
+    if (engine === "local_ai" && !entitlement.features.localVoice) {
       openFeatureLock(
         "Unlock rF AI voice",
-        "rF AI voice is included in AI Pro and Power. Reader Plus and higher include Phone voice without cloud AI cost."
+        "rF AI voice is included in AI Pro and Power. Free includes a 10-minute daily preview when rF AI is available for the book language."
       );
       return;
     }
@@ -421,6 +557,10 @@ export function Reader({
         "Download rF AI",
         "rF AI is not ready on this phone. Go to Voice on the shelf, download rF AI, then choose rF AI again. Until then, use Phone voice or Cloud AI on eligible plans."
       );
+      return;
+    }
+    if (engine === "local_ai" && localVoiceQuotaExhausted()) {
+      openLocalVoiceLimitOffer();
       return;
     }
     if (engine === "cloud" && !readingLanguage.cloudAiVoice) {
@@ -456,10 +596,10 @@ export function Reader({
       return true;
     }
     if (preferences.voiceEngine !== "local_ai") return false;
-    if (!entitlement.features.ai) {
+    if (!entitlement.features.localVoice) {
       openFeatureLock(
         "Unlock rF AI voice",
-        "rF AI voice is included in AI Pro and Power. Reader Plus and higher include Phone voice without cloud AI cost."
+        "rF AI voice is included in AI Pro and Power. Free includes a 10-minute daily preview when rF AI is available for the book language."
       );
       return true;
     }
@@ -475,6 +615,10 @@ export function Reader({
         "Download rF AI",
         "rF AI is not ready on this phone. Go to Voice on the shelf, download rF AI, then choose rF AI again."
       );
+      return true;
+    }
+    if (localVoiceQuotaExhausted()) {
+      openLocalVoiceLimitOffer();
       return true;
     }
     return false;
@@ -513,8 +657,10 @@ export function Reader({
       epochRef.current++;
       playingRef.current = false;
       if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
-      if (scrollRetryTimerRef.current) clearTimeout(scrollRetryTimerRef.current);
       if (scrollInteractionTimerRef.current) clearTimeout(scrollInteractionTimerRef.current);
+      if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
+      flushLocalVoiceUsage();
+      saveLastReadRef.current();
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
       ttsRef.current.stop();
     };
@@ -546,16 +692,26 @@ export function Reader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [immersive, showAI, showBookmarks, showPaywall]);
 
-  // Resume at the saved position from the Library.
+  // Resume at the stable page-relative position from the Library.
   useEffect(() => {
     const f = flatRef.current;
-    const start = Math.max(0, Math.min(startSentenceId, Math.max(0, f.length - 1)));
+    const start = resolveReadingPosition(f, startPosition);
     initialJumpRef.current = start > 0;
-    if (start <= 0) return;
+    const sentence = f[start];
+    if (!sentence) return;
     indexRef.current = start;
-    setCurrent(f[start]?.id ?? null);
+    visiblePositionRef.current = positionForSentence(sentence);
+    setCurrent(sentence.id);
+    const nextStart = Math.max(0, start - READER_WINDOW_BEFORE);
+    const nextEnd = Math.min(f.length, start + READER_WINDOW_AFTER);
+    windowStartRef.current = nextStart;
+    windowEndRef.current = nextEnd;
+    setWindowStart(nextStart);
+    setWindowEnd(nextEnd);
+    setWindowFocusIndex(start);
+    setListGeneration((generation) => generation + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [doc.docId, startSentenceId]);
+  }, [doc.docId]);
 
   // ----- helpers -----
   // Keep a live, render-independent copy of the sentence list. TTS onDone/onError
@@ -582,8 +738,10 @@ export function Reader({
       currentPageRef.current = pg;
       // Remember WHICH sentence (page + position within page) is active so the
       // highlight can re-anchor if OCR later inserts pages and shifts indices.
-      const within = f.filter((s) => s.page === pg).findIndex((s) => s.id === id);
-      anchorRef.current = { page: pg, within: Math.max(0, within) };
+      anchorRef.current = {
+        page: pg,
+        within: Math.max(0, f[id].pageSentenceIndex),
+      };
     }
   }
   function setActiveLineIndex(sentenceId: number | null, lineIndex: number) {
@@ -608,6 +766,11 @@ export function Reader({
     const f = flatRef.current;
     const id = currentIdRef.current ?? indexRef.current;
     return f[id];
+  }
+  function visibleSentence(): Sentence | undefined {
+    const position = visiblePositionRef.current;
+    if (!position) return currentSentence();
+    return flatRef.current[resolveReadingPosition(flatRef.current, position)];
   }
   // Resolve the index of the currently-anchored sentence in the LATEST flat list.
   // Used to advance playback so an OCR-driven index shift can never skip/repeat.
@@ -640,12 +803,8 @@ export function Reader({
   }
 
   function pageWithinIndex(sentence: Sentence, list = flatRef.current): number {
-    let within = 0;
-    for (const item of list) {
-      if (item.id === sentence.id) return within;
-      if (item.page === sentence.page) within++;
-    }
-    return 0;
+    if (Number.isFinite(sentence.pageSentenceIndex)) return sentence.pageSentenceIndex;
+    return list.filter((item) => item.page === sentence.page).findIndex((item) => item.id === sentence.id);
   }
 
   function resolvePageWithinIndex(page: number, within: number): number {
@@ -768,20 +927,23 @@ export function Reader({
     lineRangesRef.current.clear();
     const activeChar = activeCharRef.current;
     if (activeChar) setActiveLineIndex(activeChar.sentenceId, 0);
-    if (currentIdRef.current == null) return;
-
-    const target = resolveAnchorIndex();
+    const target = playingRef.current && followRef.current
+      ? resolveAnchorIndex()
+      : resolveReadingPosition(flatRef.current, visiblePositionRef.current);
+    if (!flatRef.current[target]) return;
     indexRef.current = target;
-    currentIdRef.current = target;
-    setCurrentId(target);
+    if (playingRef.current && followRef.current) {
+      currentIdRef.current = target;
+      setCurrentId(target);
+    }
     layoutScrollQuietRef.current = true;
 
     if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
     layoutSettleTimerRef.current = setTimeout(() => {
       layoutSettleTimerRef.current = null;
-      if (followRef.current) scrollToIndexSafe(resolveAnchorIndex(), false);
+      scrollToIndexSafe(target, false);
       layoutScrollQuietRef.current = false;
-    }, 180);
+    }, 120);
 
     return () => {
       if (layoutSettleTimerRef.current) {
@@ -790,7 +952,7 @@ export function Reader({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [windowWidth, windowHeight, lineHeight]);
+  }, [windowWidth, lineHeight]);
 
   // Perform a queued "go to page" once that page's text has finished loading.
   useEffect(() => {
@@ -807,11 +969,34 @@ export function Reader({
 
 
   // ----- scrolling / follow (FlatList) -----
+  function resetWindowAround(globalIndex: number) {
+    const f = flatRef.current;
+    const target = Math.max(0, Math.min(globalIndex, Math.max(0, f.length - 1)));
+    const nextStart = Math.max(0, target - READER_WINDOW_BEFORE);
+    const nextEnd = Math.min(f.length, target + READER_WINDOW_AFTER);
+    windowStartRef.current = nextStart;
+    windowEndRef.current = nextEnd;
+    setWindowStart(nextStart);
+    setWindowEnd(nextEnd);
+    setWindowFocusIndex(target);
+    setListGeneration((generation) => generation + 1);
+  }
+
   function scrollToIndexSafe(index: number, animated: boolean, resetFailures = true) {
     if (index < 0 || index >= flatRef.current.length) return;
+    const currentWindowStart = windowStartRef.current;
+    const currentWindowEnd = windowEndRef.current;
+    if (index < currentWindowStart || index >= currentWindowEnd) {
+      resetWindowAround(index);
+      return;
+    }
     if (resetFailures) scrollFailureCountRef.current = 0;
     try {
-      listRef.current?.scrollToIndex({ index, viewPosition: 0.25, animated });
+      listRef.current?.scrollToIndex({
+        index: index - currentWindowStart,
+        viewPosition: 0.22,
+        animated,
+      });
     } catch {
       /* not measured yet; onScrollToIndexFailed handles it */
     }
@@ -825,40 +1010,66 @@ export function Reader({
   }
 
   // onViewableItemsChanged / viewabilityConfig must be stable across renders.
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 20 }).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 35 }).current;
   const onViewableItemsChanged = useRef((info: { viewableItems: ViewToken[] }) => {
-    const first = info.viewableItems.find((v) => v.isViewable);
+    const visible = info.viewableItems
+      .filter((token) => token.isViewable && token.item)
+      .sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
+    const first = visible[0];
     if (first && first.item) {
-      const p = (first.item as Sentence).page;
+      const sentence = first.item as Sentence;
+      const p = sentence.page;
+      const position = positionForSentence(sentence);
+      visiblePositionRef.current = position;
       setCurrentPage(p);
       currentPageRef.current = p;
+      if (!playingRef.current || !followRef.current) indexRef.current = sentence.id;
       // Bias the background OCR engine toward what's on screen so scrolling keeps
       // loading the pages just ahead of you.
       OcrLoader.setPriority(docRef.current.docId, p);
+
+      if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
+      progressSaveTimerRef.current = setTimeout(() => {
+        progressSaveTimerRef.current = null;
+        // Persist the visible location after scrolling settles. The named
+        // "Last read" bookmark is updated on stop/back/background to avoid a
+        // second storage write while the user is actively reading.
+        saveLastReadRef.current(false);
+      }, 700);
+
+      const last = visible[visible.length - 1]?.item as Sentence | undefined;
+      const currentWindowStart = windowStartRef.current;
+      const currentWindowEnd = windowEndRef.current;
+      if (sentence.id <= currentWindowStart + 8 && currentWindowStart > 0) {
+        setWindowStart((start) => {
+          const next = Math.max(0, start - READER_WINDOW_EXPAND);
+          windowStartRef.current = next;
+          return next;
+        });
+      }
+      if (
+        last &&
+        last.id >= currentWindowEnd - 20 &&
+        currentWindowEnd < flatRef.current.length
+      ) {
+        setWindowEnd((end) => {
+          const next = Math.min(flatRef.current.length, end + READER_WINDOW_EXPAND);
+          windowEndRef.current = next;
+          return next;
+        });
+      }
     }
   }).current;
 
   function onScrollToIndexFailed(info: { index: number; averageItemLength: number }) {
-    const index = Math.max(0, Math.min(info.index, Math.max(0, flatRef.current.length - 1)));
-    const quiet = initialJumpRef.current || layoutScrollQuietRef.current;
-    const attempts = scrollFailureCountRef.current;
+    const localIndex = Math.max(0, Math.min(info.index, Math.max(0, renderedFlat.length - 1)));
     listRef.current?.scrollToOffset({
-      offset: Math.max(0, info.averageItemLength * index),
+      offset: Math.max(0, info.averageItemLength * localIndex),
       animated: false,
     });
-    if (attempts >= 2) {
-      initialJumpRef.current = false;
-      layoutScrollQuietRef.current = false;
-      scrollFailureCountRef.current = 0;
-      return;
-    }
-    scrollFailureCountRef.current = attempts + 1;
-    if (scrollRetryTimerRef.current) clearTimeout(scrollRetryTimerRef.current);
-    scrollRetryTimerRef.current = setTimeout(() => {
-      scrollRetryTimerRef.current = null;
-      scrollToIndexSafe(index, false, false);
-      initialJumpRef.current = false;
-    }, quiet ? 160 : 80);
+    initialJumpRef.current = false;
+    layoutScrollQuietRef.current = false;
+    scrollFailureCountRef.current = 0;
   }
 
   function markUserScrollActive() {
@@ -893,6 +1104,12 @@ export function Reader({
       return;
     }
     const s = f[i];
+    if (voiceMode === "local" && localVoiceQuotaExhausted()) {
+      flushLocalVoiceUsage();
+      reachedEnd();
+      openLocalVoiceLimitOffer();
+      return;
+    }
     if (s.page > freeCap()) {
       saveLastRead();
       playingRef.current = false;
@@ -913,6 +1130,7 @@ export function Reader({
     const firstPosition = locateChunkPosition(chunk, 0);
     const text = chunk.text;
     const spokenLength = Math.max(1, text.length);
+    localVoiceProgressRef.current = 0;
 
     indexRef.current = i;
 
@@ -937,6 +1155,7 @@ export function Reader({
     // Advance from the ANCHORED position (re-resolved against the latest list) so
     // an OCR-driven index shift can never desync the voice from the highlight.
     const advance = () => {
+      flushLocalVoiceUsage();
       if (!playingRef.current || myEpoch !== epochRef.current) return;
       speakAt(resolvePageWithinIndex(chunk.lastPage, chunk.lastWithin) + 1);
     };
@@ -992,6 +1211,8 @@ export function Reader({
       },
       onProgress: ({ currentTime, duration }) => {
         if (myEpoch !== epochRef.current || duration <= 0) return;
+        trackLocalVoiceProgress(currentTime);
+        if (!playingRef.current || myEpoch !== epochRef.current) return;
         const ratio = Math.max(0, Math.min(0.999, currentTime / duration));
         const position = locateChunkPosition(chunk, Math.floor(spokenLength * ratio));
         if (!position) return;
@@ -1008,6 +1229,7 @@ export function Reader({
   }
 
   function reachedEnd() {
+    flushLocalVoiceUsage();
     saveLastRead();
     playingRef.current = false;
     setIsPlaying(false);
@@ -1027,6 +1249,7 @@ export function Reader({
     playingRef.current = false;
     setIsPlaying(false);
     ttsRef.current.stop(); // resume re-speaks current sentence (cross-platform safe)
+    flushLocalVoiceUsage();
   }
 
   function stop() {
@@ -1034,6 +1257,7 @@ export function Reader({
     playingRef.current = false;
     setIsPlaying(false);
     ttsRef.current.stop();
+    flushLocalVoiceUsage();
     saveLastRead(); // requirement: stopping saves the current position
   }
 
@@ -1072,6 +1296,7 @@ export function Reader({
         playingRef.current = false;
         setIsPlaying(false);
         ttsRef.current.stop();
+        flushLocalVoiceUsage();
         setControlsOpen(false);
       } else {
         // Entering listening mode: make sure the chrome is visible.
@@ -1116,12 +1341,18 @@ export function Reader({
   }
 
   function onJumpBookmark(b: Bookmark) {
-    jumpToSentence(b.sentenceId, false);
+    const target = resolveReadingPosition(flatRef.current, {
+      page: b.page,
+      pageSentenceIndex: b.pageSentenceIndex,
+      sentenceId: b.sentenceId,
+      preview: b.preview,
+    });
+    jumpToSentence(target, false, true);
     setShowBookmarks(false);
   }
 
-  function jumpToSentence(globalId: number, autoplay: boolean) {
-    const s = flat[globalId];
+  function jumpToSentence(globalId: number, autoplay: boolean, resetWindow = false) {
+    const s = flatRef.current[globalId];
     if (!s) return;
     if (s.page > freeCap()) {
       openPageLimitOffer();
@@ -1132,7 +1363,17 @@ export function Reader({
     indexRef.current = globalId;
     pendingOffsetRef.current = 0;
     setCurrent(globalId);
-    scrollToIndexSafe(globalId, false);
+    const position = positionForSentence(s);
+    visiblePositionRef.current = position;
+    if (
+      resetWindow ||
+      globalId < windowStartRef.current ||
+      globalId >= windowEndRef.current
+    ) {
+      resetWindowAround(globalId);
+    } else {
+      scrollToIndexSafe(globalId, false);
+    }
     if (autoplay) {
       if (readAloudBlocked()) return;
       playingRef.current = true;
@@ -1145,10 +1386,12 @@ export function Reader({
   }
 
   // ----- bookmarks -----
-  function saveLastRead() {
-    const s = currentSentence();
+  function saveLastRead(updateBookmark = true) {
+    const s = visibleSentence();
     if (!s) return;
-    onProgress?.(s.page, s.id, totalPages);
+    const position = positionForSentence(s);
+    onProgress?.(position, totalPages);
+    if (!updateBookmark) return;
     Bookmarks.upsert({
       tag: "Last read",
       docId: doc.docId,
@@ -1156,6 +1399,7 @@ export function Reader({
       page: s.page,
       chunkIndex: 0,
       sentenceId: s.id,
+      pageSentenceIndex: s.pageSentenceIndex,
       preview: s.text.slice(0, 60),
     }).catch(() => {});
   }
@@ -1205,13 +1449,19 @@ export function Reader({
     );
   }
 
-  const cs = currentSentence();
-  const currentPos = {
-    page: cs?.page ?? currentPage,
+  const cs = visibleSentence();
+  const visibleAnchor = visiblePositionRef.current;
+  const currentPos: ReadingPosition & { chunkIndex: number } = {
+    page: visibleAnchor?.page ?? cs?.page ?? currentPage,
     chunkIndex: 0,
-    sentenceId: cs?.id ?? flat[0]?.id ?? 0,
-    preview: (cs?.text ?? flat[0]?.text ?? "").slice(0, 60),
+    pageSentenceIndex: visibleAnchor?.pageSentenceIndex ?? cs?.pageSentenceIndex ?? 0,
+    sentenceId: visibleAnchor?.sentenceId ?? cs?.id ?? flat[0]?.id ?? 0,
+    preview: (visibleAnchor?.preview ?? cs?.text ?? flat[0]?.text ?? "").slice(0, 60),
   };
+  const initialWindowIndex = Math.max(
+    0,
+    Math.min(windowFocusIndex - windowStart, Math.max(0, renderedFlat.length - 1))
+  );
   // Live status-bar inset (works with Android edge-to-edge + rotation). When the
   // status bar is hidden (immersive) the inset collapses to 0, which is correct.
   const topInset = immersive ? 0 : Math.max(insets.top, Constants.statusBarHeight);
@@ -1352,10 +1602,10 @@ export function Reader({
 
       {/* reading surface — virtualized for smooth, uninterrupted scrolling */}
         <FlatList
-        key={doc.docId}
+        key={`${doc.docId}:${listGeneration}`}
         ref={listRef}
-        data={flat}
-        keyExtractor={(s) => String(s.id)}
+        data={renderedFlat}
+        keyExtractor={(s) => s.key}
         extraData={`${currentId ?? "n"}:${activeLine.sentenceId ?? "n"}:${activeLine.lineIndex}:${settings.fontSize}:${lineHeight}`}
         renderItem={({ item, index }: ListRenderItemInfo<Sentence>) => (
           <SentenceRow
@@ -1364,11 +1614,11 @@ export function Reader({
             activeLineIndex={item.id === activeLine.sentenceId ? activeLine.lineIndex : null}
             fontSize={settings.fontSize}
             lineHeight={lineHeight}
-            layoutKey={`${Math.round(windowWidth)}:${Math.round(windowHeight)}:${lineHeight}`}
+            layoutKey={`${Math.round(windowWidth)}:${lineHeight}`}
             rtl={Boolean(readingLanguage.rtl)}
             onTapWord={tapHandler}
             onLineRanges={handleLineRanges}
-            showPageDivider={index > 0 && flat[index - 1].page !== item.page}
+            showPageDivider={index > 0 && renderedFlat[index - 1].page !== item.page}
           />
         )}
         style={styles.reader}
@@ -1379,11 +1629,20 @@ export function Reader({
         onScrollBeginDrag={onReaderScrollBeginDrag}
         onScrollEndDrag={() => markUserScrollSettling(260)}
         onMomentumScrollEnd={() => markUserScrollSettling(80)}
-        initialScrollIndex={initialSentenceIndex > 0 ? initialSentenceIndex : undefined}
-        initialNumToRender={14}
-        maxToRenderPerBatch={12}
-        windowSize={11}
-        updateCellsBatchingPeriod={50}
+        initialScrollIndex={initialWindowIndex > 0 ? initialWindowIndex : undefined}
+        initialNumToRender={24}
+        maxToRenderPerBatch={16}
+        windowSize={9}
+        updateCellsBatchingPeriod={32}
+        maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+        onEndReached={() =>
+          setWindowEnd((end) => {
+            const next = Math.min(flatRef.current.length, end + READER_WINDOW_EXPAND);
+            windowEndRef.current = next;
+            return next;
+          })
+        }
+        onEndReachedThreshold={0.45}
         removeClippedSubviews={false}
       />
 
@@ -1524,8 +1783,8 @@ const SentenceRow = React.memo(function SentenceRow({
   }
 
   const textStyle = {
-    fontSize,
-    lineHeight,
+    fontSize: sentence.kind === "heading" ? Math.round(fontSize * 1.18) : fontSize,
+    lineHeight: sentence.kind === "heading" ? Math.round(lineHeight * 1.16) : lineHeight,
     textAlign: rtl ? "right" : "left",
     writingDirection: rtl ? "rtl" : "ltr",
   } as const;
@@ -1552,7 +1811,10 @@ const SentenceRow = React.memo(function SentenceRow({
           <View style={styles.pageDividerLine} />
         </View>
       ) : null}
-      <Text style={[styles.row, textStyle]} onTextLayout={active ? handleTextLayout : undefined}>
+      <Text
+        style={[styles.row, sentence.kind === "heading" && styles.headingRow, textStyle]}
+        onTextLayout={active ? handleTextLayout : undefined}
+      >
         {active && lines?.length ? renderMeasuredLines(lines) : renderTokenText(tokens)}
       </Text>
     </View>
@@ -1773,6 +2035,12 @@ const styles = StyleSheet.create({
   reader: { flex: 1 },
   readerContent: { padding: theme.spacing(3) },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
+  headingRow: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    paddingTop: theme.spacing(2.4),
+    paddingBottom: theme.spacing(1.2),
+  },
   rtlRowWrap: { alignItems: "stretch" },
   pageDivider: {
     flexDirection: "row",

@@ -1,9 +1,19 @@
-import { PdfPage } from "./PDFParser";
+import type { PdfPage } from "./PDFParser";
 
 export interface Sentence {
   id: number;
   page: number;
+  /** Stable position inside the page; unlike id, this survives earlier-page OCR updates. */
+  pageSentenceIndex: number;
+  /** Stable FlatList key while text on other pages is inserted or rebuilt. */
+  key: string;
   text: string;
+  kind: "body" | "heading";
+}
+
+interface TextUnit {
+  text: string;
+  kind: Sentence["kind"];
 }
 
 export interface ReflowChunk {
@@ -64,25 +74,35 @@ export const TextReflow = {
    * Native pages flow wrapped lines into paragraphs; OCR pages keep each line
    * as its own unit so list/figure structure (and page enters) survive.
    */
-  unitsForPage(p: PdfPage, skipLines?: Set<string>): string[] {
+  unitsForPage(p: PdfPage, skipLines?: Set<string>): TextUnit[] {
     if (p.source === "ocr") {
       const clean = this.cleanOcrText(p.text, p.page, skipLines);
-      const units: string[] = [];
-      for (const line of clean.split(/\n+/)) {
+      const units: TextUnit[] = [];
+      const lines = clean.split("\n");
+      for (let index = 0; index < lines.length; index++) {
+        const line = lines[index];
         const trimmed = line.trim();
         if (!trimmed) continue;
-        for (const s of this.splitSentences(trimmed)) units.push(s);
+        const previousText = index > 0 ? lines[index - 1].trim() : "";
+        const nextText = index < lines.length - 1 ? lines[index + 1].trim() : "";
+        const heading = isHeadingLine(trimmed, {
+          isolated: !previousText || !nextText,
+          followsChapterMarker: Boolean(previousText && isChapterMarker(previousText)),
+        });
+        for (const text of this.splitSentences(trimmed)) {
+          units.push({ text, kind: heading ? "heading" : "body" });
+        }
       }
       return units;
     }
-    return this.splitSentences(this.cleanPageText(p.text, p.page, skipLines));
+    return nativeStructuredUnits(p.text, p.page, skipLines, this.splitSentences.bind(this));
   },
 
   splitSentences(text: string): string[] {
     if (!text) return [];
     // Split after . ! ? (incl. common closing quotes) followed by a space.
     const parts = text
-      .replace(/([.!?]["”’)]?)\s+/g, "$1\u0001")
+      .replace(/([.!?。！？؟]["”’)]?)\s+/g, "$1\u0001")
       .split("\u0001")
       .map((s) => s.trim())
       .filter(Boolean);
@@ -100,8 +120,17 @@ export const TextReflow = {
     const skipLines = buildRepeatedSkipLines(pages);
     let id = 0;
     for (const p of pages) {
-      for (const s of this.unitsForPage(p, skipLines)) {
-        out.push({ id: id++, page: p.page, text: s });
+      let pageSentenceIndex = 0;
+      for (const unit of this.unitsForPage(p, skipLines)) {
+        out.push({
+          id: id++,
+          page: p.page,
+          pageSentenceIndex,
+          key: `${p.page}:${pageSentenceIndex}`,
+          text: unit.text,
+          kind: unit.kind,
+        });
+        pageSentenceIndex++;
       }
     }
     return out;
@@ -112,7 +141,8 @@ export const TextReflow = {
     return sentences.findIndex((s) => s.page === page);
   },
 
-  buildChunks(pages: PdfPage[]): ReflowChunk[] {    const chunks: ReflowChunk[] = [];
+  buildChunks(pages: PdfPage[]): ReflowChunk[] {
+    const chunks: ReflowChunk[] = [];
     const skipLines = buildRepeatedSkipLines(pages);
     let sentenceId = 0;
 
@@ -121,8 +151,17 @@ export const TextReflow = {
       const sentences: Sentence[] = [];
 
       for (const p of slice) {
-        for (const s of this.unitsForPage(p, skipLines)) {
-          sentences.push({ id: sentenceId++, page: p.page, text: s });
+        let pageSentenceIndex = 0;
+        for (const unit of this.unitsForPage(p, skipLines)) {
+          sentences.push({
+            id: sentenceId++,
+            page: p.page,
+            pageSentenceIndex,
+            key: `${p.page}:${pageSentenceIndex}`,
+            text: unit.text,
+            kind: unit.kind,
+          });
+          pageSentenceIndex++;
         }
       }
 
@@ -164,6 +203,105 @@ export const TextReflow = {
     return -1;
   },
 };
+
+function nativeStructuredUnits(
+  raw: string,
+  pageNumber: number | undefined,
+  skipLines: Set<string> | undefined,
+  splitSentences: (text: string) => string[]
+): TextUnit[] {
+  const cleaned = cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
+    .replace(/\r/g, "")
+    .replace(/(\w)-\n(\w)/g, "$1$2")
+    .replace(/[ \t]{2,}/g, " ");
+  const lines = cleaned.split("\n");
+  const units: TextUnit[] = [];
+  let bodyLines: string[] = [];
+  let previousWasChapterMarker = false;
+
+  const flushBody = () => {
+    const paragraph = bodyLines.join(" ").replace(/\s{2,}/g, " ").trim();
+    bodyLines = [];
+    if (!paragraph) return;
+    for (const text of splitSentences(paragraph)) units.push({ text, kind: "body" });
+  };
+
+  for (let index = 0; index < lines.length; index++) {
+    const text = lines[index].trim();
+    if (!text) {
+      flushBody();
+      previousWasChapterMarker = false;
+      continue;
+    }
+
+    const previousBlank = index === 0 || !lines[index - 1].trim();
+    const nextBlank = index === lines.length - 1 || !lines[index + 1].trim();
+    const chapterMarker = isChapterMarker(text);
+    const heading = isHeadingLine(text, {
+      isolated: previousBlank || nextBlank,
+      followsChapterMarker: previousWasChapterMarker,
+    });
+
+    if (heading) {
+      flushBody();
+      units.push({ text, kind: "heading" });
+      previousWasChapterMarker = chapterMarker;
+      continue;
+    }
+
+    bodyLines.push(text);
+    previousWasChapterMarker = false;
+  }
+
+  flushBody();
+  return units;
+}
+
+function isChapterMarker(text: string): boolean {
+  const value = text.trim();
+  return (
+    /^(chapter|part|book|section|prologue|epilogue|introduction|conclusion|preface|foreword|appendix)\b/i.test(
+      value
+    ) ||
+    /^(فصل|بخش|کتاب|مقدمه|نتیجه|پیوست)(?:\s|$)/.test(value) ||
+    /^(الفصل|الباب|الجزء|الكتاب|مقدمة|الخاتمة|ملحق)(?:\s|$)/.test(value) ||
+    /^(kapittel|del|innledning|konklusjon|vedlegg)\b/i.test(value) ||
+    /^(kapitel|teil|einleitung|schluss|anhang)\b/i.test(value) ||
+    /^(глава|часть|книга|раздел|введение|заключение|приложение)(?:\s|$)/i.test(value) ||
+    /^(cap[ií]tulo|parte|libro|introducci[oó]n|conclusi[oó]n|ap[eé]ndice)\b/i.test(value) ||
+    /^(chapitre|partie|livre|introduction|conclusion|annexe)\b/i.test(value) ||
+    /^(capitolo|parte|libro|introduzione|conclusione|appendice)\b/i.test(value) ||
+    /^(cap[ií]tulo|parte|livro|introdu[cç][aã]o|conclus[aã]o|ap[eê]ndice)\b/i.test(value) ||
+    /^(b[oö]l[uü]m|k[iı]s[iı]m|kitap|giri[sş]|sonu[cç]|ek)\b/i.test(value) ||
+    /^(第[一二三四五六七八九十百千\d]+[章节卷部篇]|前言|序言|引言|结论|附录)/.test(value) ||
+    /^(第[一二三四五六七八九十百千\d]+[章部編]|序章|終章|はじめに|結論|付録)/.test(value) ||
+    /^(제\s*[\d일이삼사오육칠팔구십백]+\s*[장부]|서문|소개|결론|부록)/.test(value)
+  );
+}
+
+function isHeadingLine(
+  text: string,
+  context: { isolated: boolean; followsChapterMarker: boolean }
+): boolean {
+  const value = text.trim();
+  if (!value || value.length > 100) return false;
+  if (isChapterMarker(value)) return true;
+  if (context.followsChapterMarker && value.split(/\s+/).length <= 14 && !/[.!?؟]$/.test(value)) {
+    return true;
+  }
+  if (!context.isolated || /[.!?؟]$/.test(value)) return false;
+
+  const words = value.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 12) return false;
+  if (/^[IVXLCDM\d\s.:-]+$/i.test(value)) return true;
+
+  const latinWords = words.filter((word) => /[A-Za-z]/.test(word));
+  if (latinWords.length === 0) return false;
+  const titleLike = latinWords.filter(
+    (word) => /^[A-Z][A-Za-z'’\-]*$/.test(word) || /^[A-Z\d'’\-]+$/.test(word)
+  ).length;
+  return titleLike / latinWords.length >= 0.72;
+}
 
 function stripNonReadingLines(
   raw: string,

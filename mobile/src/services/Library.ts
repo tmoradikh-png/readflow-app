@@ -23,6 +23,9 @@ export interface LibraryItem {
   /** Reading progress. */
   lastPage: number;
   lastSentenceId: number;
+  /** Stable position within lastPage; sentence ids shift when OCR inserts text. */
+  lastPageSentenceIndex?: number;
+  lastPreview?: string;
   progress: number; // 0..1
   addedAt: number;
   updatedAt: number;
@@ -112,6 +115,8 @@ export const Library = {
       mimeType: mimeType ?? existing?.mimeType ?? null,
       lastPage: existing?.lastPage ?? 1,
       lastSentenceId: existing?.lastSentenceId ?? 0,
+      lastPageSentenceIndex: existing?.lastPageSentenceIndex ?? 0,
+      lastPreview: existing?.lastPreview ?? "",
       progress: existing?.progress ?? 0,
       addedAt: existing?.addedAt ?? now,
       updatedAt: now,
@@ -125,7 +130,13 @@ export const Library = {
   /** Persist the latest reading position for a document. */
   async updateProgress(
     id: string,
-    info: { lastPage: number; lastSentenceId: number; totalPages: number }
+    info: {
+      lastPage: number;
+      lastSentenceId: number;
+      lastPageSentenceIndex?: number;
+      lastPreview?: string;
+      totalPages: number;
+    }
   ): Promise<void> {
     const all = await readAll();
     const idx = all.findIndex((x) => x.id === id);
@@ -135,6 +146,8 @@ export const Library = {
       ...all[idx],
       lastPage: Math.max(1, info.lastPage || 1),
       lastSentenceId: Math.max(0, info.lastSentenceId || 0),
+      lastPageSentenceIndex: Math.max(0, info.lastPageSentenceIndex || 0),
+      lastPreview: String(info.lastPreview || "").slice(0, 80),
       progress: Math.min(1, Math.max(0, info.lastPage / totalPages)),
       updatedAt: Date.now(),
     };

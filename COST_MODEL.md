@@ -1,6 +1,6 @@
 # readFlow Pricing and Cost Model
 
-Updated: 2026-06-29
+Updated: 2026-07-20
 
 This file records the business model assumptions for readFlow so another
 developer can continue without guessing. Re-check vendor prices before launch
@@ -74,8 +74,9 @@ Current cloud voice implementation:
 - Free-tier source now follows the latest product decision: 1 imported PDF per
   month and the first 100 pages of a native-text document. The backend returns
   `truncated/pageCap` so the reader can show a page-limit message instead of
-  mistaking page 101 for a scanned page. Source `1.0.23` also blocks
-  Listen/read-aloud for Free and routes it to a Reader Plus upgrade prompt.
+  mistaking page 101 for a scanned page. Source `1.0.29` allows a 10-minute
+  daily preview of downloaded on-device rF AI. The timer uses actual local
+  playback progress and makes no OpenAI request.
 - Reader Plus is now intentionally non-OCR: ad-free/full native-text reading,
   larger imports, and device voice. Scanned/image PDFs require AI Pro or Power.
 - Cloud AI voice is language-quality gated. Persian, Arabic, Russian, Hindi,
@@ -96,10 +97,13 @@ The free tier must have no marginal API cost to us.
 Allowed in free:
 - Native text preview for a small number of pages/books.
 - Local reading, bookmarks, and basic settings.
+- Up to 10 minutes/day of downloaded on-device rF AI. This uses the user's CPU,
+  battery, storage, and bandwidth for the model download; it has no per-character
+  vendor charge to Urmia Works.
 - Ads if the product uses ads later.
 
 Not allowed in free:
-- Read-aloud / Listen mode.
+- Unlimited read-aloud / Listen mode.
 - OpenAI AI calls.
 - OpenAI cloud TTS.
 - OCR for scanned PDFs unless it is fully local and proven cheap enough.
@@ -107,6 +111,11 @@ Not allowed in free:
 
 The only expected free-tier business cost should be shared Render hosting and
 small bandwidth/CPU overhead.
+
+The hidden Reviewer tier is also designed to have no variable AI vendor cost.
+It grants full reading, library, export, and on-device rF AI, while keeping OCR,
+AI questions, and Cloud AI voice disabled. Its signed access token is for store
+review and trusted QA only; it is not a public subscription.
 
 ## AI COGS Guardrail
 

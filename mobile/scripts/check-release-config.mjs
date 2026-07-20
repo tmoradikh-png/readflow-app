@@ -30,9 +30,9 @@ const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
 const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.28";
-const EXPECTED_ANDROID_VERSION_CODE = 34;
-const EXPECTED_IOS_BUILD_NUMBER = "28";
+const EXPECTED_VERSION = "1.0.29";
+const EXPECTED_ANDROID_VERSION_CODE = 35;
+const EXPECTED_IOS_BUILD_NUMBER = "29";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
 // 0) This repo releases as a managed Expo app. A local generated android/

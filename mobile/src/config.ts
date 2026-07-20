@@ -1,5 +1,6 @@
 import Constants from "expo-constants";
 import { getAppUserId } from "./services/AppIdentity";
+import { getReviewerToken } from "./services/ReviewerToken";
 
 /**
  * Backend base URL.
@@ -74,5 +75,7 @@ export function apiHeaders(extra?: Record<string, string>): Record<string, strin
   if (APP_KEY) h["x-app-key"] = APP_KEY;
   const appUserId = getAppUserId();
   if (appUserId) h["x-app-user-id"] = appUserId;
+  const reviewerToken = getReviewerToken();
+  if (reviewerToken) h["x-reviewer-token"] = reviewerToken;
   return h;
 }

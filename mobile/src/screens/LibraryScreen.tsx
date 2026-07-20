@@ -8,9 +8,11 @@ import {
   ScrollView,
   Linking,
   Modal,
+  TextInput,
 } from "react-native";
 import Constants from "expo-constants";
 import * as Speech from "expo-speech";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   PDFParser,
@@ -48,6 +50,9 @@ import {
   voiceRegionLabel,
 } from "../services/ReadingLanguages";
 import { theme } from "../theme";
+import { activateReviewerAccess } from "../services/ReviewerAccess";
+
+const RF_AI_FREE_OFFER_KEY = "readflow.rfAiFreeOffer.v1";
 
 interface Props {
   /** Open a freshly parsed document in the reader. */
@@ -57,6 +62,7 @@ interface Props {
   preferences: ReadingPreferences;
   onPreferencesChange: (next: ReadingPreferences) => void;
   onRefreshUsage?: () => void;
+  onRefreshEntitlement?: () => Promise<void>;
   purchasingAvailable?: boolean;
   purchaseSetupLoading?: boolean;
   purchasing?: boolean;
@@ -91,6 +97,7 @@ export function LibraryScreen({
   preferences,
   onPreferencesChange,
   onRefreshUsage,
+  onRefreshEntitlement,
   purchasingAvailable,
   purchaseSetupLoading,
   purchasing,
@@ -165,6 +172,41 @@ export function LibraryScreen({
   useEffect(() => {
     if (showVoice) refreshLocalVoiceStatus().catch(() => {});
   }, [refreshLocalVoiceStatus, showVoice]);
+
+  useEffect(() => {
+    if (
+      entitlement.tier !== "free" ||
+      !entitlement.features.localVoice ||
+      !readingLanguage.rfAi ||
+      !localStatus.nativeAvailable ||
+      localStatus.modelDownloaded
+    ) {
+      return;
+    }
+    let cancelled = false;
+    AsyncStorage.getItem(RF_AI_FREE_OFFER_KEY)
+      .then((seen) => {
+        if (cancelled || seen) return;
+        setNotice({
+          title: "Try rF AI free",
+          body: `Free includes 10 minutes of offline rF AI reading each day. The optional ${formatLocalModelSize(localStatus.modelSizeBytes)} voice pack downloads once, runs on this phone, and has no Cloud AI cost.`,
+          secondary: { label: "Not now", tone: "secondary" },
+          primary: { label: "Download", onPress: installLocalVoice },
+        });
+        return AsyncStorage.setItem(RF_AI_FREE_OFFER_KEY, "shown");
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    entitlement.features.localVoice,
+    entitlement.tier,
+    localStatus.modelDownloaded,
+    localStatus.modelSizeBytes,
+    localStatus.nativeAvailable,
+    readingLanguage.rfAi,
+  ]);
 
   useEffect(() => {
     Speech.getAvailableVoicesAsync()
@@ -628,7 +670,12 @@ export function LibraryScreen({
         onClose={() => setShowLanguage(false)}
         onChange={onPreferencesChange}
       />
-      <HelpAboutSheet visible={showHelp} onClose={() => setShowHelp(false)} />
+      <HelpAboutSheet
+        visible={showHelp}
+        planName={entitlement.name}
+        onReviewerActivated={onRefreshEntitlement}
+        onClose={() => setShowHelp(false)}
+      />
       <ThemedNotice
         visible={Boolean(notice)}
         title={notice?.title || ""}
@@ -911,12 +958,14 @@ function VoiceSettingsSheet({
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
   const planHasCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
   const canUseCloud = Boolean(planHasCloud && readingLanguage.cloudAiVoice);
-  const canUseReadAloud =
+  const canUseDeviceReadAloud =
     entitlement.tier !== "free" &&
     (entitlement.features.unlimitedLibrary ||
       entitlement.features.ai ||
       entitlement.features.ocr ||
       entitlement.features.cloudVoice);
+  const canUseRfVoice = Boolean(entitlement.features.localVoice);
+  const rfVoiceDailyLimit = entitlement.limits.localVoiceSecondsPerDay || 0;
   const currentDeviceVoice = deviceVoices.find((v) => v.id === preferences.deviceVoiceId);
   const [voiceRegion, setVoiceRegion] = useState("recommended");
   const regionOptions = useMemo(() => {
@@ -933,7 +982,7 @@ function VoiceSettingsSheet({
   }, [deviceVoices, voiceRegion]);
 
   function selectEngine(engine: VoiceEngine) {
-    if (engine === "device" && !canUseReadAloud) {
+    if (engine === "device" && !canUseDeviceReadAloud) {
       onUpgrade({
         title: "Unlock read-aloud",
         body:
@@ -956,11 +1005,11 @@ function VoiceSettingsSheet({
       });
       return;
     }
-    if (engine === "local_ai" && !entitlement.features.ai) {
+    if (engine === "local_ai" && !canUseRfVoice) {
       onUpgrade({
         title: "Unlock rF AI voice",
         body:
-          "rF AI voice is included in AI Pro and Power. Reader Plus and higher include Phone voice without cloud AI cost.",
+          "rF AI voice is available on supported plans. It runs entirely on this phone and does not use Cloud AI.",
       });
       return;
     }
@@ -1022,16 +1071,20 @@ function VoiceSettingsSheet({
               <VoiceChoice
                 title="rF AI"
                 detail={
-                  localStatus.engineInstalled
+                  entitlement.tier === "free" && rfVoiceDailyLimit > 0
+                    ? `10-minute daily preview. Downloads once and runs on this phone.`
+                    : localStatus.engineInstalled
                     ? readingLanguage.rfAi
                       ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
                       : "English voice pack only for now. More rF AI languages can be added later."
                     : localStatus.detail
                 }
                 active={preferences.voiceEngine === "local_ai"}
-                locked={!localStatus.engineInstalled || !readingLanguage.rfAi}
+                locked={!canUseRfVoice || !localStatus.engineInstalled || !readingLanguage.rfAi}
                 stateLabel={
-                  !readingLanguage.rfAi
+                  !canUseRfVoice
+                    ? "Plan"
+                    : !readingLanguage.rfAi
                     ? "English"
                     : localStatus.engineInstalled
                     ? undefined
@@ -1049,8 +1102,8 @@ function VoiceSettingsSheet({
                     : `Uses the phone's built-in ${readingLanguage.label} voice when available.`
                 }
                 active={preferences.voiceEngine === "device"}
-                locked={!canUseReadAloud}
-                stateLabel={canUseReadAloud ? undefined : "Reader+"}
+                locked={!canUseDeviceReadAloud}
+                stateLabel={canUseDeviceReadAloud ? undefined : "Reader+"}
                 onPress={() => selectEngine("device")}
               />
               <VoiceChoice
@@ -1281,12 +1334,25 @@ function VoiceChoice({
   );
 }
 
-function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function HelpAboutSheet({
+  visible,
+  planName,
+  onReviewerActivated,
+  onClose,
+}: {
+  visible: boolean;
+  planName: string;
+  onReviewerActivated?: () => Promise<void>;
+  onClose: () => void;
+}) {
   const expo = Constants.expoConfig as any;
   const version = expo?.version || "dev";
   const code = expo?.android?.versionCode || expo?.ios?.buildNumber || "";
   const supportEmail = expo?.extra?.supportEmail || "support@urmiaworks.com";
   const website = expo?.extra?.website || "https://urmiaworks.com";
+  const [reviewCode, setReviewCode] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
+  const [reviewMessage, setReviewMessage] = useState("");
 
   function contact() {
     Linking.openURL(`mailto:${supportEmail}?subject=readFlow support`).catch(() => {});
@@ -1294,6 +1360,21 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
 
   function openWebsite() {
     Linking.openURL(website).catch(() => {});
+  }
+
+  async function activateReview() {
+    setReviewBusy(true);
+    setReviewMessage("");
+    try {
+      await activateReviewerAccess(reviewCode);
+      await onReviewerActivated?.();
+      setReviewCode("");
+      setReviewMessage("Reviewer access is active on this device.");
+    } catch (error: any) {
+      setReviewMessage(error?.message || "Could not activate review access.");
+    } finally {
+      setReviewBusy(false);
+    }
   }
 
   return (
@@ -1311,19 +1392,54 @@ function HelpAboutSheet({ visible, onClose }: { visible: boolean; onClose: () =>
               readFlow {version}
               {code ? ` (${code})` : ""}
             </Text>
+            <Text style={styles.aboutPlan}>Plan: {planName}</Text>
             <Text style={styles.aboutBody}>
-              readFlow turns PDF and Word documents into phone-sized reading text, then reads with Phone voice, capped Cloud AI, or downloaded rF AI on eligible plans.
+              readFlow turns PDF and Word documents into phone-sized reading text, then reads with Phone voice, capped Cloud AI, or downloaded rF AI. Free includes a short daily rF AI preview.
             </Text>
             <View style={styles.helpRows}>
               <HelpRow label="+" text="Add a PDF or Word document." />
               <HelpRow label="Lang" text="Sets OCR, phone voices, Cloud AI, and AI answer language." />
-              <HelpRow label="Voice" text="Choose Reader Plus Phone voice, capped Cloud AI, or downloaded rF AI." />
+              <HelpRow label="Voice" text="Choose Phone voice, capped Cloud AI, or downloaded rF AI. Free includes 10 rF AI minutes per day." />
               <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
               <HelpRow label="Fix text" text="Rebuilds a bad PDF import with paid OCR." />
               <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />
               <HelpRow label="Focus" text="Hides controls for a cleaner reading view." />
               <HelpRow label="BM" text="Opens bookmarks and page navigation." />
               <HelpRow label="AI" text="Summaries, explanations, and questions for AI Pro and Power." />
+            </View>
+            <View style={styles.reviewAccess}>
+              <Text style={styles.reviewAccessTitle}>App review access</Text>
+              <Text style={styles.reviewAccessHint}>
+                For authorized store reviewers and release testing. This enables only features that do not use paid AI services.
+              </Text>
+              <View style={styles.reviewAccessRow}>
+                <TextInput
+                  style={styles.reviewAccessInput}
+                  value={reviewCode}
+                  onChangeText={setReviewCode}
+                  placeholder="Access code"
+                  placeholderTextColor={theme.colors.textDim}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  secureTextEntry
+                  editable={!reviewBusy}
+                  onSubmitEditing={activateReview}
+                />
+                <Pressable
+                  style={[styles.reviewAccessButton, reviewBusy && styles.disabledButton]}
+                  onPress={activateReview}
+                  disabled={reviewBusy}
+                >
+                  {reviewBusy ? (
+                    <ActivityIndicator color={theme.colors.onAccent} size="small" />
+                  ) : (
+                    <Text style={styles.reviewAccessButtonText}>Activate</Text>
+                  )}
+                </Pressable>
+              </View>
+              {reviewMessage ? (
+                <Text style={styles.reviewAccessMessage}>{reviewMessage}</Text>
+              ) : null}
             </View>
             <View style={styles.aboutActions}>
               <Pressable style={styles.aboutBtn} onPress={contact}>
@@ -2270,6 +2386,11 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sansSemiBold,
     fontSize: 15,
   },
+  aboutPlan: {
+    color: theme.colors.accent,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 13,
+  },
   aboutBody: {
     color: theme.colors.textMute,
     fontFamily: theme.fonts.sans,
@@ -2277,6 +2398,55 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   helpRows: { gap: 8 },
+  reviewAccess: {
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: 12,
+  },
+  reviewAccessTitle: {
+    color: theme.colors.text,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 14,
+  },
+  reviewAccessHint: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  reviewAccessRow: { flexDirection: "row", gap: 8 },
+  reviewAccessInput: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceAlt,
+    color: theme.colors.text,
+    paddingHorizontal: 12,
+    fontFamily: theme.fonts.sans,
+  },
+  reviewAccessButton: {
+    minWidth: 92,
+    minHeight: 44,
+    borderRadius: 8,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  disabledButton: { opacity: 0.55 },
+  reviewAccessButtonText: {
+    color: theme.colors.onAccent,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 13,
+  },
+  reviewAccessMessage: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sans,
+    fontSize: 12.5,
+  },
   helpRow: {
     flexDirection: "row",
     alignItems: "flex-start",

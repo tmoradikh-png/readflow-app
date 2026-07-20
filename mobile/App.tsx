@@ -44,6 +44,7 @@ import {
 } from "./src/services/Preferences";
 import { getReadingLanguage } from "./src/services/ReadingLanguages";
 import { theme } from "./src/theme";
+import { ReadingPosition } from "./src/services/ReadingPosition";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 LogBox.ignoreLogs(["SherpaOnnxModelList: Unsupported model espeak-ng-data"]);
@@ -154,11 +155,13 @@ export default function App() {
   }, []);
 
   const handleProgress = useCallback(
-    (page: number, sentenceId: number, totalPages: number) => {
+    (position: ReadingPosition, totalPages: number) => {
       if (!doc) return;
       Library.updateProgress(doc.docId, {
-        lastPage: page,
-        lastSentenceId: sentenceId,
+        lastPage: position.page,
+        lastSentenceId: position.sentenceId,
+        lastPageSentenceIndex: position.pageSentenceIndex,
+        lastPreview: position.preview,
         totalPages,
       }).catch(() => {});
     },
@@ -179,7 +182,12 @@ export default function App() {
             onPreferencesChange={updatePreferences}
             language={readingLanguage.voiceLanguage}
             freePageLimit={entitlement.limits.perDocPageCap ?? 100}
-            startSentenceId={item?.lastSentenceId ?? 0}
+            startPosition={{
+              page: item?.lastPage ?? 1,
+              pageSentenceIndex: item?.lastPageSentenceIndex ?? 0,
+              sentenceId: item?.lastSentenceId ?? 0,
+              preview: item?.lastPreview ?? "",
+            }}
             onProgress={handleProgress}
             purchasingAvailable={purchasingAvailable}
             purchaseSetupLoading={purchaseSetupLoading}
@@ -200,6 +208,7 @@ export default function App() {
             preferences={preferences}
             onPreferencesChange={updatePreferences}
             onRefreshUsage={refreshUsage}
+            onRefreshEntitlement={refreshEntitlementAndUsage}
             purchasingAvailable={purchasingAvailable}
             purchaseSetupLoading={purchaseSetupLoading}
             purchasing={purchasing}

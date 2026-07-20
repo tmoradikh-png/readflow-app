@@ -58,7 +58,15 @@ const ttsLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: keyByUser,
 });
+const reviewerLimiter = rateLimit({
+  windowMs: 60 * 60_000,
+  limit: Number(process.env.RATE_REVIEWER_ACCESS_PER_HOUR || 12),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: keyByUser,
+});
 
+app.use("/api/reviewer", reviewerLimiter);
 app.use("/api", configRouter); // /api/config, /api/entitlements, /api/usage
 app.use("/api/pdf", requireAppKey, extractLimiter, pdfRouter);
 app.use("/api/ai", requireAppKey, aiLimiter, aiRouter);

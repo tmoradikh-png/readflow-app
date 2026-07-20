@@ -11,11 +11,35 @@
 import { Router } from "express";
 import { publicConfig } from "../config/plans";
 import { getUsage, currentMonth } from "../services/usage";
+import { appUserIdFromRequest } from "../services/entitlements";
+import {
+  createReviewerToken,
+  reviewerAccessConfigured,
+  reviewerCodeMatches,
+} from "../services/reviewerAccess";
+import { requireAppKey } from "../middleware/appKey";
 
 export const configRouter = Router();
 
 configRouter.get("/config", (_req, res) => {
   res.json(publicConfig());
+});
+
+configRouter.post("/reviewer/access", requireAppKey, (req, res) => {
+  const appUserId = appUserIdFromRequest(req);
+  if (!reviewerAccessConfigured()) {
+    res.status(503).json({ error: "reviewer_access_not_configured" });
+    return;
+  }
+  if (!appUserId) {
+    res.status(400).json({ error: "missing_app_user_id" });
+    return;
+  }
+  if (!reviewerCodeMatches(req.body?.code)) {
+    res.status(403).json({ error: "invalid_reviewer_code" });
+    return;
+  }
+  res.json({ token: createReviewerToken(appUserId), tier: "reviewer" });
 });
 
 configRouter.get("/entitlements", (req, res) => {

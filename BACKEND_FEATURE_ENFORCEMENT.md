@@ -2,7 +2,10 @@
 
 ## Overview
 
-**AI and TTS features are strictly enforced on the backend** to prevent free users from accessing cost-bearing services. Free users can use local/device reading, but **cannot access any cloud AI, OCR, or TTS features**.
+**AI and cloud TTS features are strictly enforced on the backend** to prevent
+free users from accessing cost-bearing services. Free users can use local
+reading and a 10-minute daily on-device rF AI preview, but **cannot access cloud
+AI, OCR, or cloud TTS features**.
 
 > Cost note: read `COST_MODEL.md` before changing paid tiers or natural voice.
 > Unlimited cloud TTS is not economically safe. Natural voice is gated behind
@@ -19,14 +22,15 @@
 
 ## Feature Access by Tier
 
-| Feature | Free | Reader Plus | AI Pro | Power |
-|---------|------|-------------|--------|-------|
-| **Local PDF reading** | ✅ (100 pages/doc) | ✅ (full native text PDFs) | ✅ | ✅ |
-| **Server PDF extraction** | ✅ (1 PDF/mo) | ✅ (100/mo) | ✅ (300/mo) | ✅ (1000/mo) |
-| **AI summary/explain/ask** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (150/mo) | ✅ (400/mo) |
-| **OCR (scanned PDFs)** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (750/mo) | ✅ (2500/mo) |
-| **Cloud TTS (AI voice)** | ❌ 402 Blocked | ❌ 402 Blocked | ✅ (45k chars/mo) | ✅ (100k chars/mo) |
-| **Export** | ❌ 402 Blocked | ❌ 402 Blocked | ❌ 402 Blocked | ✅ |
+| Feature | Free | Reader Plus | Reviewer (internal) | AI Pro | Power |
+|---------|------|-------------|---------------------|--------|-------|
+| **Local PDF reading** | 100 pages/doc | Full native text PDFs | Unlimited | Full | Full |
+| **On-device rF AI** | 10 min/day | Blocked | Unlimited | Unlimited | Unlimited |
+| **Server PDF extraction** | 1 PDF/mo | 100/mo | Review-only high cap | 300/mo | 1000/mo |
+| **AI summary/explain/ask** | 402 Blocked | 402 Blocked | 402 Blocked | 150/mo | 400/mo |
+| **OCR (scanned PDFs)** | 402 Blocked | 402 Blocked | 402 Blocked | 750/mo | 2500/mo |
+| **Cloud TTS (AI voice)** | 402 Blocked | 402 Blocked | 402 Blocked | 45k chars/mo | 100k chars/mo |
+| **Export** | 402 Blocked | 402 Blocked | Allowed | 402 Blocked | Allowed |
 
 *TTS is cached in-memory; actual OpenAI usage varies by unique text/voice/speed
 combos. Caching does not make cloud voice safe to sell as unlimited.
@@ -99,19 +103,24 @@ Free tier definition (from `src/config/plans.ts`):
 
 When a request arrives, the backend resolves the user's tier in this order:
 
-1. **Production (with RevenueCat)**: If `RC_SECRET_KEY` is set:
+1. **Reviewer token**: If `x-reviewer-token` is valid, signed by
+   `REVIEWER_TOKEN_SECRET`, and bound to the same app-user id, the hidden
+   Reviewer tier is returned. The token can only be issued by
+   `POST /api/reviewer/access` after a correct `REVIEWER_ACCESS_CODE`.
+
+2. **Production (with RevenueCat)**: If `RC_SECRET_KEY` is set:
    - Client sends `x-app-user-id` header (RevenueCat $RCAnonymousID)
    - Backend queries RevenueCat REST API with server-only secret
    - Maps active entitlements → highest tier
    - Caches result for 60s
    - ⚠️ **On RevenueCat error: defaults to FREE (never grants paid on failure)**
 
-2. **Dev/Testing**: If `ENTITLEMENTS_DEV_OVERRIDE=true`:
+3. **Dev/Testing**: If `ENTITLEMENTS_DEV_OVERRIDE=true`:
    - Uses `DEV_DEFAULT_TIER` env var (e.g., "ai_pro" for testing)
    - Only works if explicitly enabled
    - Always falls back to free if env var is missing or false
 
-3. **Local/Unauthenticated**: Default fallback
+4. **Local/Unauthenticated**: Default fallback
    - No `x-app-user-id` header → FREE tier
    - No RevenueCat key → FREE tier
 
@@ -148,6 +157,8 @@ export async function resolveEntitlement(req: Request): Promise<Entitlement> {
 
 ```yaml
 OPENAI_API_KEY: <your-openai-key>        # Needed for /api/ai, /api/tts
+REVIEWER_ACCESS_CODE: <strong-review-code>
+REVIEWER_TOKEN_SECRET: <independent-32-byte-or-longer-secret>
 APP_KEY: <random-secret-string>          # Optional app key protection
 RC_SECRET_KEY: <revenuecat-secret-key>   # ← Required for prod entitlements
 ```

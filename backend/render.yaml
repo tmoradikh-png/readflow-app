@@ -43,6 +43,10 @@ services:
         sync: false
       - key: RC_SECRET_KEY
         sync: false
+      - key: REVIEWER_ACCESS_CODE
+        sync: false
+      - key: REVIEWER_TOKEN_SECRET
+        sync: false
       # --- AI / voice config ---
       - key: AI_PROVIDER
         value: openai

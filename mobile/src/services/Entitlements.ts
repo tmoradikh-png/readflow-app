@@ -1,5 +1,6 @@
 import { API_BASE, apiHeaders } from "../config";
 import { loadAppUserId } from "./AppIdentity";
+import { loadReviewerToken } from "./ReviewerToken";
 
 export interface PlanFeatures {
   ads: boolean;
@@ -9,6 +10,7 @@ export interface PlanFeatures {
   export: boolean;
   cloudVoice: boolean;
   unlimitedLibrary: boolean;
+  localVoice: boolean;
 }
 
 export interface PlanLimits {
@@ -19,6 +21,8 @@ export interface PlanLimits {
   maxFileSizeMb?: number;
   maxPages?: number;
   perDocPageCap?: number;
+  /** Daily on-device rF AI seconds. 0 means unlimited when localVoice is enabled. */
+  localVoiceSecondsPerDay?: number;
 }
 
 export interface EntitlementSnapshot {
@@ -26,7 +30,7 @@ export interface EntitlementSnapshot {
   name: string;
   features: PlanFeatures;
   limits: PlanLimits;
-  source: "revenuecat" | "dev-override" | "free";
+  source: "revenuecat" | "reviewer-access" | "dev-override" | "free";
 }
 
 const FREE_FEATURES: PlanFeatures = {
@@ -37,6 +41,7 @@ const FREE_FEATURES: PlanFeatures = {
   export: false,
   cloudVoice: false,
   unlimitedLibrary: false,
+  localVoice: true,
 };
 
 export const FREE_LIMITS: PlanLimits = {
@@ -47,6 +52,7 @@ export const FREE_LIMITS: PlanLimits = {
   maxFileSizeMb: 20,
   maxPages: 2000,
   perDocPageCap: 100,
+  localVoiceSecondsPerDay: 10 * 60,
 };
 
 export const FREE_ENTITLEMENT: EntitlementSnapshot = {
@@ -84,7 +90,7 @@ export interface UsageSnapshot {
 
 export async function fetchEntitlement(): Promise<EntitlementSnapshot> {
   try {
-    await loadAppUserId();
+    await Promise.all([loadAppUserId(), loadReviewerToken()]);
     const res = await fetch(`${API_BASE}/api/entitlements`, {
       headers: apiHeaders(),
     });
@@ -96,7 +102,10 @@ export async function fetchEntitlement(): Promise<EntitlementSnapshot> {
       features: { ...FREE_FEATURES, ...(data.features || {}) },
       limits: { ...FREE_LIMITS, ...((data as any).limits || {}) },
       source:
-        data.source === "revenuecat" || data.source === "dev-override" || data.source === "free"
+        data.source === "revenuecat" ||
+        data.source === "reviewer-access" ||
+        data.source === "dev-override" ||
+        data.source === "free"
           ? data.source
           : "free",
     };
@@ -107,7 +116,7 @@ export async function fetchEntitlement(): Promise<EntitlementSnapshot> {
 
 export async function fetchUsage(): Promise<UsageSnapshot | null> {
   try {
-    await loadAppUserId();
+    await Promise.all([loadAppUserId(), loadReviewerToken()]);
     const res = await fetch(`${API_BASE}/api/usage`, {
       headers: apiHeaders(),
     });

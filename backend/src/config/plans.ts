@@ -14,7 +14,7 @@
  *   and must be capped even though it has no OpenAI per-page charge.
  */
 
-export type TierKey = "free" | "reader_plus" | "ai_pro" | "power";
+export type TierKey = "free" | "reader_plus" | "reviewer" | "ai_pro" | "power";
 export type BillingPeriod = "monthly" | "yearly";
 
 /** Monthly usage allowances. Use Infinity sparingly — we avoid "unlimited". */
@@ -36,6 +36,8 @@ export interface PlanLimits {
    * N pages of their own PDF; beyond that we show the paywall.
    */
   perDocPageCap: number;
+  /** Daily on-device rF AI seconds. 0 means unlimited when localVoice is enabled. */
+  localVoiceSecondsPerDay: number;
 }
 
 export interface PlanFeatures {
@@ -53,6 +55,8 @@ export interface PlanFeatures {
   cloudVoice: boolean;
   /** Save an unlimited local library (vs the small free cap). */
   unlimitedLibrary: boolean;
+  /** Downloaded on-device rF AI. This has no OpenAI usage cost. */
+  localVoice: boolean;
 }
 
 export interface TierProduct {
@@ -70,6 +74,8 @@ export interface Tier {
   entitlementId: string | null;
   /** Highlight this as the default/recommended plan in the paywall. */
   recommended?: boolean;
+  /** Internal access tier; never shown as a purchasable plan. */
+  internal?: boolean;
   products: Partial<Record<BillingPeriod, TierProduct>>;
   limits: PlanLimits;
   features: PlanFeatures;
@@ -79,8 +85,9 @@ export interface Tier {
 export const TIER_RANK: Record<TierKey, number> = {
   free: 0,
   reader_plus: 1,
-  ai_pro: 2,
-  power: 3,
+  reviewer: 2,
+  ai_pro: 3,
+  power: 4,
 };
 
 export const AI_ECONOMICS = {
@@ -113,6 +120,7 @@ export const TIERS: Tier[] = [
       maxFileSizeMb: 20,
       maxPages: 2000,
       perDocPageCap: 100,
+      localVoiceSecondsPerDay: 10 * 60,
     },
     features: {
       ads: true,
@@ -122,6 +130,7 @@ export const TIERS: Tier[] = [
       export: false,
       cloudVoice: false,
       unlimitedLibrary: false,
+      localVoice: true,
     },
   },
   {
@@ -141,6 +150,7 @@ export const TIERS: Tier[] = [
       maxFileSizeMb: 100,
       maxPages: 2000,
       perDocPageCap: 0,
+      localVoiceSecondsPerDay: 0,
     },
     features: {
       ads: false,
@@ -150,6 +160,35 @@ export const TIERS: Tier[] = [
       export: false,
       cloudVoice: false,
       unlimitedLibrary: true,
+      localVoice: false,
+    },
+  },
+  {
+    key: "reviewer",
+    name: "Reviewer",
+    tagline: "Unlimited cost-free reading features for app review.",
+    entitlementId: "reviewer",
+    internal: true,
+    products: {},
+    limits: {
+      ocrPagesPerMonth: 0,
+      aiActionsPerMonth: 0,
+      cloudVoiceCharsPerMonth: 0,
+      pdfsPerMonth: 10_000,
+      maxFileSizeMb: 200,
+      maxPages: 5000,
+      perDocPageCap: 0,
+      localVoiceSecondsPerDay: 0,
+    },
+    features: {
+      ads: false,
+      ai: false,
+      ocr: false,
+      serverExtract: true,
+      export: true,
+      cloudVoice: false,
+      unlimitedLibrary: true,
+      localVoice: true,
     },
   },
   {
@@ -170,6 +209,7 @@ export const TIERS: Tier[] = [
       maxFileSizeMb: 100,
       maxPages: 1500,
       perDocPageCap: 0,
+      localVoiceSecondsPerDay: 0,
     },
     features: {
       ads: false,
@@ -179,6 +219,7 @@ export const TIERS: Tier[] = [
       export: false,
       cloudVoice: true,
       unlimitedLibrary: true,
+      localVoice: true,
     },
   },
   {
@@ -198,6 +239,7 @@ export const TIERS: Tier[] = [
       maxFileSizeMb: 200,
       maxPages: 5000,
       perDocPageCap: 0,
+      localVoiceSecondsPerDay: 0,
     },
     features: {
       ads: false,
@@ -207,6 +249,7 @@ export const TIERS: Tier[] = [
       export: true,
       cloudVoice: true,
       unlimitedLibrary: true,
+      localVoice: true,
     },
   },
 ];
@@ -288,7 +331,7 @@ export function publicConfig() {
     currency: "USD",
     recommendedTier: TIERS.find((t) => t.recommended)?.key ?? "ai_pro",
     cloudVoiceAvailable: true,
-    tiers: TIERS.map((t) => ({
+    tiers: TIERS.filter((t) => !t.internal).map((t) => ({
       key: t.key,
       name: t.name,
       tagline: t.tagline,

@@ -16,6 +16,7 @@ interface CurrentPos {
   page: number;
   chunkIndex: number;
   sentenceId: number;
+  pageSentenceIndex: number;
   preview: string;
 }
 
@@ -72,6 +73,7 @@ export function BookmarkPanel({
       page: current.page,
       chunkIndex: current.chunkIndex,
       sentenceId: current.sentenceId,
+      pageSentenceIndex: current.pageSentenceIndex,
       preview: current.preview,
     });
     setTag("");
