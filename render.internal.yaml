@@ -2,7 +2,7 @@
 # Use this file when you want to test paid features on Render Free.
 #
 # WARNING: Do not use this for public release.
-# It enables ENTITLEMENTS_DEV_OVERRIDE=true, so everyone is treated as paid.
+# It enables the cost-free Reviewer override for separately packaged QA builds.
 
 services:
   - type: web
@@ -41,7 +41,7 @@ services:
       - key: ENTITLEMENTS_DEV_OVERRIDE
         value: "true"
       - key: DEV_DEFAULT_TIER
-        value: ai_pro
+        value: reviewer
       - key: ENTITLEMENTS_CACHE_MS
         value: "60000"
       - key: RATE_EXTRACT_PER_MIN

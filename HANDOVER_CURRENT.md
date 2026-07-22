@@ -1,6 +1,6 @@
 # readFlow Current Handover
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 Start here when taking over readFlow. This file is a short operational map. It
 does not contain passwords, API keys, service-account JSON contents, signing
@@ -14,7 +14,7 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source and side-by-side QA candidate: `1.0.42` / version code `48`.
+- Current source and side-by-side QA candidate: `1.0.43` / version code `49`.
   It contains the reader stability, reviewer-access, page-continuity, title,
   reference-marker, and speech-articulation repairs described below. It is not
   public until a new AAB passes phone QA and is promoted in Play Console.
@@ -529,6 +529,29 @@ all passed. New imports receive the font-geometry marker after the matching
 backend source is deployed; the installed build's fallback repairs the retained
 pre-marker cache immediately.
 
+## 1.0.43 QA Reviewer Import Entitlement Repair
+
+The side-by-side QA app previously granted Reviewer access only inside the
+mobile UI. Import requests still reached the backend without a server-verifiable
+Reviewer signal, so RevenueCat resolved the tester as Free and rejected files
+larger than 20 MB. Version `1.0.43 (49)` makes the QA contract explicit:
+
+- only a separately packaged build with `expo.extra.qaReviewerMode=true` sends
+  `x-readflow-qa-reviewer: 1`;
+- only an internal backend with `ENTITLEMENTS_DEV_OVERRIDE=true` honors that
+  marker, and it resolves directly to the cost-free `reviewer` tier before a
+  RevenueCat lookup;
+- tracked production `app.json` never enables the QA flag, and both public
+  Render blueprints keep `ENTITLEMENTS_DEV_OVERRIDE=false`;
+- internal blueprints default to `DEV_DEFAULT_TIER=reviewer`, not `ai_pro`, so
+  QA cannot accidentally unlock OCR, text AI, or Cloud AI vendor spend.
+
+Reviewer QA therefore has unlimited local library/rF AI use for practical
+testing, up to the server's 200 MB absolute per-file safety cap and 5,000 pages
+per document. OCR, text AI, and Cloud AI remain disabled. Automated release
+checks pin both halves of this contract and fail if production configuration
+can request the override.
+
 ## Accounts And Services
 
 | Area | Account / owner | Important id or URL |
@@ -559,10 +582,11 @@ In the app, the reviewer opens `Shelf -> ? -> App review access`, enters the
 access code once, and taps Activate. The backend returns a signed, app-install
 bound reviewer token. Reviewer access is hidden from public pricing and cannot
 call OpenAI, OCR, or Cloud AI voice. A separately packaged local QA build may
-set `expo.extra.qaReviewerMode=true`; it grants the same cost-free Reviewer
-tier without a token and must use `com.urmiaworks.readflow.qa`, never the
-production package. Rotate both secrets if the access code is shared outside
-the intended review group.
+set `expo.extra.qaReviewerMode=true`; it sends the internal QA marker and
+receives the same cost-free Reviewer tier without a token only from a backend
+whose development override is enabled. It must use
+`com.urmiaworks.readflow.qa`, never the production package. Rotate both secrets
+if the access code is shared outside the intended review group.
 
 Google Play internal/closed tester membership does not itself create a
 `reader_plus` RevenueCat entitlement. For beta access, prefer the existing

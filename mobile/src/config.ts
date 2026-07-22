@@ -83,6 +83,9 @@ export function apiHeaders(extra?: Record<string, string>): Record<string, strin
   if (APP_KEY) h["x-app-key"] = APP_KEY;
   const appUserId = getAppUserId();
   if (appUserId) h["x-app-user-id"] = appUserId;
+  // The internal backend honors this only when its server-side development
+  // override is enabled. Production app.json never enables REVIEWER_QA_MODE.
+  if (REVIEWER_QA_MODE) h["x-readflow-qa-reviewer"] = "1";
   const reviewerToken = getReviewerToken();
   if (reviewerToken) h["x-reviewer-token"] = reviewerToken;
   return h;

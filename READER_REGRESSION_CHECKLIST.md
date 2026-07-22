@@ -1,6 +1,6 @@
 # readFlow Reader Regression Checklist
 
-Updated: 2026-07-21
+Updated: 2026-07-22
 
 This is the permanent reader/audio bug ledger. Every change to document
 reflow, scrolling, saved position, bookmarks, voice, highlighting, lifecycle,
@@ -70,6 +70,7 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
 | RF-R41 | Verse, time, ratio, schedule, or score numbers after a colon disappear or become silent as citations | A colon followed by digits is semantic content, not a flattened footnote marker | Citation fallback excludes colons; fixtures preserve and speak `John 3:16`, `12:30`, `4:2`, and `16:9` exactly |
 | RF-R42 | A real PDF title such as `Measurement, ranking, and the crowd` renders as body text | Detect headings from the PDF's typography and layout, independent of a particular title's wording or punctuation | Backend requires larger size, a dedicated full-line font, and vertical separation; real-book audit covers all 133 pages and an italic-body counterexample prevents false headings |
 | RF-R43 | rF AI misreads or skips 3+ digit values and currency such as `$1.12 billion` | Convert English numeric glyphs into unambiguous words only at the local speech boundary | Generic speech-only normalization covers integers, grouped values, decimals, years, ordinals, ranges, percentages, scaled quantities, and `$`/`£`/`€`; displayed/copy/AI source text remains exact |
+| RF-R44 | QA Reviewer sees the Free 20 MB import limit | A side-by-side QA build must receive the backend Reviewer tier for imports without unlocking vendor-cost features | QA-only request marker is accepted only when backend `DEV_OVERRIDE` is enabled; production config cannot send it; test a 20-200 MB native-text PDF and verify tier `reviewer` |
 
 ## Connected-Phone Candidate Gate
 
@@ -95,6 +96,9 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
    controls appear.
 11. Run one clean PDF, one scanned/OCR PDF, one DOCX, and one RTL PDF through
     import/open/delete before promoting the build.
+12. In the side-by-side QA build, import a native-text PDF larger than 20 MB.
+    It must be accepted as Reviewer (up to the 200 MB safety cap) without
+    enabling OCR, text AI, or Cloud AI.
 
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.

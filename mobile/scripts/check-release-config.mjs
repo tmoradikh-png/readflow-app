@@ -10,6 +10,9 @@ const androidDirPath = path.join(mobileDir, "android");
 const iosDirPath = path.join(mobileDir, "ios");
 const renderYamlPath = path.join(repoRoot, "render.yaml");
 const backendRenderYamlPath = path.join(repoRoot, "backend", "render.yaml");
+const internalRenderYamlPath = path.join(repoRoot, "render.internal.yaml");
+const backendInternalRenderYamlPath = path.join(repoRoot, "backend", "render.internal.yaml");
+const backendEntitlementsPath = path.join(repoRoot, "backend", "src", "services", "entitlements.ts");
 
 function fail(message) {
   console.error(`FAIL: ${message}`);
@@ -30,9 +33,9 @@ const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
 const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.42";
-const EXPECTED_ANDROID_VERSION_CODE = 48;
-const EXPECTED_IOS_BUILD_NUMBER = "42";
+const EXPECTED_VERSION = "1.0.43";
+const EXPECTED_ANDROID_VERSION_CODE = 49;
+const EXPECTED_IOS_BUILD_NUMBER = "43";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
 // 0) This repo releases as a managed Expo app. A local generated android/
@@ -234,6 +237,33 @@ if (hasDevOverrideFalse(renderYaml) && hasDevOverrideFalse(backendRenderYaml)) {
   pass("Public release blueprints set ENTITLEMENTS_DEV_OVERRIDE=false");
 } else {
   fail("Public release blueprint must set ENTITLEMENTS_DEV_OVERRIDE=false in render.yaml and backend/render.yaml");
+}
+
+// 11) QA reviewer access must be explicit, cost-free, and impossible to turn
+// on from the tracked production app configuration.
+const internalRenderYaml = readUtf8(internalRenderYamlPath);
+const backendInternalRenderYaml = readUtf8(backendInternalRenderYamlPath);
+const entitlementSource = readUtf8(backendEntitlementsPath);
+const qaHeaderIsGuarded =
+  /REVIEWER_QA_MODE\) h\["x-readflow-qa-reviewer"\] = "1"/.test(mobileSource) &&
+  /DEV_OVERRIDE\s*&&[\s\S]{0,160}?x-readflow-qa-reviewer/.test(entitlementSource) &&
+  /tierByKey\("reviewer"\)/.test(entitlementSource);
+if (extra.qaReviewerMode !== true && qaHeaderIsGuarded) {
+  pass("Production config cannot request the internal QA Reviewer override");
+} else {
+  fail("QA Reviewer override must require REVIEWER_QA_MODE plus backend DEV_OVERRIDE and stay off in app.json");
+}
+
+function hasCostFreeReviewerDefault(content) {
+  return /-\s*key:\s*ENTITLEMENTS_DEV_OVERRIDE[\s\S]{0,120}?value:\s*"?true"?[\s\S]{0,180}?-\s*key:\s*DEV_DEFAULT_TIER[\s\S]{0,120}?value:\s*reviewer/m.test(content);
+}
+if (
+  hasCostFreeReviewerDefault(internalRenderYaml) &&
+  hasCostFreeReviewerDefault(backendInternalRenderYaml)
+) {
+  pass("Internal QA blueprints default to the no-vendor-cost Reviewer tier");
+} else {
+  fail("Internal QA blueprints must use DEV_DEFAULT_TIER=reviewer");
 }
 
 if (process.exitCode) {

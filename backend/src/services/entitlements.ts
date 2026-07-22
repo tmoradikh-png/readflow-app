@@ -5,11 +5,13 @@
  * RevenueCat's REST API using a server-only secret key.
  *
  * Resolution order for a request:
- *   1. If RC_SECRET_KEY is set and the request carries an app-user id, ask
+ *   1. A separately packaged QA app may request the cost-free Reviewer tier,
+ *      but only when the backend's development override is enabled.
+ *   2. If RC_SECRET_KEY is set and the request carries an app-user id, ask
  *      RevenueCat which entitlements are active → map to the highest tier.
- *   2. Otherwise (local dev / RC not configured): if ENTITLEMENTS_DEV_OVERRIDE
+ *   3. Otherwise (local dev / RC not configured): if ENTITLEMENTS_DEV_OVERRIDE
  *      is true, use DEV_DEFAULT_TIER (lets us test paid features without IAP).
- *   3. Fall back to the free tier.
+ *   4. Fall back to the free tier.
  *
  * Results are cached briefly per user to avoid hammering RevenueCat.
  */
@@ -83,6 +85,18 @@ export async function resolveEntitlement(
   options: { forceRefresh?: boolean } = {}
 ): Promise<Entitlement> {
   const appUserId = appUserIdFromRequest(req);
+
+  if (
+    DEV_OVERRIDE &&
+    appUserId &&
+    req.header("x-readflow-qa-reviewer")?.trim() === "1"
+  ) {
+    return {
+      appUserId,
+      tier: tierByKey("reviewer"),
+      source: "dev-override",
+    };
+  }
 
   if (
     appUserId &&

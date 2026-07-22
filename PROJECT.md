@@ -1,6 +1,6 @@
 # readFlow Developer Handoff
 
-Updated: 2026-07-15
+Updated: 2026-07-22
 
 Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
 file for the fuller map of accounts, services, release status, and operational
@@ -36,9 +36,9 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.42`
-- Current source Android `versionCode`: `48`
-- Current source iOS `buildNumber`: `42`
+- Current source version: `1.0.43`
+- Current source Android `versionCode`: `49`
+- Current source iOS `buildNumber`: `43`
 - Latest finished Android EAS build: `1.0.28` / code `34`
 - Latest finished Android EAS build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`
 - Latest finished Android AAB:
@@ -52,10 +52,10 @@ Current shape:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build should use code `35` unless another EAS
+- Next Android build after this QA candidate should use code `50` unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
-- Next iOS build should use buildNumber `28` unless an iOS EAS build has already
+- Next iOS build after this QA candidate should use buildNumber `44` unless an iOS EAS build has already
   consumed it. Run the EAS `build:list --platform ios` command in
   `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 
@@ -120,6 +120,13 @@ Current Play release prep in source `1.0.28`:
   questions and a 5-minute/day downloaded rF AI preview. Reader Plus keeps
   native-text reading free of vendor AI/OCR cost and includes unlimited
   downloaded rF AI during beta.
+- Side-by-side QA builds use package `com.urmiaworks.readflow.qa` and
+  `expo.extra.qaReviewerMode=true`. They send an internal-only Reviewer marker;
+  a backend honors it only with `ENTITLEMENTS_DEV_OVERRIDE=true`. Reviewer QA
+  receives effectively unlimited native-text imports and downloaded rF AI
+  (200 MB/5,000-page technical document caps), while OCR, text AI, and Cloud AI
+  remain disabled to prevent vendor cost. Public app.json and public Render
+  blueprints cannot enable this path.
 - `npm run check:release` now fails if the build points away from the converted
   production backend, asks for microphone permission, declares background audio,
   omits app-user-id support, or has public Render blueprints with
