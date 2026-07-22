@@ -207,7 +207,7 @@ Includes:
 - Larger native-text PDF and Word `.docx` imports.
 - Full text-based books.
 - Device voice.
-- Up to 10 minutes/day of downloaded rF AI on supported phones and languages.
+- Up to 30 minutes/day of downloaded rF AI on supported phones and languages.
 - Bookmarks and reading progress.
 
 Does not include:
@@ -230,7 +230,7 @@ Includes:
 
 - 150 AI actions/month.
 - 750 OCR pages/month.
-- 45,000 Cloud AI voice characters/month for approved languages.
+- 20,000 Cloud AI voice characters/month for approved languages.
 - Unlimited downloaded rF AI where supported.
 
 ### Power
@@ -245,9 +245,9 @@ Message:
 
 Includes:
 
-- 400 AI actions/month.
-- 2,500 OCR pages/month.
-- 100,000 Cloud AI voice characters/month for approved languages.
+- 250 AI actions/month.
+- 1,500 OCR pages/month.
+- 50,000 Cloud AI voice characters/month for approved languages.
 - Higher file/page limits.
 
 ## Play Store Draft
@@ -277,7 +277,7 @@ Features:
 - Read manually with clean typography, bookmarks, saved progress, and focus controls
 - Recognize common chapter headings and separate them from body text
 - Listen with Phone voice on eligible plans
-- Try rF AI for 5 minutes/day on Free or 10 minutes/day on Reader Plus. AI Pro,
+- Try rF AI for 5 minutes/day on Free or 30 minutes/day on Reader Plus. AI Pro,
   Power, and reviewer access have no daily rF AI limit after downloading the model
 - Use capped Cloud AI voice on supported paid plans and approved languages
 - Highlight text while listening

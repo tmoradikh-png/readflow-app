@@ -593,8 +593,8 @@ export function Reader({
     openFeatureLock(
       "Daily rF AI allowance finished",
       entitlement.tier === "reader_plus"
-        ? "Reader Plus includes 10 minutes of rF AI each day. AI Pro includes unlimited downloaded rF AI, OCR, AI questions, and a Cloud AI allowance."
-        : "Free includes 5 minutes of rF AI each day. Reader Plus increases this to 10 minutes each day, while AI Pro includes unlimited downloaded rF AI."
+        ? "Reader Plus includes 30 minutes of rF AI each day. AI Pro includes unlimited downloaded rF AI, OCR, AI questions, and a Cloud AI allowance."
+        : "Free includes 5 minutes of rF AI each day. Reader Plus increases this to 30 minutes each day, while AI Pro includes unlimited downloaded rF AI."
     );
   }
 
@@ -728,8 +728,8 @@ export function Reader({
   function openOcrLimitOffer() {
     const body =
       entitlement.tier === "ai_pro"
-          ? "AI Pro includes 750 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. Power raises OCR to 2,500 pages/month."
-          : "Scanned pages use OCR. AI Pro includes 750 OCR pages/month, and Power includes 2,500.";
+          ? "AI Pro includes 750 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. Power raises OCR to 1,500 pages/month."
+          : "Scanned pages use OCR. AI Pro includes 750 OCR pages/month, and Power includes 1,500.";
     openFeatureLock("More OCR pages", body);
   }
 

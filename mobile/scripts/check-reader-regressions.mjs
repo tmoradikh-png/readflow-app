@@ -70,13 +70,19 @@ const { TIERS } = planModule;
 
 const planByKey = Object.fromEntries(TIERS.map((tier) => [tier.key, tier]));
 assert.equal(planByKey.free.limits.localVoiceSecondsPerDay, 5 * 60);
-assert.equal(planByKey.reader_plus.limits.localVoiceSecondsPerDay, 10 * 60);
+assert.equal(planByKey.reader_plus.limits.localVoiceSecondsPerDay, 30 * 60);
 assert.equal(planByKey.ai_pro.limits.localVoiceSecondsPerDay, 0);
 assert.equal(planByKey.power.limits.localVoiceSecondsPerDay, 0);
 assert.equal(planByKey.reviewer.limits.localVoiceSecondsPerDay, 0);
 assert.equal(planByKey.reader_plus.features.ocr, false);
 assert.equal(planByKey.reader_plus.features.ai, false);
 assert.equal(planByKey.reader_plus.features.cloudVoice, false);
+assert.equal(planByKey.ai_pro.limits.cloudVoiceCharsPerMonth, 20_000);
+assert.equal(planByKey.power.limits.ocrPagesPerMonth, 1_500);
+assert.equal(planByKey.power.limits.aiActionsPerMonth, 250);
+assert.equal(planByKey.power.limits.cloudVoiceCharsPerMonth, 50_000);
+assert.equal(planByKey.power.products.monthly.priceUsd, 19.99);
+assert.equal(planByKey.power.products.yearly.priceUsd, 179.99);
 
 // Speech preparation is independent from rendering. It uses context and
 // structure, preserves lexical content, and maps every spoken character back

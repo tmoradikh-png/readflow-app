@@ -1,6 +1,6 @@
 # readFlow Payment Setup
 
-Updated: 2026-07-20
+Updated: 2026-07-22
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer
@@ -135,7 +135,7 @@ The backend currently defines these product ids:
 | --- | --- | --- | --- |
 | Reader Plus | `readflow_reader_plus_monthly` | `readflow_reader_plus_yearly` | $4.99/mo, $39.99/yr |
 | AI Pro | `readflow_ai_pro_monthly` | `readflow_ai_pro_yearly` | $12.99/mo, $119.99/yr |
-| Power | `readflow_power_monthly` | `readflow_power_yearly` | $29.99/mo, $279.99/yr |
+| Power | `readflow_power_monthly` | `readflow_power_yearly` | $19.99/mo, $179.99/yr |
 
 RevenueCat entitlement ids:
 
@@ -213,8 +213,14 @@ $17.99+ to keep the same margin.
 | `readflow_reader_plus_yearly` | Reader Plus Yearly | `uw-baseplan02` | Yearly | $39.99 |
 | `readflow_ai_pro_monthly` | AI Pro Monthly | `uw-baseplan03` | Monthly | $12.99 |
 | `readflow_ai_pro_yearly` | AI Pro Yearly | `uw-baseplan04` | Yearly | $119.99 |
-| `readflow_power_monthly` | Power Monthly | `uw-baseplan05` | Monthly | $29.99 |
-| `readflow_power_yearly` | Power Yearly | `uw-baseplan06` | Yearly | $279.99 |
+| `readflow_power_monthly` | Power Monthly | `uw-baseplan05` | Monthly | $19.99 |
+| `readflow_power_yearly` | Power Yearly | `uw-baseplan06` | Yearly | $179.99 |
+
+- On 2026-07-22, source and live Google Play pricing were reduced from
+  $29.99/$279.99 to $19.99/$179.99. Google Play recalculated all regional
+  prices. The lower prices apply to new subscribers; any existing subscriber
+  remains at their prior price until explicitly migrated. RevenueCat reads the
+  localized store prices without new product ids.
 
 - Earlier Play Console Save failures happened with several generated ids. The
   working pattern was the short company-prefixed base plan ids above.

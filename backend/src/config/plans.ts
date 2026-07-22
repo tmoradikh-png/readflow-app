@@ -137,7 +137,7 @@ export const TIERS: Tier[] = [
   {
     key: "reader_plus",
     name: "Reader Plus",
-    tagline: "Ad-free reading with 10 minutes of offline rF AI each day.",
+    tagline: "Ad-free reading with 30 minutes of offline rF AI each day.",
     entitlementId: "reader_plus",
     products: {
       monthly: { productId: "readflow_reader_plus_monthly", priceUsd: 4.99 },
@@ -151,7 +151,7 @@ export const TIERS: Tier[] = [
       maxFileSizeMb: 100,
       maxPages: 2000,
       perDocPageCap: 0,
-      localVoiceSecondsPerDay: 10 * 60,
+      localVoiceSecondsPerDay: 30 * 60,
     },
     features: {
       ads: false,
@@ -205,7 +205,7 @@ export const TIERS: Tier[] = [
     limits: {
       ocrPagesPerMonth: 750,
       aiActionsPerMonth: 150,
-      cloudVoiceCharsPerMonth: 45000,
+      cloudVoiceCharsPerMonth: 20000,
       pdfsPerMonth: 300,
       maxFileSizeMb: 100,
       maxPages: 1500,
@@ -229,13 +229,13 @@ export const TIERS: Tier[] = [
     tagline: "High limits, export and batch tools for heavy users.",
     entitlementId: "power",
     products: {
-      monthly: { productId: "readflow_power_monthly", priceUsd: 29.99 },
-      yearly: { productId: "readflow_power_yearly", priceUsd: 279.99 },
+      monthly: { productId: "readflow_power_monthly", priceUsd: 19.99 },
+      yearly: { productId: "readflow_power_yearly", priceUsd: 179.99 },
     },
     limits: {
-      ocrPagesPerMonth: 2500,
-      aiActionsPerMonth: 400,
-      cloudVoiceCharsPerMonth: 100000,
+      ocrPagesPerMonth: 1500,
+      aiActionsPerMonth: 250,
+      cloudVoiceCharsPerMonth: 50000,
       pdfsPerMonth: 1000,
       maxFileSizeMb: 200,
       maxPages: 5000,
