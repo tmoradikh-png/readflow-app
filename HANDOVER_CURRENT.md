@@ -552,6 +552,27 @@ per document. OCR, text AI, and Cloud AI remain disabled. Automated release
 checks pin both halves of this contract and fail if production configuration
 can request the override.
 
+The signed side-by-side artifact is
+`artifacts/readflow-qa-1.0.43-49.apk` (211,248,420 bytes; SHA-256
+`37C1D9FB3759CBFADD79D2329684A11E3E37934894F675D55CD69A010EB0393C`).
+APK inspection verified package `com.urmiaworks.readflow.qa`, version
+`1.0.43 (49)`, the required foreground-service permissions, and no recording
+permission. It was installed in place on Samsung SM-S918B without clearing the
+existing library and launched without an AndroidRuntime or ReactNativeJS crash.
+
+For the current side-by-side tester cycle, the live Render service temporarily
+uses `ENTITLEMENTS_DEV_OVERRIDE=true` with `DEV_DEFAULT_TIER=free`. This is a
+deliberate narrow combination: a QA build carrying
+`x-readflow-qa-reviewer: 1` resolves to Reviewer, while a normal RevenueCat
+request and a request with no app-user id both remain Free. On 2026-07-22 the
+three live probes returned, respectively, `reviewer/dev-override/200 MB`,
+`free/revenuecat/20 MB`, and `free/dev-override/20 MB`; OCR, text AI, and Cloud
+AI were false for Reviewer. A real 28,280,226-byte PDF (`nytt vedlegg.pdf`)
+that previously exceeded the Free limit uploaded successfully with HTTP 200
+and returned 124 extracted pages. Disable the temporary Render override after
+the side-by-side QA cycle; public Play builds should use RevenueCat or the
+signed reviewer-access flow instead of the QA marker.
+
 ## Accounts And Services
 
 | Area | Account / owner | Important id or URL |

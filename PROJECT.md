@@ -127,6 +127,12 @@ Current Play release prep in source `1.0.28`:
   (200 MB/5,000-page technical document caps), while OCR, text AI, and Cloud AI
   remain disabled to prevent vendor cost. Public app.json and public Render
   blueprints cannot enable this path.
+- During the 2026-07-22 side-by-side QA cycle, the live Render service was set
+  manually to `ENTITLEMENTS_DEV_OVERRIDE=true` and `DEV_DEFAULT_TIER=free`.
+  This grants Reviewer only when the QA marker is present; normal RevenueCat
+  users and callers without an app-user id remain Free. A 27 MB, 124-page PDF
+  passed the live import endpoint while Reviewer OCR, text AI, and Cloud AI
+  remained disabled. Restore the live override to `false` after this QA cycle.
 - `npm run check:release` now fails if the build points away from the converted
   production backend, asks for microphone permission, declares background audio,
   omits app-user-id support, or has public Render blueprints with
