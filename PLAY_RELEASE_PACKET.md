@@ -17,7 +17,7 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.50 / versionCode 56`.
+- Source release candidate is `1.0.50 / versionCode 57`.
 - Release checker passes for the current source configuration.
 - Android permissions include the minimum required for subscriptions plus
   generated-audio playback/model download services: `INTERNET`,
@@ -36,6 +36,15 @@ Current source status:
   ads, Advertising ID (`No`), foreground services, government apps, financial
   features, health, content rating, target audience, Data Safety, and app
   category are saved or in review.
+- Production AAB `1.0.50 (57)` was built on 2026-07-22 from commit `9870a69`,
+  uploaded to the production track, and submitted for a 100% rollout. Play
+  reported `Changes in review` while automated quick checks run. Managed
+  publishing is off, so approval publishes automatically.
+- EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`.
+- EAS artifact:
+  `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`.
+- Local AAB: `artifacts/readflow-1.0.50-57-production.aab`; SHA-256
+  `2EBF3B928A89B83D099F449B744AE22FD7E24EFD0C0689314BD046AAB4ECD30C`.
 
 Verified for paid launch prep:
 

@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 56,
+      "versionCode": 57,
       "permissions": [
         "INTERNET",
         "android.permission.FOREGROUND_SERVICE",

@@ -199,7 +199,7 @@ Append a row every time an iOS EAS build is started.
 
 | buildNumber | versionName | EAS build id | Status | What changed |
 | ----------- | ----------- | ------------ | ------ | ------------ |
-| 23 | 1.0.23 | not started | source prepared | iOS App Store/TestFlight prep based on Android 1.0.23 release candidate. No EAS iOS build existed on 2026-06-29. |
+| 50 | 1.0.50 | not started | source prepared | iOS App Store/TestFlight source aligned with Android 1.0.50. No EAS iOS build existed on 2026-06-29. |
 
-**Next iOS buildNumber: 23** unless `eas build:list --platform ios` shows that
-23 or a higher number has already been consumed.
+**Next iOS buildNumber: 50** unless `eas build:list --platform ios` shows that
+50 or a higher number has already been consumed.

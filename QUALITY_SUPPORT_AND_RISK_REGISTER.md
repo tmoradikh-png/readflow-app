@@ -210,6 +210,14 @@ the product and one-month trial duration, then export and distribute unique
 codes. Users can redeem one-off codes through Google Play or the app. Keep one
 campaign per promoter so redemptions can be attributed.
 
+Google Play promotion-program terms were accepted on 2026-07-22. No promo-code
+campaign was published that day because the Play form rejected the otherwise
+valid numeric free-trial and code-quantity fields. RevenueCat time-limited
+entitlement grants are the ready operational method until a Play campaign is
+created and redemption is tested. Do not tell a promoter that codes exist until
+the exported code file is stored in the private operations location and a code
+has been redeemed once.
+
 ### 3. Public acquisition offer: Google Play subscription offer
 
 Create a 30-day new-customer offer on the selected base plan. Google Play
@@ -251,4 +259,3 @@ Use this concise disclosure in support, store, and product copy where needed:
 > content against the original. Features, supported languages, file limits,
 > and monthly allowances vary by plan and may require internet access or a
 > separate on-device model download.
-

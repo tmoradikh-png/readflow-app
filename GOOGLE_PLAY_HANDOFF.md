@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-07-20
+Updated: 2026-07-22
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -8,6 +8,24 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 
 ## Current Play Status
 
+- Google Play production release `1.0.28 (34)` is the currently live release.
+  Play Console reported 7 active-device installs while preparing the next
+  release.
+- Production release `1.0.50 (57)` was built from commit `9870a69`, uploaded
+  manually, and submitted for a 100% rollout on 2026-07-22. Play reported
+  `Changes in review` while automated quick checks run. Managed publishing is
+  off, so approval publishes automatically.
+- EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`.
+- Artifact:
+  `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`.
+- Local copy: `artifacts/readflow-1.0.50-57-production.aab`; SHA-256
+  `2EBF3B928A89B83D099F449B744AE22FD7E24EFD0C0689314BD046AAB4ECD30C`.
+- Play parsed the release as target SDK 36, minimum API 24, with unchanged
+  phone/tablet device coverage. It estimated about 34 MB for a new install and
+  5.01 MB for an update. The only release warning was the non-blocking absence
+  of an R8/ProGuard deobfuscation file.
+- Android version code `57` is consumed. Use `58` or higher next, after checking
+  both EAS and Play.
 - Google Play production release `1.0.27` / version code `33` was submitted for
   review on 2026-07-01 and approved/released by 2026-07-14.
 - Last observed Play Console state on 2026-07-14: Production track is active

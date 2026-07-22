@@ -75,6 +75,10 @@ Already present:
 - A connected-phone smoke test on 2026-07-14 verified that the Google Play
   build opens the RevenueCat paywall and Google Play checkout for `AI Pro
   Yearly`.
+- Production release `1.0.50 (57)` was submitted for a 100% Play rollout on
+  2026-07-22. Its source and production backend use the plan prices and limits
+  in this document. End-to-end sandbox purchase/restore/cancel/expiry QA remains
+  required after Play makes the build available.
 
 Remaining before paid QA is complete:
 
@@ -216,11 +220,12 @@ $17.99+ to keep the same margin.
 | `readflow_power_monthly` | Power Monthly | `uw-baseplan05` | Monthly | $19.99 |
 | `readflow_power_yearly` | Power Yearly | `uw-baseplan06` | Yearly | $179.99 |
 
-- On 2026-07-22, source and live Google Play pricing were reduced from
-  $29.99/$279.99 to $19.99/$179.99. Google Play recalculated all regional
-  prices. The lower prices apply to new subscribers; any existing subscriber
-  remains at their prior price until explicitly migrated. RevenueCat reads the
-  localized store prices without new product ids.
+- On 2026-07-22, Google Play US anchor prices were verified as AI Pro
+  $10.99/$119.99 and Power $19.99/$179.99. Google Play recalculated regional
+  prices when those prices were changed. The lower prices apply to new
+  subscribers; any existing subscriber remains at their prior price until
+  explicitly migrated. RevenueCat reads the localized store prices without new
+  product ids.
 
 - Earlier Play Console Save failures happened with several generated ids. The
   working pattern was the short company-prefixed base plan ids above.

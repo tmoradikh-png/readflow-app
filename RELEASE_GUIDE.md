@@ -577,10 +577,11 @@ must never be reused (a code is consumed the moment a build is made — see Step
 | 34 | 1.0.28 | d973d085 | finished | Hotfix for generated-audio crash: restore required foreground media-playback/data-sync permissions and service types while keeping microphone/recording blocked. AAB: https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab |
 | 34 | 1.0.28 | 46806d5f | finished; do not upload | Duplicate build started by CLI timeout retry. It finished with the same consumed version code; keep it out of Play. |
 | 35 | 1.0.29 | 51a83cdf | finished; phone QA pending | Reader stability repair: visible-position bookmarks/resume/navigation, stable long-book scrolling and lock recovery, chapter heading layout, Free 10-minute/day rF AI preview, and hidden no-vendor-cost Reviewer access. Manifest verified without `RECORD_AUDIO`. AAB: https://expo.dev/artifacts/eas/8mCk29evi4lil-XgvjdOfx25sPS2955W7_PXh-ZGSO0.aab |
+| 57 | 1.0.50 | ce809eb4-029a-48a0-88f3-6279fb1cb08e | finished; submitted to production review | Final reader/text-intelligence repairs, plan and cost guardrails, subscriber support diagnostics, multilingual/large-document handling, and release documentation. AAB: https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab |
 
-**Next source candidate after 1.0.29: versionCode 36 or higher.** Before starting any later
-EAS build, run `eas build:list` and pick a higher code if any account build has
-consumed 35 or above.
+**Next source candidate after 1.0.50: versionCode 58 or higher.** Before starting
+any later EAS build, run `eas build:list` and pick a higher code if any account
+build has consumed 58 or above.
 
 ### Lessons baked into this guide (do not relearn the hard way)
 - **Never reuse a versionCode.** Build `f2511def` reused code 13 → a paid build was

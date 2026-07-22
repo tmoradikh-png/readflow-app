@@ -36,28 +36,28 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.44`
-- Current source Android `versionCode`: `50`
-- Current source iOS `buildNumber`: `44`
-- Latest finished Android EAS build: `1.0.28` / code `34`
-- Latest finished Android EAS build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`
+- Current source version: `1.0.50`
+- Current source Android `versionCode`: `57`
+- Current source iOS `buildNumber`: `50`
+- Latest finished Android EAS build: `1.0.50` / code `57`
+- Latest finished Android EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`
 - Latest finished Android AAB:
-  `https://expo.dev/artifacts/eas/b5xTuQwsLxzXZ30kv-Fr2-DkEPxyob7pSZGT8DIudEY.aab`
+  `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`
 - Latest finished Android AAB local copy:
-  `artifacts/readflow-1.0.28-34.aab`.
-- Android production status: Google Play release `1.0.27 (33)` is live. Hotfix
-  `1.0.28 (34)` was uploaded to production and sent from Publishing overview on
-  2026-07-15; last observed Play Console state was `Changes in review` with
-  quick checks still running. Public listing:
+  `artifacts/readflow-1.0.50-57-production.aab`.
+- Android production status: Google Play release `1.0.28 (34)` is live.
+  Release `1.0.50 (57)` was submitted for a 100% production rollout on
+  2026-07-22; last observed state was `Changes in review` while automated
+  quick checks run. Managed publishing is off. Public listing:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build after this QA candidate should use code `51` unless another EAS
+- Next Android build after this release must use code `58` or higher unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
-- Next iOS build after this QA candidate should use buildNumber `45` unless an iOS EAS build has already
-  consumed it. Run the EAS `build:list --platform ios` command in
-  `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
+- The prepared iOS source uses buildNumber `50`. No iOS EAS build has been
+  recorded; verify with the `build:list --platform ios` command in
+  `IOS_RELEASE_GUIDE.md` and use `50` only if it is still unconsumed.
 
 Changes included in the latest finished EAS build:
 - RevenueCat SDK / Play Billing wiring was added in mobile source, with the

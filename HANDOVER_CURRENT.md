@@ -14,25 +14,29 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source release candidate: `1.0.50` / version code `56`.
+- Current source release candidate: `1.0.50` / version code `57`.
   It contains the reader stability, reviewer-access, page-continuity, title,
   reference-marker, bounded local-synthesis, and independent speech
   text-intelligence and progressive-rF-playback repairs described below. It is
-  not public until a new AAB
-  completes release QA and is promoted in Play Console.
-- Latest EAS Android build id: `51a83cdf-12d6-4692-a589-2de95fee28f2`.
+  not public until Google approves the submitted production rollout.
+- Latest EAS Android build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`.
 - Latest EAS Android artifact:
-  `https://expo.dev/artifacts/eas/8mCk29evi4lil-XgvjdOfx25sPS2955W7_PXh-ZGSO0.aab`
-- Local AAB copy: `artifacts/readflow-1.0.29-35.aab` (135.04 MiB)
+  `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`
+- Local AAB copy: `artifacts/readflow-1.0.50-57-production.aab`
+  (140,629,623 bytes; 134.11 MiB)
 - SHA-256:
-  `3FFE6ED7A3EAD29AD5DC2F391848E4A411D397502660B60B2EC551CA7045D5C6`
-- Build `1.0.29 (35)` finished on 2026-07-20 from commit `d73084b` with
-  Play Store distribution. Bundletool verified package
-  `com.urmiaworks.readflow`, version `1.0.29 (35)`, required foreground audio
-  permissions, and no `RECORD_AUDIO` permission.
-- The next production AAB source is prepared as `1.0.50 (56)`. Recheck EAS and
-  Play before building; if code `56` has been consumed there, increment it rather
-  than reusing it.
+  `2EBF3B928A89B83D099F449B744AE22FD7E24EFD0C0689314BD046AAB4ECD30C`
+- Build `1.0.50 (57)` finished on 2026-07-22 from commit `9870a69` with
+  Play Store distribution. Play parsed it as package
+  `com.urmiaworks.readflow`, version `1.0.50 (57)`, target SDK 36, minimum API
+  24. The release check verified required foreground-audio permissions and no
+  `RECORD_AUDIO` permission in source configuration.
+- `1.0.50 (57)` was uploaded to the Google Play production track on
+  2026-07-22 and submitted for a 100% rollout. Play reported `Changes in
+  review` while automated quick checks run. Managed publishing is off, so an
+  approved release publishes automatically.
+- Android version code `57` is consumed. The next Android build must use a code
+  greater than `57`.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
@@ -914,7 +918,7 @@ Rules:
 ## Current Follow-Ups
 
 Owner's numbered priorities, independent text-intelligence layer, and
-progressive rF AI playback are in the current `1.0.50 (56)` source. The
+progressive rF AI playback are in the current `1.0.50 (57)` source. The
 standalone reviewer build passed startup and progressive runtime playback.
 These items remain for human audible/lifecycle verification before production:
 
@@ -929,8 +933,8 @@ These items remain for human audible/lifecycle verification before production:
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
-- Build the production AAB from the tagged `1.0.50 (56)` source after completing
-  the remaining audible reader gates. The older
+- Production AAB `1.0.50 (57)` has been built and submitted. Monitor Play quick
+  checks/review and the first production devices; the older
   `artifacts/readflow-1.0.29-35.aab` does not contain the final repairs.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
