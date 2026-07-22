@@ -20,6 +20,7 @@ ReadFlow/
 | -------------- | --------------------------------------- | ------------------------------------- |
 | PDF → text     | `backend/src/services/pdfExtract.ts`    | add OCR for scanned PDFs              |
 | Reflow/sentences | `mobile/src/services/TextReflow.ts`   | tune splitting, paragraphs           |
+| Speech text intelligence | `mobile/src/services/text-intelligence/*` | local model / online fallback |
 | Voice (TTS)    | `mobile/src/services/tts/*`             | device/cloud providers                |
 | AI             | `backend/src/providers/*`               | `openai` → `claude`/`ollama`          |
 | Reader UI      | `mobile/src/components/Reader.tsx`      | —                                     |
@@ -42,6 +43,9 @@ and app-content drafts live in **[PRIVACY_POLICY_DRAFT.md](PRIVACY_POLICY_DRAFT.
 **[PLAY_DATA_SAFETY_DRAFT.md](PLAY_DATA_SAFETY_DRAFT.md)**. Keep the docs
 updated whenever accounts, build codes, backend URLs, costs, or production
 workflows change.
+
+The speech preparation/display separation is documented in
+**[TEXT_INTELLIGENCE_ARCHITECTURE.md](TEXT_INTELLIGENCE_ARCHITECTURE.md)**.
 
 **Why a backend?** The OpenAI key must never ship inside the phone app. The app
 talks only to our backend; the backend talks to OpenAI. The backend also caches

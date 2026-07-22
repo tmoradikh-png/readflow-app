@@ -14,10 +14,11 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source and side-by-side QA candidate: `1.0.44` / version code `50`.
+- Current source and side-by-side QA candidate: `1.0.45` / version code `51`.
   It contains the reader stability, reviewer-access, page-continuity, title,
-  reference-marker, bounded local-synthesis, and speech-articulation repairs described below. It is not
-  public until a new AAB passes phone QA and is promoted in Play Console.
+  reference-marker, bounded local-synthesis, and independent speech
+  text-intelligence repairs described below. It is not public until a new AAB
+  completes release QA and is promoted in Play Console.
 - Latest EAS Android build id: `51a83cdf-12d6-4692-a589-2de95fee28f2`.
 - Latest EAS Android artifact:
   `https://expo.dev/artifacts/eas/8mCk29evi4lil-XgvjdOfx25sPS2955W7_PXh-ZGSO0.aab`
@@ -28,8 +29,9 @@ keys, or recovery codes.
   Play Store distribution. Bundletool verified package
   `com.urmiaworks.readflow`, version `1.0.29 (35)`, required foreground audio
   permissions, and no `RECORD_AUDIO` permission.
-- The next Android build must use version code `36` or higher after checking
-  EAS and Play for consumed codes.
+- The next production AAB is prepared as `1.0.45 (51)`. Recheck EAS and Play
+  before building; if code `51` has been consumed there, increment it rather
+  than reusing it.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
@@ -614,6 +616,60 @@ The signed side-by-side artifact is
 It is package `com.urmiaworks.readflow.qa` and was installed in place without
 clearing the retained library or downloaded rF AI model.
 
+## 1.0.45 Independent Speech Text Intelligence
+
+Version `1.0.45 (51)` separates canonical displayed document text from the
+mapped representation sent to Device, rF AI, or Cloud AI speech. The new
+replaceable module lives under
+`mobile/src/services/text-intelligence/`; its full contract and upgrade path
+are documented in `TEXT_INTELLIGENCE_ARCHITECTURE.md`.
+
+The offline pipeline combines safe deterministic normalization with a compact
+multilingual contextual classifier. It uses nearby segments, source/layout
+metadata, and generic Unicode/script features to interpret prose, headings,
+dialogue, lists, tables, formulas, and suspicious artifacts. Output includes
+boundaries, language/pronunciation metadata, pauses, emphasis, confidence,
+fallback reason, and a character-level map to the unchanged visible source.
+Reader look-ahead uses the module's bounded 96-entry cache and never analyzes a
+whole book.
+
+An optional backend endpoint exists for difficult AI Pro/Power cases, guarded
+by the existing app key, AI entitlement, rate limit, cache, and monthly AI
+quota. It is deliberately disabled in Reader until an explicit paid setting is
+added. Normal offline reading, Free, and Reader Plus therefore do not call it.
+Both client and server reject online output that omits, reorders, summarizes,
+or invents lexical content.
+
+This feature does not bundle a multilingual generative model and does not make
+the English rF AI voice multilingual. It adds negligible app size. OCR language
+data and actual TTS voice packs remain separate. Regression fixtures cover
+Persian/Chinese scripts, mixed-language metadata, unfamiliar structures,
+source-offset fidelity, heading-only Roman pronunciation, the exact `would
+have` report, and rejection of unsafe online text.
+
+The final signed side-by-side artifact is
+`artifacts/readflow-qa-1.0.45-51.apk` (211,367,136 bytes; 201.58 MiB; SHA-256
+`9D4905EBD2F0ED235EEBC4EF5F65CF1BB10D25E6B39277961CCE8EE43E2B5C1C`). It is
+114,904 bytes (112.21 KiB) larger than `1.0.44 (50)`.
+
+### 2026-07-22 Text-Intelligence Phone QA
+
+The final `1.0.45 (51)` QA APK was installed in place on Samsung SM-S918B as
+`com.urmiaworks.readflow.qa`, preserving its retained library and downloaded rF
+AI pack. The app opened the retained 283-page Rousseau book at page 9. rF AI
+entered playback, the coral highlight covered one current wrapped line, and it
+remained anchored while the prepared speech advanced through the unchanged
+displayed paragraph. Focused logcat contained no fatal exception, ANR,
+ReactNativeJS error, or out-of-memory error.
+
+The first Follow reposition briefly exposed an empty viewport before the
+existing render window recovered. That behavior belongs to the reader scroll
+system, not the text preparation mapping, and remains a phone regression item.
+This session verified runtime playback and source-map highlighting, not audible
+quality for every fixture. Before production, a person must still listen to an
+unfamiliar heading, list, table/formula, mixed-language sample, and a complete
+page-boundary sentence.
+
 ## Accounts And Services
 
 | Area | Account / owner | Important id or URL |
@@ -768,9 +824,10 @@ Rules:
 
 ## Current Follow-Ups
 
-Owner's numbered priorities are implemented in `1.0.30 (36)` source. The
-standalone reviewer build passed resume and Home/app-switch background checks;
-these items remain for human audible/lifecycle verification before production:
+Owner's numbered priorities and the independent text-intelligence layer are in
+the current `1.0.45 (51)` source. The standalone reviewer build passed startup,
+rF AI playback, and mapped line-highlight smoke checks. These items remain for
+human audible/lifecycle verification before production:
 
 1. Confirm Free/Reader Plus beta limits against the production backend after it
    is deployed.
@@ -780,11 +837,9 @@ these items remain for human audible/lifecycle verification before production:
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
-- Build a new Android candidate with version code `36` or higher after the
-  entitlement/title/navigation/rF AI repair, upload it to a Play internal track,
-  and complete the remaining reader regression checklist before public
-  promotion. The older `artifacts/readflow-1.0.29-35.aab` does not contain the
-  final repair.
+- Build the production AAB from the tagged `1.0.45 (51)` source after completing
+  the remaining audible reader gates. The older
+  `artifacts/readflow-1.0.29-35.aab` does not contain the final repairs.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.
 - Deploy the `1.0.30` canonical plan changes before relying on the revised Free

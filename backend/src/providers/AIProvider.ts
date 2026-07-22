@@ -32,8 +32,26 @@ export interface AIRequest {
   language?: string;
 }
 
+export interface SpeechPreparationRequest {
+  rawText: string;
+  before?: Array<{ text: string; kind?: string }>;
+  after?: Array<{ text: string; kind?: string }>;
+  layout?: Record<string, unknown>;
+  language?: string;
+  localStructure?: { kind?: string; confidence?: number; cues?: string[] };
+}
+
+export interface SpeechPreparationResult {
+  text: string;
+  structure: "prose" | "heading" | "dialogue" | "list" | "table" | "formula" | "artifact" | "unknown";
+  confidence: number;
+  language?: string;
+}
+
 export interface AIProvider {
   readonly name: string;
   /** Returns structured fields. Implementations should return JSON-shaped data. */
   run(req: AIRequest): Promise<ExplainResult & { answer?: string }>;
+  /** Optional high-precision fallback for ambiguous speech preparation. */
+  prepareSpeech?(req: SpeechPreparationRequest): Promise<SpeechPreparationResult>;
 }

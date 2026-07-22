@@ -21,7 +21,8 @@ npm run check:release
 `check:release` now includes the reader regression script. It verifies source-
 paragraph layout, bounded long-paragraph continuity with exact word retention,
 page-boundary sentence continuity, silent reference markers, clean speech
-normalization, and the Android Supertonic 3 runtime/model configuration.
+normalization, text-intelligence structure/fidelity/fallback behavior, Unicode
+source mapping, and the Android Supertonic 3 runtime/model configuration.
 
 ## Permanent Regression Matrix
 
@@ -73,6 +74,10 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
 | RF-R44 | QA Reviewer sees the Free 20 MB import limit | A side-by-side QA build must receive the backend Reviewer tier for imports without unlocking vendor-cost features | Passed API gate 2026-07-22: QA marker returned Reviewer/200 MB and a real 27 MB, 124-page PDF extracted with HTTP 200; normal and missing-id probes stayed Free; connected-phone picker confirmation remains the final UI gate |
 | RF-R45 | A newly imported long book cannot start rF AI and Back/Stop leave the reader hung | Keep local synthesis memory bounded, invalidate every queued render on Stop, and destroy the native engine when leaving the reader | rF AI prefetches only one clip, queued work carries a cancellation epoch, em-dash contents entries become short clauses, remaining unbroken requests are capped at 260 characters, and repeated open/read/exit cycles must release rather than stack Supertonic engines; phone gate uses the retained 712-page book |
 | RF-R46 | A compact heading such as `BOOK I` is skipped or pronounced as letters | Recognize broad structural heading forms and make Roman numbering unambiguous without rewriting body prose | Typography markers plus multilingual heading patterns and short isolated-line recovery; heading-only speech normalization covers marker-plus-Roman and standalone Roman forms |
+| RF-R47 | Every newly discovered book format requires another phrase-specific voice patch | Interpret each short speech segment from its layout, neighboring context, script, and structural features | Independent hybrid text-intelligence engine plus compact multilingual contextual classifier; unfamiliar list/table/dialogue/formula fixtures are permanent |
+| RF-R48 | Improving pronunciation changes displayed text or breaks highlighting | Keep the canonical displayed book unchanged and map every prepared speech character to its source offset | `SpeakableText.sourceOffsets`; tests cover Roman heading expansion, list-marker removal, table separators, and exact display-source retention |
+| RF-R49 | Ambiguous text silently triggers paid AI or an online rewrite drops words | Offline preparation remains the default; online fallback is explicit, entitled, capped, and fidelity-checked | Reader pins `allowOnlineFallback:false`; mobile and backend reject output that changes lexical token order/content |
+| RF-R50 | A multilingual preparation feature is mistaken for multilingual OCR or rF voices | Handle structure across Unicode scripts without claiming unsupported extraction or pronunciation | Script/language metadata is universal; OCR packs and TTS voice-language support remain separate product capabilities |
 
 ## Connected-Phone Candidate Gate
 
@@ -110,6 +115,22 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
 14. Read `BOOK I`, `CHAPTER IV`, a sentence-case title, and an ordinary sentence
    beginning with `I`. The headings must be distinct and complete; the body
    pronoun must remain unchanged.
+15. Read an unfamiliar bullet list, a pipe-separated table row, dialogue, and a
+   formula. Confirm pauses/structure are natural and no meaningful word is lost.
+16. Read Persian or Arabic, Cyrillic, and CJK native-text samples with suitable
+   Device voices. The displayed source must remain exact and the app must not
+   imply that the English rF AI pack supports those languages.
+17. During transformed speech (for example `BOOK II`), verify the highlighted
+   line remains anchored to the visible source and does not drift.
+18. Keep the phone offline and confirm normal preparation/playback works. No
+   `/api/text-intelligence` request is allowed unless a future paid online
+   fallback setting is explicitly enabled.
 
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.
+
+Latest record: `1.0.45 (51)`, Samsung SM-S918B, QA Reviewer, retained 283-page
+Rousseau PDF page 9. rF AI playback and one-line mapped highlight passed; focused
+crash/ANR/ReactNativeJS/OOM logs passed. Audible multilingual/structure cases
+and the observed transient blank Follow reposition remain open before public
+promotion.

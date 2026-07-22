@@ -1,5 +1,11 @@
 import OpenAI from "openai";
-import { AIProvider, AIRequest, ExplainResult } from "./AIProvider";
+import {
+  AIProvider,
+  AIRequest,
+  ExplainResult,
+  SpeechPreparationRequest,
+  SpeechPreparationResult,
+} from "./AIProvider";
 
 const SYSTEM_PROMPT = `You are readFlow, a reading assistant that helps people truly understand documents.
 You do NOT just rephrase. You read with understanding: clarify intent, structure, and meaning.
@@ -67,6 +73,51 @@ export class OpenAIProvider implements AIProvider {
       key_points: Array.isArray(parsed.key_points) ? parsed.key_points : [],
       terms: Array.isArray(parsed.terms) ? parsed.terms : [],
       answer: parsed.answer || undefined,
+    };
+  }
+
+  async prepareSpeech(req: SpeechPreparationRequest): Promise<SpeechPreparationResult> {
+    const completion = await this.client.chat.completions.create({
+      model: this.model,
+      temperature: 0,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `You prepare extracted document text for text-to-speech. Return strict JSON with keys text, structure, confidence, language. Preserve every meaningful source word in the same order. Never summarize, paraphrase, simplify, translate, omit meaningful content, or invent words. You may only normalize visual separators, whitespace, punctuation, obvious OCR character noise, and pronunciation-oriented number or abbreviation forms. Use nearby text and layout only to interpret the current rawText. structure must be one of prose, heading, dialogue, list, table, formula, artifact, unknown. If uncertain, return rawText unchanged and low confidence.`,
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            language: req.language || "und",
+            layout: req.layout || {},
+            localStructure: req.localStructure || {},
+            before: (req.before || []).slice(-2),
+            rawText: req.rawText,
+            after: (req.after || []).slice(0, 2),
+          }),
+        },
+      ],
+    });
+    const raw = completion.choices[0]?.message?.content || "{}";
+    const parsed = JSON.parse(raw) as Partial<SpeechPreparationResult>;
+    const structures = new Set([
+      "prose",
+      "heading",
+      "dialogue",
+      "list",
+      "table",
+      "formula",
+      "artifact",
+      "unknown",
+    ]);
+    return {
+      text: typeof parsed.text === "string" ? parsed.text : req.rawText,
+      structure: structures.has(parsed.structure || "")
+        ? (parsed.structure as SpeechPreparationResult["structure"])
+        : "unknown",
+      confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0)),
+      language: typeof parsed.language === "string" ? parsed.language : req.language,
     };
   }
 }

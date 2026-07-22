@@ -6,6 +6,7 @@ import { pdfRouter } from "./routes/pdf";
 import { aiRouter } from "./routes/ai";
 import { ttsRouter } from "./routes/tts";
 import { configRouter } from "./routes/config";
+import { textIntelligenceRouter } from "./routes/textIntelligence";
 import { attachEntitlement } from "./middleware/gate";
 import { requireAppKey } from "./middleware/appKey";
 
@@ -70,6 +71,7 @@ app.use("/api/reviewer", reviewerLimiter);
 app.use("/api", configRouter); // /api/config, /api/entitlements, /api/usage
 app.use("/api/pdf", requireAppKey, extractLimiter, pdfRouter);
 app.use("/api/ai", requireAppKey, aiLimiter, aiRouter);
+app.use("/api/text-intelligence", requireAppKey, aiLimiter, textIntelligenceRouter);
 app.use("/api/tts", requireAppKey, ttsLimiter, ttsRouter);
 
 app.listen(PORT, () => {

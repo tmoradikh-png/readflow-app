@@ -612,6 +612,9 @@ Mobile:
   sentence units.
 - `mobile/src/services/SpeechChunk.ts`: testable voice-unit builder, including
   unfinished sentence continuity across visual PDF page boundaries.
+- `mobile/src/services/text-intelligence/*`: independent hybrid preparation of
+  mapped speakable text from the current segment, nearby context, layout, and
+  language metadata. See `TEXT_INTELLIGENCE_ARCHITECTURE.md`.
 - `mobile/src/services/tts/*`: device, cloud natural voice, and local neural
   voice providers.
 - `READER_REGRESSION_CHECKLIST.md`: permanent resolved-bug ledger and mandatory
@@ -625,6 +628,9 @@ Backend:
 - `backend/src/index.ts`: Express app and route wiring.
 - `backend/src/routes/pdf.ts`: PDF extraction/OCR route.
 - `backend/src/routes/ai.ts`: AI summary/explain/Q&A route.
+- `backend/src/routes/textIntelligence.ts`: optional AI Pro/Power fallback for
+  ambiguous speech preparation; fidelity-checked, cached, quota-limited, and
+  disabled by default in Reader.
 - `backend/src/routes/tts.ts`: cloud TTS proxy route.
 - `backend/src/middleware/gate.ts`: entitlement resolution and feature gating.
 - `backend/src/config/plans.ts`: tier definitions, features, and limits.

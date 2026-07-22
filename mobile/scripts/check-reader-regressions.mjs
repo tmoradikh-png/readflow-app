@@ -37,6 +37,20 @@ const speechModule = loadTypeScript("src/services/SpeechChunk.ts", {
   "./TextReflow": textModule,
 });
 const normalizationModule = loadTypeScript("src/services/SpeechNormalization.ts");
+const compactTextModelModule = loadTypeScript(
+  "src/services/text-intelligence/CompactMultilingualModel.ts"
+);
+const deterministicTextModule = loadTypeScript(
+  "src/services/text-intelligence/DeterministicSpeechNormalizer.ts",
+  { "../SpeechNormalization": normalizationModule }
+);
+const hybridTextModule = loadTypeScript(
+  "src/services/text-intelligence/HybridTextIntelligence.ts",
+  {
+    "./CompactMultilingualModel": compactTextModelModule,
+    "./DeterministicSpeechNormalizer": deterministicTextModule,
+  }
+);
 const pdfExtractionModule = loadTypeScript("../backend/src/services/pdfExtract.ts", {
   "pdf-parse/lib/pdf-parse.js": async () => ({ numpages: 0 }),
 });
@@ -49,6 +63,166 @@ const {
   normalizeLocalSpeechText,
 } = normalizationModule;
 const { renderPdfTextItems } = pdfExtractionModule;
+const { CompactMultilingualModel } = compactTextModelModule;
+const { HybridTextIntelligence } = hybridTextModule;
+
+// Speech preparation is independent from rendering. It uses context and
+// structure, preserves lexical content, and maps every spoken character back
+// to the unchanged displayed source.
+const textIntelligence = new HybridTextIntelligence(new CompactMultilingualModel());
+const headingSource = "BOOK II";
+const preparedHeading = await textIntelligence.prepare({
+  rawText: headingSource,
+  before: [{ text: "The preceding chapter closes here.", kind: "body" }],
+  after: [{ text: "A new argument begins here.", kind: "body" }],
+  layout: { kind: "heading", isolated: true, page: 43 },
+  language: "en-US",
+});
+assert.equal(headingSource, "BOOK II", "displayed heading source must remain unchanged");
+assert.equal(preparedHeading.text, "BOOK 2");
+assert.equal(preparedHeading.structure.kind, "heading");
+assert.equal(preparedHeading.sourceOffsets.length, preparedHeading.text.length);
+assert.ok(preparedHeading.sourceOffsets.every((offset) => offset >= 0 && offset < headingSource.length));
+assert.ok(preparedHeading.emphasis.some((item) => item.reason === "heading"));
+
+const unfamiliarPersianHeading = "وفاداری که امتناع می‌کند";
+const preparedPersianHeading = await textIntelligence.prepare({
+  rawText: unfamiliarPersianHeading,
+  before: [{ text: "این بند در اینجا پایان می‌یابد.", kind: "body" }],
+  after: [{ text: "بحث تازه از اینجا آغاز می‌شود.", kind: "body" }],
+  layout: { kind: "heading", isolated: true },
+  language: "fa-IR",
+});
+assert.equal(preparedPersianHeading.text, unfamiliarPersianHeading);
+assert.equal(preparedPersianHeading.structure.kind, "heading");
+assert.equal(preparedPersianHeading.language.primary, "fa");
+assert.ok(preparedPersianHeading.language.scripts.includes("Arabic"));
+
+const preparedList = await textIntelligence.prepare({
+  rawText: "• Preserve every meaningful word",
+  before: [{ text: "Requirements", kind: "heading" }],
+  after: [{ text: "• Keep reading offline", kind: "body" }],
+  layout: { kind: "body", isolated: true },
+  language: "en",
+});
+assert.equal(preparedList.structure.kind, "list");
+assert.equal(preparedList.text, "Preserve every meaningful word");
+assert.equal(preparedList.boundaries[0]?.kind, "item");
+
+const preparedTable = await textIntelligence.prepare({
+  rawText: "Norway | 12 | Active",
+  before: [{ text: "Country | Users | Status", kind: "body" }],
+  after: [{ text: "Sweden | 8 | Active", kind: "body" }],
+  layout: { kind: "body" },
+  language: "en",
+});
+assert.equal(preparedTable.structure.kind, "table");
+assert.equal(preparedTable.text, "Norway, 12, Active");
+assert.equal(preparedTable.sourceOffsets.length, preparedTable.text.length);
+
+const exactReportedPhrase =
+  "In a very small community, dependence would have been difficult to escape.";
+const preparedReportedPhrase = await textIntelligence.prepare({
+  rawText: exactReportedPhrase,
+  before: [{ text: "The sentence before remains nearby.", kind: "body" }],
+  after: [{ text: "The sentence after remains nearby.", kind: "body" }],
+  layout: { kind: "body" },
+  language: "en",
+});
+assert.equal(preparedReportedPhrase.text, exactReportedPhrase);
+assert.match(preparedReportedPhrase.text, /would have/);
+
+const mixedLanguage = await textIntelligence.prepare({
+  rawText: "ReadFlow keeps فارسی terms in their original wording.",
+  layout: { kind: "body" },
+  language: "en",
+});
+assert.equal(mixedLanguage.language.mixed, true);
+assert.ok(mixedLanguage.pronunciation.some((hint) => hint.language === "ar"));
+
+const preparedDialogue = await textIntelligence.prepare({
+  rawText: "“Nothing meaningful may be omitted,” she replied.",
+  before: [{ text: "They paused at the doorway.", kind: "body" }],
+  after: [{ text: "Then the conversation continued.", kind: "body" }],
+  layout: { kind: "body" },
+  language: "en",
+});
+assert.equal(preparedDialogue.structure.kind, "dialogue");
+assert.equal(preparedDialogue.text, '"Nothing meaningful may be omitted," she replied.');
+assert.ok(preparedDialogue.emphasis.some((item) => item.reason === "dialogue"));
+
+const preparedFormula = await textIntelligence.prepare({
+  rawText: "E = mc² + ΔE",
+  before: [{ text: "The relationship is written as follows.", kind: "body" }],
+  after: [{ text: "The variables are defined below.", kind: "body" }],
+  layout: { kind: "body", isolated: true },
+  language: "en",
+});
+assert.equal(preparedFormula.structure.kind, "formula");
+assert.match(preparedFormula.text, /E = mc2 \+ ΔE/);
+
+const preparedChineseList = await textIntelligence.prepare({
+  rawText: "• 保留作者的每一个词",
+  before: [{ text: "要求", kind: "heading" }],
+  after: [{ text: "• 保持离线阅读", kind: "body" }],
+  layout: { kind: "body", isolated: true },
+  language: "zh-CN",
+});
+assert.equal(preparedChineseList.structure.kind, "list");
+assert.equal(preparedChineseList.text, "保留作者的每一个词");
+assert.ok(preparedChineseList.language.scripts.includes("Han"));
+
+const rejectingOnlineFallback = new HybridTextIntelligence(new CompactMultilingualModel(), {
+  id: "unsafe-test-fallback",
+  async prepare() {
+    return { text: "invented summary", structure: "prose", confidence: 0.99 };
+  },
+});
+const suspiciousSource = "@@@ preserved words must remain @@@";
+const rejectedOnline = await rejectingOnlineFallback.prepare({
+  rawText: suspiciousSource,
+  layout: { kind: "body" },
+  language: "en",
+  allowOnlineFallback: true,
+});
+assert.equal(rejectedOnline.text, suspiciousSource);
+assert.equal(rejectedOnline.fallback.usedOnline, false);
+
+const unicodeMapped = await textIntelligence.prepare({
+  rawText: "Read 📘 section ².",
+  language: "en-US",
+  layout: { kind: "body", source: "native" },
+});
+assert.equal(unicodeMapped.sourceOffsets.length, unicodeMapped.text.length);
+assert.ok(
+  unicodeMapped.sourceOffsets.every(
+    (offset) => offset >= 0 && offset < "Read 📘 section ².".length
+  )
+);
+
+const pronunciationMetadata = await textIntelligence.prepare({
+  rawText: "The U.S. total was $1.12 billion.",
+  language: "en-US",
+  layout: { kind: "body", source: "native" },
+});
+assert.ok(pronunciationMetadata.pronunciation.some((hint) => hint.mode === "letters"));
+assert.ok(pronunciationMetadata.pronunciation.some((hint) => hint.mode === "number"));
+assert.equal(pronunciationMetadata.text, "The U.S. total was $1.12 billion.");
+
+const throwingEngine = new HybridTextIntelligence({
+  id: "throwing-local-test",
+  interpret() {
+    throw new Error("test model failure");
+  },
+});
+const identityFallback = await throwingEngine.prepare({
+  rawText: "Keep every original word.",
+  language: "en-US",
+});
+assert.equal(identityFallback.text, "Keep every original word.");
+assert.equal(identityFallback.fallback.required, true);
+assert.equal(identityFallback.structure.kind, "unknown");
+assert.equal(identityFallback.sourceOffsets.length, identityFallback.text.length);
 
 // Native PDF paragraphs are visual rows. They must no longer be exploded into
 // one row per sentence, which made ordinary books look highly fragmented.
@@ -637,7 +811,9 @@ assert.match(readerSource, /function keepActiveLineVisible/);
 assert.match(readerSource, /viewOffset: targetY - lineY/);
 assert.match(readerSource, /style=\{styles\.pageNavAi\}/);
 assert.doesNotMatch(readerSource, /styles\.aiFab/);
-assert.match(readerSource, /text: isHeading \? normalizeHeadingForSpeech\(chunk\.text\) : chunk\.text/);
+assert.match(readerSource, /textIntelligence\.prepare\(input\)/);
+assert.match(readerSource, /sourceOffsetForSpeech\(speech\.intelligence, spokenOffset\)/);
+assert.match(readerSource, /allowOnlineFallback: false/);
 assert.doesNotMatch(readerSource, /TITLE_CUES|titleCueFor/);
 assert.match(readerSource, /renderTokenText\(tokens, 0, highlightedRange\)/);
 assert.doesNotMatch(

@@ -45,7 +45,11 @@ import {
   formatLocalVoiceRemaining,
   getLocalVoiceSecondsToday,
 } from "../services/LocalVoiceUsage";
-import { normalizeHeadingForSpeech } from "../services/SpeechNormalization";
+import {
+  SpeakableText,
+  TextIntelligenceInput,
+  textIntelligence,
+} from "../services/text-intelligence";
 import {
   getLocalNeuralVoiceStatus,
   loadLocalNeuralVoiceStatus,
@@ -154,15 +158,23 @@ function voiceLabelFor(mode: RuntimeVoiceMode): string {
   return "Device voice";
 }
 
-function speechForChunk(chunk: SpeechChunk, _language: string, rate: number) {
-  const isHeading = chunk.spans.some((span) => span.sentence.kind === "heading");
+async function speechForChunk(
+  chunk: SpeechChunk,
+  input: TextIntelligenceInput,
+  rate: number
+) {
+  const prepared = await textIntelligence.prepare(input);
+  const isHeading = prepared.structure.kind === "heading";
+  const trailingPauseMs = prepared.pauses
+    .filter((pause) => pause.offset >= prepared.text.length)
+    .reduce((longest, pause) => Math.max(longest, pause.durationMs), 0);
   return {
-    // Speech must be derived only from displayed source prose. Headings keep a
-    // slower rate and short trailing pause, but no invisible "Title" cue.
-    text: isHeading ? normalizeHeadingForSpeech(chunk.text) : chunk.text,
-    prefixLength: 0,
+    text: prepared.text,
+    sourceOffsets: prepared.sourceOffsets,
     rate: isHeading ? Math.max(0.5, rate * 0.88) : rate,
     isHeading,
+    trailingPauseMs,
+    intelligence: prepared,
   };
 }
 
@@ -930,6 +942,51 @@ export function Reader({
     };
   }
 
+  function textInputForSpeechChunk(chunk: SpeechChunk, list = flatRef.current): TextIntelligenceInput {
+    const first = chunk.spans[0]?.sentence;
+    const last = chunk.spans[chunk.spans.length - 1]?.sentence;
+    const firstIndex = first?.id ?? 0;
+    const lastIndex = last?.id ?? firstIndex;
+    const pageSource = pages.find((page) => page.page === first?.page)?.source || "native";
+    const asContext = (sentence: Sentence) => ({
+      text: sentence.text,
+      kind: sentence.kind,
+      page: sentence.page,
+      paragraphIndex: sentence.paragraphIndex,
+    });
+    const previous = list.slice(Math.max(0, firstIndex - 2), firstIndex);
+    const following = list.slice(lastIndex + 1, Math.min(list.length, lastIndex + 3));
+    return {
+      rawText: chunk.text,
+      before: previous.map(asContext),
+      after: following.map(asContext),
+      layout: {
+        source: pageSource,
+        kind: chunk.spans.some((span) => span.sentence.kind === "heading") ? "heading" : "body",
+        page: first?.page,
+        paragraphIndex: first?.paragraphIndex,
+        isolated:
+          first?.kind === "heading" ||
+          Boolean(previous[previous.length - 1]?.kind === "body" && following[0]?.kind === "body"),
+      },
+      language,
+      position: {
+        page: first?.page,
+        segmentIndex: firstIndex,
+        sourceOffset: chunk.spans[0]?.sourceStart || 0,
+      },
+      // Online interpretation is deliberately not enabled implicitly. The
+      // backend adapter can be injected after an explicit paid setting exists.
+      allowOnlineFallback: false,
+    };
+  }
+
+  function sourceOffsetForSpeech(prepared: SpeakableText, spokenOffset: number): number {
+    if (!prepared.sourceOffsets.length) return 0;
+    const bounded = Math.max(0, Math.min(prepared.sourceOffsets.length - 1, spokenOffset));
+    return prepared.sourceOffsets[bounded] ?? 0;
+  }
+
   // Subscribe to the GLOBAL background OCR engine. Starting it here registers the
   // job once; it then keeps loading even if we leave for another book or the
   // Library, and resumes automatically when the app returns to the foreground.
@@ -1268,7 +1325,7 @@ export function Reader({
   }
 
   // ----- playback -----
-  function speakAt(i: number) {
+  async function speakAt(i: number) {
     const myEpoch = ++epochRef.current; // any earlier utterance's callback is now stale
     const f = flatRef.current;
     if (i < 0 || i >= f.length) {
@@ -1299,8 +1356,13 @@ export function Reader({
       reachedEnd();
       return;
     }
-    const firstPosition = locateChunkPosition(chunk, 0);
-    const speech = speechForChunk(chunk, language, settingsRef.current.speed);
+    const speechInput = textInputForSpeechChunk(chunk, f);
+    const speech = await speechForChunk(chunk, speechInput, settingsRef.current.speed);
+    if (!playingRef.current || myEpoch !== epochRef.current) return;
+    const firstPosition = locateChunkPosition(
+      chunk,
+      sourceOffsetForSpeech(speech.intelligence, 0)
+    );
     const text = speech.text;
     const spokenLength = Math.max(1, text.length);
     localVoiceProgressRef.current = 0;
@@ -1315,14 +1377,16 @@ export function Reader({
     for (let ahead = 1; ahead <= prefetchAhead; ahead++) {
       const nextChunk = buildSpeechChunk(nextIndex, f, voiceMode, nextOffset);
       if (!nextChunk) break;
-      const nextSpeech = speechForChunk(nextChunk, language, settingsRef.current.speed);
-      ttsRef.current
-        .prefetch?.(nextSpeech.text, {
-          language,
-          rate: nextSpeech.rate,
-          voiceId: voiceIdFor(voiceMode, preferences),
-          fallbackVoiceId: preferences.deviceVoiceId,
-        })
+      const nextInput = textInputForSpeechChunk(nextChunk, f);
+      void speechForChunk(nextChunk, nextInput, settingsRef.current.speed)
+        .then((nextSpeech) =>
+          ttsRef.current.prefetch?.(nextSpeech.text, {
+            language,
+            rate: nextSpeech.rate,
+            voiceId: voiceIdFor(voiceMode, preferences),
+            fallbackVoiceId: preferences.deviceVoiceId,
+          })
+        )
         .catch(() => {});
       nextIndex = nextChunk.nextIndex;
       nextOffset = nextChunk.nextOffset;
@@ -1338,12 +1402,14 @@ export function Reader({
         const anchored = resolvePageWithinIndex(chunk.lastPage, chunk.lastWithin);
         if (chunk.nextOffset > 0) {
           pendingOffsetRef.current = chunk.nextOffset;
-          speakAt(anchored);
+          void speakAt(anchored);
         } else {
-          speakAt(anchored + 1);
+          void speakAt(anchored + 1);
         }
       };
-      if (speech.isHeading) setTimeout(continueReading, TITLE_PAUSE_MS);
+      if (speech.isHeading || speech.trailingPauseMs > 0) {
+        setTimeout(continueReading, Math.max(TITLE_PAUSE_MS, speech.trailingPauseMs));
+      }
       else continueReading();
     };
 
@@ -1404,7 +1470,7 @@ export function Reader({
         const spokenOffset = Math.floor(spokenLength * ratio);
         const position = locateChunkPosition(
           chunk,
-          Math.max(0, spokenOffset - speech.prefixLength)
+          sourceOffsetForSpeech(speech.intelligence, spokenOffset)
         );
         if (!position) return;
         indexRef.current = position.sentence.id;
@@ -1432,7 +1498,7 @@ export function Reader({
     if (voiceAccessBlocked()) return;
     playingRef.current = true;
     setIsPlaying(true);
-    speakAt(indexRef.current);
+    void speakAt(indexRef.current);
   }
 
   function pause() {
@@ -1482,7 +1548,7 @@ export function Reader({
     pendingOffsetRef.current = charOffset;
     playingRef.current = true;
     setIsPlaying(true);
-    speakAt(globalId);
+    void speakAt(globalId);
   }
   onTapWordRef.current = onTapWord;
 
@@ -1578,7 +1644,7 @@ export function Reader({
       if (readAloudBlocked()) return;
       playingRef.current = true;
       setIsPlaying(true);
-      setTimeout(() => speakAt(globalId), 150);
+      setTimeout(() => void speakAt(globalId), 150);
     } else {
       playingRef.current = false;
       setIsPlaying(false);
