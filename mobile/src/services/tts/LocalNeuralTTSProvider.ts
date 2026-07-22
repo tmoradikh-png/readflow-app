@@ -16,7 +16,7 @@ import {
 } from "../SpeechNormalization";
 
 let audioModeBackground: boolean | null = null;
-const LOCAL_TTS_RENDER_VERSION = "stitched0.2";
+const LOCAL_TTS_RENDER_VERSION = "stitched0.3";
 // Sentence/clause silence is stitched into PCM below. Disable model-controlled
 // sentence gaps so pauses do not vary with punctuation or stack twice.
 // Supertonic requires a positive engine-level value while it constructs its
@@ -49,10 +49,12 @@ export class LocalNeuralTTSProvider implements TTSProvider {
   private seq = 0;
   private enginePromise: Promise<TtsEngine> | null = null;
   private generationQueue: Promise<unknown> = Promise.resolve();
+  private generationEpoch = 0;
+  private disposePromise: Promise<void> | null = null;
   private dir = (FileSystem.cacheDirectory || "") + "local-ai-tts/";
   private dirReady = false;
   private fileCache = new Map<string, string>();
-  private inflightCache = new Map<string, Promise<string>>();
+  private inflightCache = new Map<string, { epoch: number; promise: Promise<string> }>();
   private removeListener: (() => void) | null = null;
   private finishTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetchTimers: ReturnType<typeof setTimeout>[] = [];
@@ -83,32 +85,48 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     });
   }
 
-  private async fetchAudio(text: string, speed: number): Promise<string> {
+  private async fetchAudio(text: string, speed: number, epoch = this.generationEpoch): Promise<string> {
+    this.assertGenerationCurrent(epoch);
     const key = this.keyFor(text, speed);
     const cached = this.fileCache.get(key);
     if (cached) return cached;
 
     const inflight = this.inflightCache.get(key);
-    if (inflight) return inflight;
+    if (inflight?.epoch === epoch) return inflight.promise;
 
-    const pending = this.runGeneration(() => this.generateAudio(key, text, speed)).finally(() => {
-      this.inflightCache.delete(key);
+    let pending!: Promise<string>;
+    pending = this.runGeneration(
+      () => this.generateAudio(key, text, speed, epoch),
+      epoch
+    ).finally(() => {
+      if (this.inflightCache.get(key)?.promise === pending) this.inflightCache.delete(key);
     });
-    this.inflightCache.set(key, pending);
+    this.inflightCache.set(key, { epoch, promise: pending });
     return pending;
   }
 
-  private runGeneration<T>(work: () => Promise<T>): Promise<T> {
-    const next = this.generationQueue.then(work, work);
+  private runGeneration<T>(work: () => Promise<T>, epoch: number): Promise<T> {
+    const guardedWork = () => {
+      this.assertGenerationCurrent(epoch);
+      return work();
+    };
+    const next = this.generationQueue.then(guardedWork, guardedWork);
     this.generationQueue = next.catch(() => {});
     return next;
   }
 
-  private async generateAudio(key: string, text: string, speed: number): Promise<string> {
+  private async generateAudio(
+    key: string,
+    text: string,
+    speed: number,
+    epoch: number
+  ): Promise<string> {
+    this.assertGenerationCurrent(epoch);
     const cached = this.fileCache.get(key);
     if (cached) return cached;
 
     const engine = await this.getEngine();
+    this.assertGenerationCurrent(epoch);
     const { saveAudioToFile } = await import("react-native-sherpa-onnx/tts");
 
     if (!this.dirReady) {
@@ -119,12 +137,20 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     const uri = `${this.dir}${hashKey(key)}.wav`;
     const existing = await FileSystem.getInfoAsync(uri).catch(() => ({ exists: false }));
     if (existing.exists) {
+      this.assertGenerationCurrent(epoch);
       this.fileCache.set(key, uri);
       return uri;
     }
 
-    const audio = await generateStitchedParagraph(engine, text, speed);
+    const audio = await generateStitchedParagraph(
+      engine,
+      text,
+      speed,
+      () => epoch === this.generationEpoch
+    );
+    this.assertGenerationCurrent(epoch);
     const saved = await saveAudioToFile(audio, toNativePath(uri));
+    this.assertGenerationCurrent(epoch);
     const fileUri = toFileUri(saved || uri);
     this.fileCache.set(key, fileUri);
     return fileUri;
@@ -133,16 +159,18 @@ export class LocalNeuralTTSProvider implements TTSProvider {
   async prefetch(text: string, opts: SpeakOptions): Promise<void> {
     const t = normalizeLocalSpeechText(text);
     if (!t) return;
+    const epoch = this.generationEpoch;
 
     const timer = setTimeout(() => {
       this.prefetchTimers = this.prefetchTimers.filter((item) => item !== timer);
-      this.fetchAudio(t, clampSpeed(opts.rate)).catch(() => {});
+      this.fetchAudio(t, clampSpeed(opts.rate), epoch).catch(() => {});
     }, 120);
     this.prefetchTimers.push(timer);
   }
 
   async speak(text: string, opts: SpeakOptions): Promise<void> {
     const mySeq = ++this.seq;
+    const generationEpoch = this.generationEpoch;
     const speed = clampSpeed(opts.rate);
     const rawText = (text || "").trim();
     const t = normalizeLocalSpeechText(rawText);
@@ -155,9 +183,10 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
     let uri: string;
     try {
-      uri = await this.fetchAudio(t, speed);
+      uri = await this.fetchAudio(t, speed, generationEpoch);
     } catch (e) {
       if (mySeq !== this.seq) return;
+      if (e instanceof GenerationCancelledError) return;
       opts.onFallback?.({
         reason: "local_unavailable",
         message: "rF AI is not ready on this phone. Download rF AI before using this voice.",
@@ -250,6 +279,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
   async stop(): Promise<void> {
     this.seq++;
+    this.generationEpoch++;
     this.clearPrefetchTimers();
     this.clearFinishTimer();
     this.removeListener?.();
@@ -262,6 +292,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
   async pause(): Promise<void> {
     this.seq++;
+    this.generationEpoch++;
     this.clearPrefetchTimers();
     this.clearFinishTimer();
     this.removeListener?.();
@@ -275,6 +306,26 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     try {
       this.player?.play();
     } catch {}
+  }
+
+  async dispose(): Promise<void> {
+    if (this.disposePromise) return this.disposePromise;
+
+    this.disposePromise = (async () => {
+      await this.stop();
+      const enginePromise = this.enginePromise;
+      this.enginePromise = null;
+
+      // Native generation cannot be interrupted mid-call. Wait for the stale
+      // job to return, then release the model before abandoning this provider.
+      await this.generationQueue.catch(() => {});
+      const engine = await enginePromise?.catch(() => null);
+      await engine?.destroy().catch(() => {});
+      this.inflightCache.clear();
+      this.fileCache.clear();
+    })();
+
+    return this.disposePromise;
   }
 
   async getVoices() {
@@ -306,6 +357,17 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       player?.remove();
     } catch {}
     if (player === this.player) this.player = null;
+  }
+
+  private assertGenerationCurrent(epoch: number) {
+    if (epoch !== this.generationEpoch) throw new GenerationCancelledError();
+  }
+}
+
+class GenerationCancelledError extends Error {
+  constructor() {
+    super("rF AI generation cancelled");
+    this.name = "GenerationCancelledError";
   }
 }
 
@@ -339,7 +401,8 @@ function hashKey(value: string): string {
 async function generateStitchedParagraph(
   engine: TtsEngine,
   text: string,
-  speed: number
+  speed: number,
+  shouldContinue: () => boolean
 ): Promise<GeneratedAudio> {
   const segments = buildLocalSpeechSegments(text);
   if (!segments.length) return { samples: [], sampleRate: 0 };
@@ -347,12 +410,14 @@ async function generateStitchedParagraph(
   const samples: number[] = [];
   let sampleRate = 0;
   for (let index = 0; index < segments.length; index++) {
+    if (!shouldContinue()) throw new GenerationCancelledError();
     const segment = segments[index];
     const audio = await engine.generateSpeech(segment.text, {
       sid: LOCAL_NEURAL_SPEAKER_ID,
       speed,
       silenceScale: LOCAL_TTS_SEGMENT_SILENCE_SCALE,
     });
+    if (!shouldContinue()) throw new GenerationCancelledError();
     if (!sampleRate) sampleRate = audio.sampleRate;
     if (!audio.sampleRate || audio.sampleRate !== sampleRate) {
       throw new Error("rF AI returned inconsistent audio sample rates.");

@@ -45,6 +45,7 @@ import {
   formatLocalVoiceRemaining,
   getLocalVoiceSecondsToday,
 } from "../services/LocalVoiceUsage";
+import { normalizeHeadingForSpeech } from "../services/SpeechNormalization";
 import {
   getLocalNeuralVoiceStatus,
   loadLocalNeuralVoiceStatus,
@@ -91,7 +92,9 @@ interface LineSegment extends LineRange {
 }
 
 const TTS_PREFETCH_AHEAD = 8;
-const LOCAL_AI_PREFETCH_AHEAD = 6;
+// One local render ahead is enough for a smooth handoff. Queuing several native
+// Supertonic jobs makes Stop/Back appear frozen on long or malformed paragraphs.
+const LOCAL_AI_PREFETCH_AHEAD = 1;
 const KEEP_AWAKE_TAG = "readflow-reading";
 const READER_WINDOW_BEFORE = 12;
 const READER_WINDOW_AFTER = 180;
@@ -156,7 +159,7 @@ function speechForChunk(chunk: SpeechChunk, _language: string, rate: number) {
   return {
     // Speech must be derived only from displayed source prose. Headings keep a
     // slower rate and short trailing pause, but no invisible "Title" cue.
-    text: chunk.text,
+    text: isHeading ? normalizeHeadingForSpeech(chunk.text) : chunk.text,
     prefixLength: 0,
     rate: isHeading ? Math.max(0.5, rate * 0.88) : rate,
     isHeading,
@@ -473,7 +476,9 @@ export function Reader({
   useEffect(() => {
     if (voiceMode === desiredVoiceMode) return;
     epochRef.current++;
-    ttsRef.current.stop();
+    const previousProvider = ttsRef.current;
+    if (previousProvider.dispose) void previousProvider.dispose();
+    else void previousProvider.stop();
     playingRef.current = false;
     setIsPlaying(false);
     ttsRef.current = createTTSProvider(providerKindFor(desiredVoiceMode));
@@ -482,7 +487,9 @@ export function Reader({
   useEffect(() => {
     if (canUseCloudVoice || voiceMode !== "natural") return;
     epochRef.current++;
-    ttsRef.current.stop();
+    const previousProvider = ttsRef.current;
+    if (previousProvider.dispose) void previousProvider.dispose();
+    else void previousProvider.stop();
     ttsRef.current = createTTSProvider("device");
     setVoiceMode("device");
   }, [canUseCloudVoice, voiceMode]);
@@ -731,7 +738,9 @@ export function Reader({
       flushLocalVoiceUsage();
       saveLastReadRef.current();
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
-      ttsRef.current.stop();
+      const provider = ttsRef.current;
+      if (provider.dispose) void provider.dispose();
+      else void provider.stop();
     };
   }, []);
 

@@ -44,6 +44,7 @@ const { TextReflow } = textModule;
 const { buildSpeechChunk, resumeSpeechOffset } = speechModule;
 const {
   buildLocalSpeechSegments,
+  normalizeHeadingForSpeech,
   normalizeEnglishNumbersForSpeech,
   normalizeLocalSpeechText,
 } = normalizationModule;
@@ -154,8 +155,8 @@ const completedPages = TextReflow.buildSentences([
 const completedChunk = buildSpeechChunk(0, completedPages, { mode: "device", pageCap: 300 });
 assert.equal(completedChunk?.spans.length, 1, "completed sentences must retain the page pause");
 
-// Normal paragraphs fit in one clip. Exceptionally long paragraphs restart at
-// a sentence boundary inside the same visual row and neither repeat nor omit text.
+// Exceptionally long paragraphs restart inside the same visual row and neither
+// repeat nor omit text, including when each individual sentence is pathological.
 const sentenceA = `${"Careful reading protects every quiet word ".repeat(11)}today.`;
 const sentenceB = `${"Natural pacing protects every quiet word ".repeat(11)}again.`;
 const sentenceC = `${"Complete boundaries protect every quiet word ".repeat(11)}always.`;
@@ -165,22 +166,24 @@ const longParagraph = TextReflow.buildSentences([
 ]);
 assert.equal(longParagraph.length, 1, "a long native paragraph stays one visual row");
 
-const longFirst = buildSpeechChunk(0, longParagraph, { mode: "local", pageCap: 300 });
-assert.ok(longFirst);
-assert.equal(longFirst.nextIndex, 0, "a long paragraph resumes in the same visual row");
-assert.ok(longFirst.nextOffset > 0, "a long paragraph records its exact continuation offset");
-assert.ok(longFirst.text.endsWith("again."), "the first clip must end on a sentence boundary");
-
-const longSecond = buildSpeechChunk(0, longParagraph, {
-  mode: "local",
-  pageCap: 300,
-  firstOffset: longFirst.nextOffset,
-});
-assert.equal(longSecond?.text, sentenceC);
-assert.equal(longSecond?.nextIndex, 1);
-assert.equal(longSecond?.nextOffset, 0);
+let longParagraphIndex = 0;
+let longParagraphOffset = 0;
+const longParagraphClips = [];
+for (let guard = 0; guard < 20 && longParagraphIndex < longParagraph.length; guard++) {
+  const chunk = buildSpeechChunk(longParagraphIndex, longParagraph, {
+    mode: "local",
+    pageCap: 300,
+    firstOffset: longParagraphOffset,
+  });
+  assert.ok(chunk);
+  assert.ok(chunk.text.length <= 260);
+  longParagraphClips.push(chunk.text);
+  longParagraphIndex = chunk.nextIndex;
+  longParagraphOffset = chunk.nextOffset;
+}
+assert.equal(longParagraphIndex, 1);
 assert.equal(
-  `${longFirst.text} ${longSecond?.text}`,
+  longParagraphClips.join(" "),
   longParagraphText,
   "chunking a long paragraph must not repeat, omit, or rewrite a word"
 );
@@ -197,7 +200,7 @@ const thousandWordParagraph = TextReflow.buildSentences([
 let offset = 0;
 let index = 0;
 const clips = [];
-for (let guard = 0; guard < 20 && index < thousandWordParagraph.length; guard++) {
+for (let guard = 0; guard < 100 && index < thousandWordParagraph.length; guard++) {
   const chunk = buildSpeechChunk(index, thousandWordParagraph, {
     mode: "local",
     pageCap: 300,
@@ -205,7 +208,7 @@ for (let guard = 0; guard < 20 && index < thousandWordParagraph.length; guard++)
   });
   assert.ok(chunk, "every long-paragraph continuation must build");
   clips.push(chunk.text);
-  assert.ok(chunk.text.length <= 1100, "normal sentence boundaries keep clips near the soft cap");
+  assert.ok(chunk.text.length <= 260, "local native requests stay within the hard guard");
   assert.ok(
     chunk.nextIndex > index || chunk.nextOffset > offset,
     "each continuation must make forward progress"
@@ -225,18 +228,29 @@ assert.equal(
   "pause inside a long visual paragraph resumes the current sentence, not the whole paragraph"
 );
 
-// Never cut an unusually long single sentence merely to satisfy the soft cap.
+// A pathological sentence must be bounded for local synthesis so native memory
+// cannot grow without limit. Every source word remains present across chunks.
 const oneLongSentence = `${"One grammatical sentence keeps its own natural continuity ".repeat(25)}today.`;
 const oneLongSentenceRows = TextReflow.buildSentences([
   { page: 12, source: "native", text: oneLongSentence },
 ]);
-const oneLongSentenceChunk = buildSpeechChunk(0, oneLongSentenceRows, {
-  mode: "local",
-  pageCap: 300,
-});
-assert.equal(oneLongSentenceChunk?.text, oneLongSentence);
-assert.equal(oneLongSentenceChunk?.nextIndex, 1);
-assert.equal(oneLongSentenceChunk?.nextOffset, 0);
+let longSentenceIndex = 0;
+let longSentenceOffset = 0;
+const longSentenceClips = [];
+for (let guard = 0; guard < 10 && longSentenceIndex < oneLongSentenceRows.length; guard++) {
+  const chunk = buildSpeechChunk(longSentenceIndex, oneLongSentenceRows, {
+    mode: "local",
+    pageCap: 300,
+    firstOffset: longSentenceOffset,
+  });
+  assert.ok(chunk, "every pathological-sentence continuation must build");
+  assert.ok(chunk.text.length <= 260, "one local native request must stay within the hard guard");
+  longSentenceClips.push(chunk.text);
+  longSentenceIndex = chunk.nextIndex;
+  longSentenceOffset = chunk.nextOffset;
+}
+assert.equal(longSentenceIndex, 1);
+assert.equal(longSentenceClips.join(" "), oneLongSentence);
 
 const marker = TextReflow.speechText("communities.2 The evidence", "body");
 assert.equal(marker.text, "communities. The evidence", "footnote marker must stay silent");
@@ -357,6 +371,37 @@ assert.equal(
   "heading",
   "mobile reflow must consume structural PDF heading markers without displaying them"
 );
+const headingVariationRows = TextReflow.buildSentences([
+  {
+    page: 49,
+    source: "native",
+    text: [
+      "BOOK I",
+      "Loyalty that refuses",
+      "The chapter body starts here and continues as ordinary prose.",
+      "",
+      "CHAPTER IV",
+      "A Different Kind of Courage",
+      "The next chapter body starts here.",
+    ].join("\n"),
+  },
+]);
+for (const title of ["BOOK I", "Loyalty that refuses", "CHAPTER IV", "A Different Kind of Courage"]) {
+  assert.equal(
+    headingVariationRows.find((row) => row.text === title)?.kind,
+    "heading",
+    `${title} must remain a structural heading`
+  );
+}
+assert.equal(normalizeHeadingForSpeech("BOOK I"), "BOOK 1");
+assert.equal(normalizeHeadingForSpeech("Chapter IV: A New Beginning"), "Chapter 4: A New Beginning");
+assert.equal(normalizeHeadingForSpeech("PART XII"), "PART 12");
+assert.equal(normalizeHeadingForSpeech("III"), "3");
+assert.equal(
+  normalizeHeadingForSpeech("I understand the chapter"),
+  "I understand the chapter",
+  "heading normalization must never rewrite an ordinary first-person I"
+);
 assert.ok(
   typographyStructuredRows.every((row) => !/[\uE100\uE101]/.test(row.text)),
   "internal heading markers must never reach display, copy, speech, or AI context"
@@ -453,6 +498,15 @@ assert.deepEqual(
   ],
   "decimal values retain their meaning as words while initialism and sentence dots stay unspoken"
 );
+assert.deepEqual(
+  buildLocalSpeechSegments("First contents entry\u2014Second contents entry\u2014Third entry"),
+  [
+    { text: "First contents entry", pauseAfterMs: 90 },
+    { text: "Second contents entry", pauseAfterMs: 90 },
+    { text: "Third entry", pauseAfterMs: 0 },
+  ],
+  "em-dash contents entries must become small deterministic local-AI clauses"
+);
 
 const abbreviationSentence =
   `${"A long clause safely approaches the audio boundary without punctuation ".repeat(15)}` +
@@ -460,11 +514,24 @@ const abbreviationSentence =
 const abbreviationRows = TextReflow.buildSentences([
   { page: 13, source: "native", text: abbreviationSentence },
 ]);
-const abbreviationChunk = buildSpeechChunk(0, abbreviationRows, { mode: "local", pageCap: 300 });
-assert.match(
-  abbreviationChunk?.text || "",
-  /Dr\. Thompson continued through the real end of the sentence\.$/,
-  "a title abbreviation near the soft cap must not become a false sentence boundary"
+let abbreviationIndex = 0;
+let abbreviationOffset = 0;
+const abbreviationClips = [];
+for (let guard = 0; guard < 10 && abbreviationIndex < abbreviationRows.length; guard++) {
+  const chunk = buildSpeechChunk(abbreviationIndex, abbreviationRows, {
+    mode: "local",
+    pageCap: 300,
+    firstOffset: abbreviationOffset,
+  });
+  assert.ok(chunk);
+  abbreviationClips.push(chunk.text);
+  abbreviationIndex = chunk.nextIndex;
+  abbreviationOffset = chunk.nextOffset;
+}
+assert.equal(abbreviationClips.join(" "), abbreviationSentence);
+assert.ok(
+  abbreviationClips.every((clip) => !/Dr\.$/.test(clip)),
+  "a title abbreviation near a safety split must not become a false sentence boundary"
 );
 
 const manuscriptPage43 = TextReflow.buildSentences([
@@ -558,6 +625,11 @@ const docCacheSource = fs.readFileSync(path.join(root, "src/services/DocCache.ts
 assert.match(docCacheSource, /cached\.docId !== fresh\.docId/);
 
 const readerSource = fs.readFileSync(path.join(root, "src/components/Reader.tsx"), "utf8");
+assert.match(
+  readerSource,
+  /const LOCAL_AI_PREFETCH_AHEAD = 1;/,
+  "rF AI must queue only one future native render"
+);
 assert.match(readerSource, /openLocalVoiceSetupNotice/);
 assert.match(readerSource, /voice pack itself does not require registration or a subscription purchase/);
 assert.match(readerSource, /<ThemedNotice[\s\S]*visible=\{Boolean\(readerNotice\)\}/);
@@ -565,7 +637,7 @@ assert.match(readerSource, /function keepActiveLineVisible/);
 assert.match(readerSource, /viewOffset: targetY - lineY/);
 assert.match(readerSource, /style=\{styles\.pageNavAi\}/);
 assert.doesNotMatch(readerSource, /styles\.aiFab/);
-assert.match(readerSource, /text: chunk\.text/);
+assert.match(readerSource, /text: isHeading \? normalizeHeadingForSpeech\(chunk\.text\) : chunk\.text/);
 assert.doesNotMatch(readerSource, /TITLE_CUES|titleCueFor/);
 assert.match(readerSource, /renderTokenText\(tokens, 0, highlightedRange\)/);
 assert.doesNotMatch(
@@ -582,8 +654,23 @@ assert.match(localProviderSource, /LOCAL_TTS_ENGINE_SILENCE_SCALE = 0\.2/);
 assert.match(localProviderSource, /LOCAL_TTS_SEGMENT_SILENCE_SCALE = 0/);
 assert.match(localProviderSource, /silenceScale: LOCAL_TTS_ENGINE_SILENCE_SCALE/);
 assert.match(localProviderSource, /silenceScale: LOCAL_TTS_SEGMENT_SILENCE_SCALE/);
-assert.match(localProviderSource, /LOCAL_TTS_RENDER_VERSION = "stitched0\.2"/);
+assert.match(localProviderSource, /LOCAL_TTS_RENDER_VERSION = "stitched0\.3"/);
 assert.match(localProviderSource, /generateStitchedParagraph/);
+assert.match(
+  localProviderSource,
+  /generationEpoch\+\+;/,
+  "Stop and pause must invalidate queued local synthesis"
+);
+assert.match(
+  localProviderSource,
+  /await engine\?\.destroy\(\)\.catch/,
+  "disposing rF AI must release its native model"
+);
+assert.match(
+  readerSource,
+  /if \(provider\.dispose\) void provider\.dispose\(\);/,
+  "leaving the reader must dispose native voice providers"
+);
 
 assert.match(
   pdfParserSource,

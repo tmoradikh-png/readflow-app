@@ -26,11 +26,12 @@ interface BuildSpeechChunkOptions {
   firstOffset?: number;
 }
 
-// Keep normal paragraphs intact. Exceptionally long paragraphs are divided only
-// at grammatical sentence boundaries so a 1,000-word paragraph cannot create a
-// multi-hundred-megabyte PCM bridge payload. A single long sentence is allowed
-// to exceed the soft cap rather than being cut mid-sentence.
+// Keep normal paragraphs intact. Exceptionally long paragraphs are divided at
+// grammatical sentence boundaries. A malformed or unusually long sentence also
+// has a hard local-AI guard: very large one-shot Supertonic requests can exhaust
+// Android memory and leave the reader UI unable to navigate.
 const LOCAL_AI_BLOCK_MAX_CHARS = 1000;
+const LOCAL_AI_UNBROKEN_MAX_CHARS = 260;
 const CLOUD_AI_BLOCK_MAX_CHARS = 1100;
 const DEVICE_BLOCK_MAX_CHARS = 1000;
 const NON_TERMINAL_ABBREVIATIONS = new Set([
@@ -69,9 +70,14 @@ export function buildSpeechChunk(
   let charCursor = 0;
   const sourceStart = Math.min(firstOffset, first.text.length);
   const sourceEnd =
-    first.kind === "heading"
+    first.kind === "heading" && options.mode !== "local"
       ? first.text.length
-      : safeBlockEnd(first.text, sourceStart, maxCharsFor(options.mode));
+      : safeBlockEnd(
+          first.text,
+          sourceStart,
+          maxCharsFor(options.mode),
+          options.mode === "local" ? LOCAL_AI_UNBROKEN_MAX_CHARS : Number.POSITIVE_INFINITY
+        );
   const prepared = TextReflow.speechText(first.text, first.kind, sourceStart, sourceEnd);
   if (!prepared.text.trim()) {
     return buildSpeechChunk(
@@ -170,10 +176,19 @@ function maxCharsFor(mode: SpeechChunkMode): number {
   return DEVICE_BLOCK_MAX_CHARS;
 }
 
-function safeBlockEnd(text: string, sourceStart: number, maxChars: number): number {
+function safeBlockEnd(
+  text: string,
+  sourceStart: number,
+  maxChars: number,
+  unbrokenMaxChars: number
+): number {
   const start = nextReadableOffset(text, sourceStart);
   const softEnd = Math.min(text.length, start + maxChars);
-  if (softEnd >= text.length) return text.length;
+  if (softEnd >= text.length) {
+    return text.length - start <= unbrokenMaxChars
+      ? text.length
+      : emergencyBlockEnd(text, start, unbrokenMaxChars);
+  }
 
   const boundaries = sentenceEnds(text, start);
   let prior = -1;
@@ -182,10 +197,35 @@ function safeBlockEnd(text: string, sourceStart: number, maxChars: number): numb
       prior = end;
       continue;
     }
-    // No complete sentence fits under the cap. Keep this one sentence whole.
-    return prior > start ? prior : end;
+    if (prior > start) {
+      return prior - start <= unbrokenMaxChars
+        ? prior
+        : emergencyBlockEnd(text, start, unbrokenMaxChars);
+    }
+    return end - start <= unbrokenMaxChars
+      ? end
+      : emergencyBlockEnd(text, start, unbrokenMaxChars);
   }
-  return text.length;
+  return text.length - start <= unbrokenMaxChars
+    ? text.length
+    : emergencyBlockEnd(text, start, unbrokenMaxChars);
+}
+
+function emergencyBlockEnd(text: string, start: number, maxChars: number): number {
+  const target = Math.min(text.length, start + Math.max(1, Math.floor(maxChars)));
+  const earliest = Math.min(target, start + Math.floor(maxChars * 0.55));
+
+  // Prefer a clause break, then any word boundary. No characters are discarded:
+  // the next chunk resumes from the returned source offset.
+  for (let index = target; index >= earliest; index--) {
+    if (/[;:,\u2014\u2013]/.test(text[index - 1] || "") && /\s/.test(text[index] || "")) {
+      return index;
+    }
+  }
+  for (let index = target; index >= earliest; index--) {
+    if (/\s/.test(text[index] || "")) return index;
+  }
+  return target;
 }
 
 function firstSentenceEnd(text: string): number {

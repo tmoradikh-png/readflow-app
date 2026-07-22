@@ -38,7 +38,7 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
 | RF-R09 | Long silence occurs between rF/Cloud chunks | Prefetch upcoming chunks and reuse the player | Provider prefetch/cache and reusable players |
 | RF-R10 | Chapter/title looks or sounds like body text | Render a separate heading and read only its displayed words at a slower rate with a short trailing pause | Structured heading units and distinct typography; no invisible spoken cue |
 | RF-R11 | A sentence split between PDF pages is read as two bad fragments | Keep the page divider visually but synthesize the unfinished sentence as one audio unit | `SpeechChunk` cross-page continuation; automated fixture covers pages 42-43 |
-| RF-R12 | rF AI omits small words such as `would have`, `to`, `as`, or `evidence` | Preserve the exact speech text and use the model designed to reduce skip/repeat failures | Android Supertonic 3, clean normalization, exact chunk reassembly test, and render cache `stitched0.2`; human listening remains required |
+| RF-R12 | rF AI omits small words such as `would have`, `to`, `as`, or `evidence` | Preserve the exact speech text and use the model designed to reduce skip/repeat failures | Android Supertonic 3, clean normalization, exact chunk reassembly test, and render cache `stitched0.3`; human listening remains required |
 | RF-R13 | Footnote/reference numbers are body-sized or spoken | Display common markers as superscripts and remove them from every voice input, including adjacent citations flattened into one digit run | Reference marker/source-map pipeline; automated `communities.2` and `.11013` checks |
 | RF-R14 | Voice reads page numbers, repeated headers, watermarks, or footnote blocks | Remove non-book boilerplate before rendering and speech | `stripNonReadingLines` and repeated-line detection; multilingual sample check |
 | RF-R15 | Wrong voice silently substitutes Device voice | Show the selected engine, require its entitlement/model, and show an upgrade/download explanation | Voice panel gating and provider fallback notice |
@@ -53,8 +53,8 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
 | RF-R24 | Page-43 `Loyalty that refuses` is formatted and spoken as body text | Render it as a separate heading and read exactly those displayed words more slowly | Sentence-case heading recovery plus exact manuscript fixture |
 | RF-R25 | rF AI omits `and` in `emperors, and people` | The conjunction must be clearly audible while displayed and synthesized prose stay unchanged | Supertonic 3 plus an assertion that reported prose receives no phrase-specific rewrite |
 | RF-R26 | rF AI stutters or reduces words such as `become`, `his`, or `belonged` | Avoid repeated/omitted syllables without mutating individual phrases | Supertonic 3 replaces phrase patches; repeat-listening QA remains mandatory |
-| RF-R27 | rF AI player handoffs between short chunks create audible glitches | Render a normal source paragraph as one WAV and hand off only at safe boundaries | One paragraph per block; exceptionally long paragraphs split only after complete sentences around a 1,000-character soft cap |
-| RF-R28 | A 1,000-word paragraph creates an unbounded native bridge payload or loses text | Use bounded grammatical clips and resume at an exact in-paragraph source offset | Automated multi-clip reassembly must reproduce every source word exactly; a single over-limit sentence remains whole |
+| RF-R27 | rF AI player handoffs between short chunks create audible glitches | Render a normal source paragraph as one WAV and hand off only at safe boundaries | One paragraph per block; exceptionally long paragraphs split after complete sentences around a 1,000-character soft cap, with a 260-character guard only for an unbroken clause |
+| RF-R28 | A 1,000-word paragraph creates an unbounded native bridge payload or loses text | Use bounded grammatical clips and resume at an exact in-paragraph source offset | Automated multi-clip reassembly must reproduce every source word exactly; pathological unbroken local-AI requests use a lossless safety split |
 | RF-R29 | Reflowed text looks far more fragmented than the source book | Render native PDF source paragraphs as wrapping paragraph blocks | Backend preserves geometry-derived paragraph gaps; `TextReflow` retains them and conservatively recovers older cached hard wraps; page-45 fixture must render exactly six source paragraphs |
 | RF-R30 | Correct book wording is mistaken for TTS invention and patched away | Compare the rendered PDF, extracted text, and manuscript before changing prose | Page-44/45 source verification keeps `the United States Army` and `the later leaders` unchanged |
 | RF-R31 | A revised PDF reuses text from an older file with the same name and page count | Key the library, parsed-text cache, OCR pages, and bookmarks by a fingerprint of the selected file bytes | Import two same-name/same-page-count files with different content; they must receive different `rf2:md5-...` document ids and never merge cached OCR |
@@ -71,6 +71,8 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
 | RF-R42 | A real PDF title such as `Measurement, ranking, and the crowd` renders as body text | Detect headings from the PDF's typography and layout, independent of a particular title's wording or punctuation | Backend requires larger size, a dedicated full-line font, and vertical separation; real-book audit covers all 133 pages and an italic-body counterexample prevents false headings |
 | RF-R43 | rF AI misreads or skips 3+ digit values and currency such as `$1.12 billion` | Convert English numeric glyphs into unambiguous words only at the local speech boundary | Generic speech-only normalization covers integers, grouped values, decimals, years, ordinals, ranges, percentages, scaled quantities, and `$`/`£`/`€`; displayed/copy/AI source text remains exact |
 | RF-R44 | QA Reviewer sees the Free 20 MB import limit | A side-by-side QA build must receive the backend Reviewer tier for imports without unlocking vendor-cost features | Passed API gate 2026-07-22: QA marker returned Reviewer/200 MB and a real 27 MB, 124-page PDF extracted with HTTP 200; normal and missing-id probes stayed Free; connected-phone picker confirmation remains the final UI gate |
+| RF-R45 | A newly imported long book cannot start rF AI and Back/Stop leave the reader hung | Keep local synthesis memory bounded, invalidate every queued render on Stop, and destroy the native engine when leaving the reader | rF AI prefetches only one clip, queued work carries a cancellation epoch, em-dash contents entries become short clauses, remaining unbroken requests are capped at 260 characters, and repeated open/read/exit cycles must release rather than stack Supertonic engines; phone gate uses the retained 712-page book |
+| RF-R46 | A compact heading such as `BOOK I` is skipped or pronounced as letters | Recognize broad structural heading forms and make Roman numbering unambiguous without rewriting body prose | Typography markers plus multilingual heading patterns and short isolated-line recovery; heading-only speech normalization covers marker-plus-Roman and standalone Roman forms |
 
 ## Connected-Phone Candidate Gate
 
@@ -99,6 +101,15 @@ normalization, and the Android Supertonic 3 runtime/model configuration.
 12. In the side-by-side QA build, import a native-text PDF larger than 20 MB.
     It must be accepted as Reviewer (up to the 200 MB safety cap) without
     enabling OCR, text AI, or Cloud AI.
+13. In the retained 712-page book, start rF AI on the long Contents paragraph,
+    press Stop, and immediately press Back. The shelf must open promptly, the
+    process must not continue allocating queued synthesis memory, and replay
+    must still work after reopening the book. Repeat the open/read/exit cycle;
+    native model memory must fall after pending generation returns instead of
+    increasing by one full engine on every visit.
+14. Read `BOOK I`, `CHAPTER IV`, a sentence-case title, and an ordinary sentence
+   beginning with `I`. The headings must be distinct and complete; the body
+   pronoun must remain unchanged.
 
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.

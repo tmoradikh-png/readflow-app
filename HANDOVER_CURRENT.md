@@ -14,9 +14,9 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source and side-by-side QA candidate: `1.0.43` / version code `49`.
+- Current source and side-by-side QA candidate: `1.0.44` / version code `50`.
   It contains the reader stability, reviewer-access, page-continuity, title,
-  reference-marker, and speech-articulation repairs described below. It is not
+  reference-marker, bounded local-synthesis, and speech-articulation repairs described below. It is not
   public until a new AAB passes phone QA and is promoted in Play Console.
 - Latest EAS Android build id: `51a83cdf-12d6-4692-a589-2de95fee28f2`.
 - Latest EAS Android artifact:
@@ -572,6 +572,47 @@ that previously exceeded the Free limit uploaded successfully with HTTP 200
 and returned 124 extracted pages. Disable the temporary Render override after
 the side-by-side QA cycle; public Play builds should use RevenueCat or the
 signed reviewer-access flow instead of the QA marker.
+
+## 1.0.44 Long-Book rF AI Memory And Heading Repair
+
+A retained 712-page PDF exposed a pathological Contents paragraph containing
+thousands of characters separated mostly by em dashes. Version `1.0.43 (49)`
+queued several native Supertonic renders for it, reached about 2.30 GB total
+PSS / 1.60 GB native heap, and left Stop/Back apparently frozen while queued
+synthesis continued.
+
+Version `1.0.44 (50)` bounds this path without shortening ordinary prose:
+
+- rF AI prefetches one clip instead of six;
+- every queued and in-flight render carries a cancellation epoch invalidated by
+  Stop/Pause, so stale audio cannot be cached or played;
+- leaving the reader or changing voice disposes the provider and calls the
+  native engine's `destroy()`, preventing one model copy from accumulating per
+  open/read/exit cycle;
+- em-dash-separated Contents/index entries become natural local speech clauses;
+- any remaining unbroken local request is losslessly split at a clause or word
+  boundary at no more than 260 characters;
+- headings with Roman numerals are normalized only at the speech boundary, so
+  `BOOK I`, `CHAPTER IV`, `PART XII`, and standalone `III` are spoken as numeric
+  headings while ordinary first-person `I` remains unchanged.
+
+Connected-phone stress QA on Samsung SM-S918B used the exact retained Contents
+page. The final installed build stabilized at about 494 MB total PSS after 20
+seconds instead of growing past 2 GB, and Stop followed immediately by Back
+returned to the shelf. A repeated open/read/exit test then reached about 568 MB
+on the first session and 448 MB on the second; after pending native generation
+returned and disposal completed, the process fell to about 267 MB rather than
+stacking a second engine at roughly 823 MB. Direct tap-to-read on the visible
+`BOOK II` heading entered rF AI playback, while automated speech-boundary tests
+verify `BOOK I`/`BOOK II` are sent as `BOOK 1`/`BOOK 2` without changing their
+displayed text. Focused logs contained no fatal exception, ANR, out-of-memory
+error, or ReactNativeJS error.
+
+The signed side-by-side artifact is
+`artifacts/readflow-qa-1.0.44-50.apk` (211,252,232 bytes; SHA-256
+`A9770926EA10C28E123EC918086FAD792E9DBAE513CF48FCE355E0092E8E1A9D`).
+It is package `com.urmiaworks.readflow.qa` and was installed in place without
+clearing the retained library or downloaded rF AI model.
 
 ## Accounts And Services
 

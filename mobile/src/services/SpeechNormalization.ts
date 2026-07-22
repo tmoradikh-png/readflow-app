@@ -5,7 +5,9 @@ export function normalizeLocalSpeechText(value: string): string {
     .replace(/\u00ad/g, "")
     .replace(/[“”„‟]/g, '"')
     .replace(/[‘’‚‛]/g, "'")
-    .replace(/[‐‑‒–—―]/g, "-")
+    // Preserve the em dash as a local speech clause boundary below. Other dash
+    // forms remain ordinary hyphens, including numeric ranges.
+    .replace(/[‐‑‒–―]/g, "-")
     .replace(/[…]/g, "...");
   return normalizeEnglishNumbersForSpeech(typography)
     .replace(/&/g, " and ")
@@ -24,6 +26,52 @@ export function normalizeLocalSpeechText(value: string): string {
     .replace(/\s+/g, " ")
     .replace(/\s+([,.;:!?])/g, "$1")
     .trim();
+}
+
+/**
+ * Make compact Roman-numeral headings unambiguous to speech engines. This is
+ * deliberately heading-only so an ordinary first-person "I" is never changed.
+ */
+export function normalizeHeadingForSpeech(value: string): string {
+  const text = (value || "").trim();
+  if (!text) return text;
+
+  const standalone = text.match(/^([IVXLCDM]+)$/i);
+  if (standalone) {
+    const number = romanNumeralValue(standalone[1]);
+    return number === null ? text : String(number);
+  }
+
+  const marker = text.match(
+    /^(chapter|part|book|section|volume|act|scene|canto)\s+([IVXLCDM]+)(\b.*)$/i
+  );
+  if (!marker) return text;
+  const number = romanNumeralValue(marker[2]);
+  return number === null ? text : `${marker[1]} ${number}${marker[3]}`;
+}
+
+function romanNumeralValue(value: string): number | null {
+  const roman = value.toUpperCase();
+  if (!/^(?=[MDCLXVI])M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/.test(roman)) {
+    return null;
+  }
+
+  const values: Record<string, number> = {
+    I: 1,
+    V: 5,
+    X: 10,
+    L: 50,
+    C: 100,
+    D: 500,
+    M: 1000,
+  };
+  let total = 0;
+  for (let index = 0; index < roman.length; index++) {
+    const current = values[roman[index]];
+    const next = values[roman[index + 1]] || 0;
+    total += current < next ? -current : current;
+  }
+  return total > 0 ? total : null;
 }
 
 const SMALL_NUMBER_WORDS = [
@@ -309,12 +357,16 @@ export function buildLocalSpeechSegments(value: string): LocalSpeechSegment[] {
   if (!text) return [];
 
   const segments: LocalSpeechSegment[] = [];
-  const boundary = /([.!?;:]+)(["']?)(?=\s|$)/g;
+  // Contents and index pages commonly use an em dash between entries without
+  // surrounding spaces. Treat it as a short clause boundary so Supertonic does
+  // not receive one huge unpunctuated request. En dashes remain untouched for
+  // numeric ranges such as 1750-1760.
+  const boundary = /([.!?;:]+)(["']?)(?=\s|$)|([\u2014]+)/g;
   let cursor = 0;
   let match: RegExpExecArray | null;
 
   while ((match = boundary.exec(text)) !== null) {
-    const marks = match[1];
+    const marks = match[1] || match[3];
     if (marks === "." && isNonTerminalPeriod(text, match.index, boundary.lastIndex)) continue;
 
     const spoken = text.slice(cursor, match.index).trim();
@@ -334,6 +386,7 @@ export function buildLocalSpeechSegments(value: string): LocalSpeechSegment[] {
 }
 
 function pauseForBoundary(marks: string): number {
+  if (marks.includes("\u2014")) return 90;
   if (marks.includes("?") || marks.includes("!")) return 340;
   if (marks.includes(".")) return 300;
   if (marks.includes(";")) return 190;

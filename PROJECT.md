@@ -36,9 +36,9 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.43`
-- Current source Android `versionCode`: `49`
-- Current source iOS `buildNumber`: `43`
+- Current source version: `1.0.44`
+- Current source Android `versionCode`: `50`
+- Current source iOS `buildNumber`: `44`
 - Latest finished Android EAS build: `1.0.28` / code `34`
 - Latest finished Android EAS build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`
 - Latest finished Android AAB:
@@ -52,10 +52,10 @@ Current shape:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build after this QA candidate should use code `50` unless another EAS
+- Next Android build after this QA candidate should use code `51` unless another EAS
   build has already consumed it. Run the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
-- Next iOS build after this QA candidate should use buildNumber `44` unless an iOS EAS build has already
+- Next iOS build after this QA candidate should use buildNumber `45` unless an iOS EAS build has already
   consumed it. Run the EAS `build:list --platform ios` command in
   `IOS_RELEASE_GUIDE.md` immediately before spending build quota.
 

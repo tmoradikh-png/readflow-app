@@ -37,6 +37,8 @@ export interface TTSProvider {
   stop(): Promise<void>;
   pause(): Promise<void>;
   resume(): Promise<void>;
+  /** Permanently release native resources when this provider is replaced or unmounted. */
+  dispose?(): Promise<void>;
   /** Optional: warm the cache for upcoming text so playback has no gap. */
   prefetch?(text: string, opts: SpeakOptions): Promise<void>;
   /** List available voices (may be empty on some platforms). */
