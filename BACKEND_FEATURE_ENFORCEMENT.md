@@ -4,7 +4,7 @@
 
 **AI and cloud TTS features are strictly enforced on the backend** to prevent
 free users from accessing cost-bearing services. Free users can use local
-reading and a 10-minute daily on-device rF AI preview, but **cannot access cloud
+reading and a 5-minute daily on-device rF AI preview, but **cannot access cloud
 AI, OCR, or cloud TTS features**.
 
 > Cost note: read `COST_MODEL.md` before changing paid tiers or natural voice.
@@ -24,8 +24,8 @@ AI, OCR, or cloud TTS features**.
 
 | Feature | Free | Reader Plus | Reviewer (internal) | AI Pro | Power |
 |---------|------|-------------|---------------------|--------|-------|
-| **Local PDF reading** | 100 pages/doc | Full native text PDFs | Unlimited | Full | Full |
-| **On-device rF AI** | 10 min/day | Blocked | Unlimited | Unlimited | Unlimited |
+| **Local PDF reading** | 300 pages/doc | Full native text PDFs | Unlimited | Full | Full |
+| **On-device rF AI** | 5 min/day | 10 min/day | Unlimited | Unlimited | Unlimited |
 | **Server PDF extraction** | 1 PDF/mo | 100/mo | Review-only high cap | 300/mo | 1000/mo |
 | **AI summary/explain/ask** | 402 Blocked | 402 Blocked | 402 Blocked | 150/mo | 400/mo |
 | **OCR (scanned PDFs)** | 402 Blocked | 402 Blocked | 402 Blocked | 750/mo | 2500/mo |

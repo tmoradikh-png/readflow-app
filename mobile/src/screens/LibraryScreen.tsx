@@ -1099,8 +1099,8 @@ function VoiceSettingsSheet({
               <VoiceChoice
                 title="rF AI"
                 detail={
-                  entitlement.tier === "free" && rfVoiceDailyLimit > 0
-                    ? `5-minute daily preview. Downloads once and runs on this phone.`
+                  rfVoiceDailyLimit > 0
+                    ? `${Math.max(1, Math.floor(rfVoiceDailyLimit / 60))}-minute daily allowance. Downloads once and runs on this phone.`
                     : localStatus.engineInstalled
                     ? readingLanguage.rfAi
                       ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."

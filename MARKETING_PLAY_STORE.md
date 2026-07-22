@@ -185,8 +185,8 @@ Message:
 Current limits:
 
 - 1 imported PDF or Word `.docx` document/month.
-- First 100 pages of native-text documents.
-- Manual reading plus up to 10 minutes/day of downloaded on-device rF AI for
+- First 300 pages of native-text documents.
+- Manual reading plus up to 5 minutes/day of downloaded on-device rF AI for
   supported languages and phones.
 - No AI answers.
 - No OCR.
@@ -207,6 +207,7 @@ Includes:
 - Larger native-text PDF and Word `.docx` imports.
 - Full text-based books.
 - Device voice.
+- Up to 10 minutes/day of downloaded rF AI on supported phones and languages.
 - Bookmarks and reading progress.
 
 Does not include:
@@ -230,7 +231,7 @@ Includes:
 - 150 AI actions/month.
 - 750 OCR pages/month.
 - 45,000 Cloud AI voice characters/month for approved languages.
-- rF AI voice option where supported.
+- Unlimited downloaded rF AI where supported.
 
 ### Power
 
@@ -276,8 +277,8 @@ Features:
 - Read manually with clean typography, bookmarks, saved progress, and focus controls
 - Recognize common chapter headings and separate them from body text
 - Listen with Phone voice on eligible plans
-- Try rF AI for 10 minutes/day on Free, or use it without a daily limit on
-  eligible AI plans and reviewer access after downloading the voice model
+- Try rF AI for 5 minutes/day on Free or 10 minutes/day on Reader Plus. AI Pro,
+  Power, and reviewer access have no daily rF AI limit after downloading the model
 - Use capped Cloud AI voice on supported paid plans and approved languages
 - Highlight text while listening
 - Ask AI for summaries, explanations, simplified passages, key points, and Q&A

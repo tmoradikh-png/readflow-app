@@ -51,6 +51,7 @@ const hybridTextModule = loadTypeScript(
     "./DeterministicSpeechNormalizer": deterministicTextModule,
   }
 );
+const planModule = loadTypeScript("../backend/src/config/plans.ts");
 const pdfExtractionModule = loadTypeScript("../backend/src/services/pdfExtract.ts", {
   "pdf-parse/lib/pdf-parse.js": async () => ({ numpages: 0 }),
 });
@@ -65,6 +66,17 @@ const {
 const { renderPdfTextItems } = pdfExtractionModule;
 const { CompactMultilingualModel } = compactTextModelModule;
 const { HybridTextIntelligence } = hybridTextModule;
+const { TIERS } = planModule;
+
+const planByKey = Object.fromEntries(TIERS.map((tier) => [tier.key, tier]));
+assert.equal(planByKey.free.limits.localVoiceSecondsPerDay, 5 * 60);
+assert.equal(planByKey.reader_plus.limits.localVoiceSecondsPerDay, 10 * 60);
+assert.equal(planByKey.ai_pro.limits.localVoiceSecondsPerDay, 0);
+assert.equal(planByKey.power.limits.localVoiceSecondsPerDay, 0);
+assert.equal(planByKey.reviewer.limits.localVoiceSecondsPerDay, 0);
+assert.equal(planByKey.reader_plus.features.ocr, false);
+assert.equal(planByKey.reader_plus.features.ai, false);
+assert.equal(planByKey.reader_plus.features.cloudVoice, false);
 
 // Speech preparation is independent from rendering. It uses context and
 // structure, preserves lexical content, and maps every spoken character back

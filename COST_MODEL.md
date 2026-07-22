@@ -78,7 +78,7 @@ Current cloud voice implementation:
   daily preview of downloaded on-device rF AI. The timer uses actual local
   playback progress and makes no OpenAI request.
 - Reader Plus is intentionally non-OCR: ad-free/full native-text reading,
-  larger imports, device voice, and unlimited downloaded rF AI during beta.
+  larger imports, device voice, and 10 minutes/day of downloaded rF AI.
   Scanned/image PDFs require AI Pro or Power.
 - Cloud AI voice is language-quality gated. Persian, Arabic, Russian, Hindi,
   Chinese, Japanese, and Korean are blocked from Cloud AI voice until voice QA
@@ -502,8 +502,8 @@ Cloud AI, and AI questions as clear upgrade reasons.
 | Tier | Suggested price | What should be included | Cost risk |
 | --- | ---: | --- | --- |
 | Free | $0 | 1 saved native-text book, up to 300 pages, bookmarks/basic settings, 5 rF AI minutes/day | Render CPU/bandwidth only |
-| Reader Plus | $4.99/mo | Ad-free full native-text reading, larger library, device read-aloud, unlimited downloaded rF AI during beta, themes, bookmarks, focus/follow | Render import CPU/bandwidth |
-| AI Pro | $12.99/mo, $119.99/yr | Everything in Reader Plus, OCR, rF AI voice, limited AI Q&A/summaries, small Cloud AI voice allowance | Direct AI vendor cost stays under 20% |
+| Reader Plus | $4.99/mo | Ad-free full native-text reading, larger library, device read-aloud, 10 downloaded rF AI minutes/day, themes, bookmarks, focus/follow | Render import CPU/bandwidth |
+| AI Pro | $12.99/mo, $119.99/yr | Everything in Reader Plus, OCR, unlimited downloaded rF AI, limited AI Q&A/summaries, small Cloud AI voice allowance | Direct AI vendor cost stays under 20% |
 | Power | $29.99/mo, $279.99/yr | Higher OCR/AI/cloud voice limits, larger books, exports/batch tools, priority heavy-reader features | Direct AI vendor cost stays under 20% |
 | AI voice / OCR packs | Separate add-on | Extra Cloud AI voice characters or extra OCR pages after monthly limits | Best match to real marginal cost |
 
@@ -512,9 +512,9 @@ Recommended starting limits:
 | Tier | OCR pages / month | AI actions / month | Cloud AI voice / month | rF AI |
 | --- | ---: | ---: | ---: | --- |
 | Free | 0 | 0 | 0 | 5 minutes/day, English pack initially |
-| Reader Plus | 0 | 0 | 0 | Unlimited during beta, English pack initially |
-| AI Pro | 750 | 150 | 45k chars | Yes, initially English |
-| Power | 2,500 | 400 | 100k chars | Yes, with future language packs |
+| Reader Plus | 0 | 0 | 0 | 10 minutes/day, English pack initially |
+| AI Pro | 750 | 150 | 45k chars | Unlimited, English pack initially |
+| Power | 2,500 | 400 | 100k chars | Unlimited, with future language packs |
 
 Upgrade logic:
 
@@ -548,7 +548,7 @@ is installed. Store copy must wait for connected-phone and entitlement QA.
 | Tier | Beta behavior | Direct vendor-cost rule |
 | --- | --- | --- |
 | Free | Up to 1 imported book and at most 300 pages; no OCR; 5 minutes/day of downloaded on-device rF AI | No OpenAI/OCR/cloud-voice cost. Only shared Render import traffic is acceptable. |
-| Reader Plus | Unlimited supported native-text PDF import and reading; no OCR; unlimited downloaded on-device rF AI during beta/testing | No OpenAI/OCR/cloud-voice cost. rF AI runs on the user's phone. Reassess the unlimited allowance before final public pricing. |
+| Reader Plus | Unlimited supported native-text PDF import and reading; no OCR; 10 minutes/day of downloaded on-device rF AI | No OpenAI/OCR/cloud-voice cost. rF AI runs on the user's phone. |
 | AI Pro | Unlimited supported native-text PDF import; unlimited downloaded on-device rF AI; a limited monthly OCR allowance; a very small monthly Cloud AI voice allowance | Keep hard backend caps and retain the direct AI vendor-cost guardrail. |
 | Power | AI Pro capabilities with materially higher OCR and Cloud AI voice limits | Higher hard caps, still sized so the customer pays comfortably above marginal cost. |
 
@@ -561,9 +561,8 @@ Open decisions:
   dependency review; the current Play declaration says the app has no ads.
 - Free uses one monthly import and a 300-page per-document/server ceiling. A
   later account system may enforce a lifetime one-book rule across reinstalls.
-- Reader Plus should use unlimited rF AI during beta so paid-plan and authorized
-  reviewers can test long playback. Decide before final pricing whether this
-  remains unlimited or becomes a daily allowance.
+- Reader Plus has a 10-minute daily rF AI allowance. AI Pro, Power, and
+  authorized Reviewer access can test or use long playback without that limit.
 - All exhausted limits should open a themed upgrade explanation rather than
   showing only a quota error.
 
@@ -596,9 +595,9 @@ are also weak and can punish shared networks. For public release, send a stable
 5. DONE in source: first rF AI voice uses Sherpa-ONNX plus on-demand
    Supertonic Reader, outside cloud voice quota. Needs native phone QA before
    product claims.
-6. DONE in `1.0.30` source: Free receives 5 rF AI minutes/day and Reader Plus
-   receives unlimited downloaded rF AI during beta. Both remain free of OCR,
-   text-AI, and Cloud-AI vendor cost.
+6. UPDATED on 2026-07-22: Free receives 5 rF AI minutes/day, Reader Plus receives
+   10 minutes/day, and AI Pro/Power receive unlimited downloaded rF AI. Free and
+   Reader Plus remain free of OCR, text-AI, and Cloud-AI vendor cost.
 7. DONE in source: Free is 1 book/up to 300 pages.
 8. Wire RevenueCat production SDK/user id so paid limits follow the store
    account / RevenueCat customer, not only a local device install id.

@@ -137,7 +137,7 @@ export const TIERS: Tier[] = [
   {
     key: "reader_plus",
     name: "Reader Plus",
-    tagline: "Ad-free reading and unlimited offline rF AI during beta.",
+    tagline: "Ad-free reading with 10 minutes of offline rF AI each day.",
     entitlementId: "reader_plus",
     products: {
       monthly: { productId: "readflow_reader_plus_monthly", priceUsd: 4.99 },
@@ -151,7 +151,7 @@ export const TIERS: Tier[] = [
       maxFileSizeMb: 100,
       maxPages: 2000,
       perDocPageCap: 0,
-      localVoiceSecondsPerDay: 0,
+      localVoiceSecondsPerDay: 10 * 60,
     },
     features: {
       ads: false,

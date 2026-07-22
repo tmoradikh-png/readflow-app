@@ -591,8 +591,10 @@ export function Reader({
 
   function openLocalVoiceLimitOffer() {
     openFeatureLock(
-      "Daily rF AI preview finished",
-      "Free includes 5 minutes of rF AI each day. Reader Plus includes unlimited downloaded rF AI during beta; AI Pro adds OCR, AI questions, and a Cloud AI allowance."
+      "Daily rF AI allowance finished",
+      entitlement.tier === "reader_plus"
+        ? "Reader Plus includes 10 minutes of rF AI each day. AI Pro includes unlimited downloaded rF AI, OCR, AI questions, and a Cloud AI allowance."
+        : "Free includes 5 minutes of rF AI each day. Reader Plus increases this to 10 minutes each day, while AI Pro includes unlimited downloaded rF AI."
     );
   }
 

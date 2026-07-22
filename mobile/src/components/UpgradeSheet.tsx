@@ -42,7 +42,7 @@ const PLANS: Plan[] = [
   {
     key: "reader_plus",
     name: "Reader Plus",
-    tagline: "Ad-free reading with offline rF AI during beta.",
+    tagline: "Ad-free reading with a daily offline rF AI allowance.",
     monthly: 4.99,
     annualPerMonth: 3.33,
     annualTotal: 39.99,
@@ -50,7 +50,7 @@ const PLANS: Plan[] = [
       "Ad-free reading",
       "Full native-text PDF library",
       "Phone voice with no AI cost",
-      "Unlimited downloaded rF AI during beta",
+      "Downloaded rF AI - 10 minutes / day",
     ],
   },
   {
@@ -63,6 +63,7 @@ const PLANS: Plan[] = [
     annualTotal: 119.99,
     perks: [
       "Everything in Reader Plus",
+      "Unlimited downloaded rF AI",
       "OCR - 750 scanned pages / month",
       "AI summaries, explain & Q&A - 150 / month",
       "Cloud AI voice - 45k characters / month",

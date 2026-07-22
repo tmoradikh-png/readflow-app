@@ -132,8 +132,9 @@ Cloud AI audio to continue after screen lock or app switching, using Expo Audio
 lock-screen controls. Free, Reader Plus, and Device voice remain foreground-
 only. The plan source of truth also applies the owner-directed beta limits:
 Free is one native-text import, 300 pages and 5 rF AI minutes/day; Reader Plus
-has unlimited supported native-text reading and unlimited downloaded rF AI
-during beta, with no OCR, text AI, or Cloud AI allowance.
+has unlimited supported native-text reading and 10 downloaded rF AI minutes/day,
+with no OCR, text AI, or Cloud AI allowance. AI Pro and Power have unlimited
+downloaded rF AI.
 
 The permanent bug ledger and release matrix is
 `READER_REGRESSION_CHECKLIST.md`. `npm run check:release` now executes its pure
