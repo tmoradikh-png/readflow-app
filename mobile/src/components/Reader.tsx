@@ -166,7 +166,10 @@ async function speechForChunk(
   const prepared = await textIntelligence.prepare(input);
   const isHeading = prepared.structure.kind === "heading";
   const trailingPauseMs = prepared.pauses
-    .filter((pause) => pause.offset >= prepared.text.length)
+    // Speech engines already render sentence punctuation. Only structural
+    // pauses belong between Reader chunks; adding sentence pauses here caused
+    // a second, conspicuous gap after every ordinary paragraph.
+    .filter((pause) => pause.offset >= prepared.text.length && pause.reason !== "sentence")
     .reduce((longest, pause) => Math.max(longest, pause.durationMs), 0);
   return {
     text: prepared.text,
@@ -965,9 +968,7 @@ export function Reader({
         kind: chunk.spans.some((span) => span.sentence.kind === "heading") ? "heading" : "body",
         page: first?.page,
         paragraphIndex: first?.paragraphIndex,
-        isolated:
-          first?.kind === "heading" ||
-          Boolean(previous[previous.length - 1]?.kind === "body" && following[0]?.kind === "body"),
+        isolated: first?.kind === "heading",
       },
       language,
       position: {
@@ -1385,6 +1386,15 @@ export function Reader({
             rate: nextSpeech.rate,
             voiceId: voiceIdFor(voiceMode, preferences),
             fallbackVoiceId: preferences.deviceVoiceId,
+            allowBackgroundPlayback: backgroundPlaybackAllowedRef.current,
+            finalPauseMs:
+              voiceMode === "local"
+                ? nextChunk.nextOffset > 0
+                  ? 70
+                  : nextSpeech.isHeading || nextSpeech.trailingPauseMs > 0
+                    ? 0
+                    : 240
+                : undefined,
           })
         )
         .catch(() => {});
@@ -1408,7 +1418,10 @@ export function Reader({
         }
       };
       if (speech.isHeading || speech.trailingPauseMs > 0) {
-        setTimeout(continueReading, Math.max(TITLE_PAUSE_MS, speech.trailingPauseMs));
+        const pauseMs = speech.isHeading
+          ? Math.max(TITLE_PAUSE_MS, speech.trailingPauseMs)
+          : speech.trailingPauseMs;
+        setTimeout(continueReading, pauseMs);
       }
       else continueReading();
     };
@@ -1462,11 +1475,22 @@ export function Reader({
         followPlacementRef.current = null;
         setActiveLineByChar(start.id, firstPosition?.charOffset ?? baseOffset);
       },
-      onProgress: ({ currentTime, duration }) => {
+      finalPauseMs:
+        voiceMode === "local"
+          ? chunk.nextOffset > 0
+            ? 70
+            : speech.isHeading || speech.trailingPauseMs > 0
+              ? 0
+              : 240
+          : undefined,
+      onProgress: ({ currentTime, duration, textRatio }) => {
         if (myEpoch !== epochRef.current || duration <= 0) return;
         trackLocalVoiceProgress(currentTime);
         if (!playingRef.current || myEpoch !== epochRef.current) return;
-        const ratio = Math.max(0, Math.min(0.999, currentTime / duration));
+        const ratio = Math.max(
+          0,
+          Math.min(0.999, textRatio ?? currentTime / duration)
+        );
         const spokenOffset = Math.floor(spokenLength * ratio);
         const position = locateChunkPosition(
           chunk,

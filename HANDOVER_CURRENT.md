@@ -14,10 +14,11 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source and side-by-side QA candidate: `1.0.45` / version code `51`.
+- Current source and side-by-side QA candidate: `1.0.49` / version code `55`.
   It contains the reader stability, reviewer-access, page-continuity, title,
   reference-marker, bounded local-synthesis, and independent speech
-  text-intelligence repairs described below. It is not public until a new AAB
+  text-intelligence and progressive-rF-playback repairs described below. It is
+  not public until a new AAB
   completes release QA and is promoted in Play Console.
 - Latest EAS Android build id: `51a83cdf-12d6-4692-a589-2de95fee28f2`.
 - Latest EAS Android artifact:
@@ -29,8 +30,8 @@ keys, or recovery codes.
   Play Store distribution. Bundletool verified package
   `com.urmiaworks.readflow`, version `1.0.29 (35)`, required foreground audio
   permissions, and no `RECORD_AUDIO` permission.
-- The next production AAB is prepared as `1.0.45 (51)`. Recheck EAS and Play
-  before building; if code `51` has been consumed there, increment it rather
+- The next production AAB source is prepared as `1.0.49 (55)`. Recheck EAS and
+  Play before building; if code `55` has been consumed there, increment it rather
   than reusing it.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
@@ -670,6 +671,82 @@ quality for every fixture. Before production, a person must still listen to an
 unfamiliar heading, list, table/formula, mixed-language sample, and a complete
 page-boundary sentence.
 
+## 1.0.49 Naturalness And Responsive rF AI Candidate
+
+Version `1.0.49 (55)` addresses the 2026-07-22 report that rF AI took too long
+to begin after tapping text, paused for too long during reading, and sounded
+cut into unnatural blocks.
+
+The investigation found four generic pipeline problems rather than a corrupt
+book:
+
+- the 260-character safety guard was being applied to a complete paragraph,
+  even when that paragraph had safe sentence punctuation;
+- rF AI waited for the complete multi-sentence paragraph WAV before starting;
+- Reader treated ordinary sentence pauses as structural paragraph pauses and
+  could add a second delay after audio already contained one;
+- the React Native Supertonic bridge discarded the JavaScript `extra.lang`
+  generation metadata, so the model never received the explicit language hint.
+
+Normal punctuated paragraphs now remain one logical reading and highlighting
+unit up to the 1,000-character soft cap. rF AI queues punctuation-safe sentence
+renders for the current paragraph first, begins playback when sentence one is
+ready, and renders the following sentences while it speaks. The 260-character
+guard remains only for a genuinely unbroken sentence. Each sentence WAV owns
+one deterministic trailing pause; Reader adds separate delay only for a real
+heading or another structural boundary. Text-relative progress keeps the
+visible line mapped across the progressive audio tracks. Render cache version
+`segments0.6` invalidates audio from both the old rhythm and the incomplete
+language-hint candidate.
+
+The installed `1.0.46` audio history gave a useful objective baseline: ordinary
+sentence-track transitions arrived about 0.7-0.95 seconds after the prior track
+stopped, with isolated gaps around 2.5 and 5.3 seconds when the next synthesis
+was not ready. Version `1.0.48` began a ready next track 50 ms before the prior
+track's padded tail ends instead of waiting for Expo's delayed completion event.
+Long sentences may be rendered as meaning-preserving clauses only at a safe
+comma (target 150 characters, minimum 55, maximum 190), with an 85 ms pause;
+automated tests prove that the lexical token stream is unchanged. The local
+engine also receives an explicit English language hint instead of relying on
+automatic inference. The dependency patch routes that metadata through native
+`generateWithConfig`; the regression gate verifies the bridge so reinstalling
+dependencies cannot silently remove it. These changes affect only speech audio,
+never displayed or copied book text.
+
+Automated fidelity tests confirm that body preparation preserves the complete
+reported page-58 paragraph containing `Ashoka`, `Iraq Inquiry`, `Britain`,
+`United Nations`, and `Ukraine`, and the page-39 phrase containing `would have`.
+The compact classifier no longer upgrades ordinary body prose to a heading
+merely because it appears near a heading. The displayed text, copied text, AI
+context, and saved positions remain the canonical source; only the speech
+projection is transformed.
+
+The English Supertonic pack still has one currently tested local speaker
+(`sid 0`). Exact text retention does not guarantee that every uncommon name or
+homograph will sound human. Do not add book-specific word substitutions. A
+future pronunciation lexicon/model upgrade must remain replaceable and must
+preserve source mapping. Final naturalness and proper-name pronunciation are
+human-listening gates, not claims made by automated tests.
+
+Connected-phone tracing of `1.0.48 (54)` measured about 3.4 seconds from a cold
+tap to audio and about 1.2 seconds for the same cached passage. Eight consecutive
+track boundaries had no multi-second synthesis stall, but most still spent
+about 0.48-0.67 seconds between Android's stop and start events because Expo
+created the next player only at handoff. `1.0.49 (55)` keeps memory bounded by
+pre-creating exactly one standby player while the current segment plays, then
+consumes that player at handoff. This changes player readiness, not text context,
+segment size, or displayed content.
+
+The signed side-by-side artifact is
+`artifacts/readflow-qa-1.0.49-55.apk` (211,370,540 bytes; 201.58 MiB; SHA-256
+`7FE00D41521064D0F62A490915087A535095A5E05C5DCB0DEA211054CA3794D9`). It is
+package `com.urmiaworks.readflow.qa`, version `1.0.49 (55)`, has no microphone
+permission, and was installed in place on Samsung SM-S918B while preserving the
+retained library and rF AI model. Static release and fidelity gates pass.
+Cold/warm tap-to-audio timing, five-sentence continuity, and human naturalness
+remain connected-phone gates; ADB cannot bypass the phone's secure lock when it
+engages during a long build.
+
 ## Accounts And Services
 
 | Area | Account / owner | Important id or URL |
@@ -824,20 +901,23 @@ Rules:
 
 ## Current Follow-Ups
 
-Owner's numbered priorities and the independent text-intelligence layer are in
-the current `1.0.45 (51)` source. The standalone reviewer build passed startup,
-rF AI playback, and mapped line-highlight smoke checks. These items remain for
-human audible/lifecycle verification before production:
+Owner's numbered priorities, independent text-intelligence layer, and
+progressive rF AI playback are in the current `1.0.49 (55)` source. The
+standalone reviewer build passed startup and progressive runtime playback.
+These items remain for human audible/lifecycle verification before production:
 
 1. Confirm Free/Reader Plus beta limits against the production backend after it
    is deployed.
-2. Audibly confirm the page-39 `would have` sentence with a fresh `ss0.21` render.
+2. Audibly confirm the page-39 `would have` sentence and page-58 proper names
+   with a fresh `segments0.6` render.
 3. Test AI Pro/Power lock, Home, notification controls, headset controls, and
    process recreation; also confirm Free/Reader Plus stop outside the app.
+4. Measure cold and warm tap-to-audio latency, then listen through at least five
+   consecutive sentences for generation starvation or a duplicated pause.
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
-- Build the production AAB from the tagged `1.0.45 (51)` source after completing
+- Build the production AAB from the tagged `1.0.49 (55)` source after completing
   the remaining audible reader gates. The older
   `artifacts/readflow-1.0.29-35.aab` does not contain the final repairs.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.

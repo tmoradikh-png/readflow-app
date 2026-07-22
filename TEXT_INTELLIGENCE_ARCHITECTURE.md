@@ -102,6 +102,16 @@ chunk and sends the same small look-ahead used by each TTS provider through the
 cache. It does not analyze the complete book. Nearby context is bounded to two
 segments before and after the current chunk.
 
+For rF AI, an ordinary paragraph remains one logical source/highlight unit, but
+the provider renders its punctuation-safe sentences progressively. It queues
+all sentences in the current unit before future look-ahead work, starts audio
+as soon as sentence one is ready, and generates later sentences while playback
+continues. A 260-character emergency split applies only to a genuinely
+unbroken sentence; it no longer fragments a well-punctuated paragraph. Each
+rendered segment contains its deterministic trailing silence, while Reader
+adds only structural heading/list/table pauses rather than duplicating normal
+sentence pauses.
+
 ## Fidelity Rules
 
 - Never summarize, simplify, translate, or invent text for speech.
@@ -136,12 +146,20 @@ npm run check:release
 
 The permanent fixtures cover unfamiliar English structures, Persian and
 Chinese scripts, mixed-script pronunciation metadata, heading-only Roman
-normalization, exact retention of `would have`, transformed-source mapping,
-non-BMP Unicode mapping, local-model failure recovery, and rejection of an
-unsafe online rewrite.
+normalization, exact retention of `would have`, exact retention of the
+page-58 `Ashoka`/`Iraq Inquiry`/`Britain`/`United Nations`/`Ukraine` prose,
+transformed-source mapping, non-BMP Unicode mapping, local-model failure
+recovery, progressive local playback, and rejection of an unsafe online
+rewrite.
 
-The signed QA APK `artifacts/readflow-qa-1.0.45-51.apk` is 211,367,136 bytes
-(201.58 MiB), only 114,904 bytes (112.21 KiB) larger than `1.0.44 (50)`. The
-preparation layer therefore adds no language-pack download and no meaningful
-installation-size increase. Most of the APK remains the existing native rF AI
-runtime and bundled application dependencies.
+The signed QA APK `artifacts/readflow-qa-1.0.49-55.apk` is 211,370,540 bytes
+(201.58 MiB), only 1,512 bytes larger than `1.0.46 (52)`. Its SHA-256 is
+`7FE00D41521064D0F62A490915087A535095A5E05C5DCB0DEA211054CA3794D9`.
+The preparation/playback changes therefore add no language-pack download and
+no meaningful installation-size increase. Most of the APK remains the existing
+native rF AI runtime and bundled application dependencies.
+
+The local provider sends explicit language metadata and the maintained
+`react-native-sherpa-onnx` dependency patch routes `extra` through native
+`generateWithConfig`. The reader regression script checks that route so a clean
+dependency install cannot silently fall back to language auto-detection.

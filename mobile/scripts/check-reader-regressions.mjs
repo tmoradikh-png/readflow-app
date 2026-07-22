@@ -132,6 +132,34 @@ const preparedReportedPhrase = await textIntelligence.prepare({
 assert.equal(preparedReportedPhrase.text, exactReportedPhrase);
 assert.match(preparedReportedPhrase.text, /would have/);
 
+const exactPage58Paragraph =
+  "Ashoka could not restore the people his edict said had been killed. The Iraq Inquiry could not return Britain to early 2003. A United Nations resolution could name aggression but did not, by naming it, end the invasion of Ukraine.";
+const preparedPage58Paragraph = await textIntelligence.prepare({
+  rawText: exactPage58Paragraph,
+  before: [{ text: "After the name", kind: "heading" }],
+  after: [{ text: "Naming remains necessary because unnamed violence is easier to repeat.", kind: "body" }],
+  layout: { kind: "body", page: 58 },
+  language: "en-US",
+});
+assert.equal(
+  preparedPage58Paragraph.text,
+  exactPage58Paragraph,
+  "speech preparation must preserve unfamiliar names and every meaningful word"
+);
+
+const shortBodyNearHeading = await textIntelligence.prepare({
+  rawText: "This remains ordinary body prose.",
+  before: [{ text: "A nearby chapter heading", kind: "heading" }],
+  after: [{ text: "The following body paragraph continues here.", kind: "body" }],
+  layout: { kind: "body", isolated: false },
+  language: "en-US",
+});
+assert.equal(
+  shortBodyNearHeading.structure.kind,
+  "prose",
+  "short body prose must not inherit heading emphasis from nearby structure"
+);
+
 const mixedLanguage = await textIntelligence.prepare({
   rawText: "ReadFlow keeps فارسی terms in their original wording.",
   layout: { kind: "body" },
@@ -362,8 +390,9 @@ assert.equal(
   "chunking a long paragraph must not repeat, omit, or rewrite a word"
 );
 
-// A roughly 1,000-word paragraph is bounded into multiple grammatical clips.
-// Reassembling every clip must reproduce the exact text sent to speech.
+// A roughly 1,000-word paragraph is bounded into multiple logical reading
+// units, while each sentence remains a small native render. Reassembling every
+// unit must reproduce the exact text sent to speech.
 const thousandWordText = Array.from(
   { length: 100 },
   (_, index) => `Careful readers preserve every small word in sentence number ${index + 1}.`
@@ -382,7 +411,11 @@ for (let guard = 0; guard < 100 && index < thousandWordParagraph.length; guard++
   });
   assert.ok(chunk, "every long-paragraph continuation must build");
   clips.push(chunk.text);
-  assert.ok(chunk.text.length <= 260, "local native requests stay within the hard guard");
+  assert.ok(chunk.text.length <= 1000, "local logical reading units stay bounded");
+  assert.ok(
+    buildLocalSpeechSegments(chunk.text).every((segment) => segment.text.length <= 260),
+    "every punctuated native render stays within the hard sentence guard"
+  );
   assert.ok(
     chunk.nextIndex > index || chunk.nextOffset > offset,
     "each continuation must make forward progress"
@@ -393,6 +426,24 @@ for (let guard = 0; guard < 100 && index < thousandWordParagraph.length; guard++
 assert.equal(index, 1, "the complete long paragraph must eventually advance");
 assert.ok(clips.length > 1, "a 1,000-word-class paragraph must use bounded clips");
 assert.equal(clips.join(" "), thousandWordText, "bounded clips must preserve every source word");
+
+const multiSentenceParagraphText = [
+  "The first complete sentence preserves its natural place in the paragraph.",
+  "The second complete sentence remains part of the same logical reading unit.",
+  "The third complete sentence allows playback to begin before the full paragraph is rendered.",
+  "The fourth complete sentence keeps every source word and reaches the paragraph ending.",
+].join(" ");
+assert.ok(multiSentenceParagraphText.length > 260);
+const multiSentenceParagraph = TextReflow.buildSentences([
+  { page: 11, source: "native", text: multiSentenceParagraphText },
+]);
+const multiSentenceChunk = buildSpeechChunk(0, multiSentenceParagraph, {
+  mode: "local",
+  pageCap: 300,
+});
+assert.equal(multiSentenceChunk?.text, multiSentenceParagraphText);
+assert.equal(multiSentenceChunk?.nextIndex, 1);
+assert.equal(multiSentenceChunk?.nextOffset, 0);
 
 const resumeText = "The first sentence is complete. The second sentence is still playing. The third waits.";
 assert.equal(resumeSpeechOffset(resumeText, 8), 0, "early pause resumes the first sentence");
@@ -681,6 +732,20 @@ assert.deepEqual(
   ],
   "em-dash contents entries must become small deterministic local-AI clauses"
 );
+const longCommaSentence =
+  "The committee reviewed testimony from every regional office and compared each statement with the archived evidence, while the independent investigators checked the names and dates against the complete public record before publishing their conclusions.";
+const responsiveCommaSegments = buildLocalSpeechSegments(longCommaSentence);
+assert.ok(
+  responsiveCommaSegments.length >= 2 &&
+    responsiveCommaSegments[0].pauseAfterMs === 85 &&
+    responsiveCommaSegments.every((segment) => segment.text.length <= 190),
+  "a long comma-delimited sentence must create responsive natural clauses"
+);
+assert.deepEqual(
+  responsiveCommaSegments.flatMap((segment) => segment.text.match(/[\p{L}\p{N}]+/gu) || []),
+  normalizeLocalSpeechText(longCommaSentence).match(/[\p{L}\p{N}]+/gu) || [],
+  "responsive clause rendering must preserve every lexical token"
+);
 
 const abbreviationSentence =
   `${"A long clause safely approaches the audio boundary without punctuation ".repeat(15)}` +
@@ -826,12 +891,40 @@ const localProviderSource = fs.readFileSync(
   path.join(root, "src/services/tts/LocalNeuralTTSProvider.ts"),
   "utf8"
 );
+const sherpaPatchSource = fs.readFileSync(
+  path.join(root, "patches/react-native-sherpa-onnx+0.4.3.patch"),
+  "utf8"
+);
 assert.match(localProviderSource, /LOCAL_TTS_ENGINE_SILENCE_SCALE = 0\.2/);
 assert.match(localProviderSource, /LOCAL_TTS_SEGMENT_SILENCE_SCALE = 0/);
 assert.match(localProviderSource, /silenceScale: LOCAL_TTS_ENGINE_SILENCE_SCALE/);
 assert.match(localProviderSource, /silenceScale: LOCAL_TTS_SEGMENT_SILENCE_SCALE/);
-assert.match(localProviderSource, /LOCAL_TTS_RENDER_VERSION = "stitched0\.3"/);
-assert.match(localProviderSource, /generateStitchedParagraph/);
+assert.match(localProviderSource, /LOCAL_TTS_RENDER_VERSION = "segments0\.6"/);
+assert.match(localProviderSource, /LOCAL_TTS_HANDOFF_LEAD_SECONDS = 0\.05/);
+assert.match(localProviderSource, /extra: \{ lang: "en" \}/);
+assert.match(
+  sherpaPatchSource,
+  /options\?\.hasKey\("extra"\) == true[\s\S]*generateWithConfig\(text, config\)/,
+  "the Android bridge must pass the rF AI language hint into native Supertonic generation"
+);
+assert.match(localProviderSource, /generateSpeechSegment/);
+assert.match(localProviderSource, /await playSegment\(0\)/);
+assert.match(localProviderSource, /textRatio:/);
+assert.match(
+  localProviderSource,
+  /prepareStandby\(index \+ 1\)/,
+  "rF AI must prepare the next audio player while the current segment is playing"
+);
+assert.match(
+  localProviderSource,
+  /takeStandbyPlayer\(index, result\.uri, mySeq\)/,
+  "rF AI must consume the prepared player instead of recreating it at handoff"
+);
+assert.match(
+  readerSource,
+  /pause\.reason !== "sentence"/,
+  "ordinary sentence punctuation must not receive a second structural pause"
+);
 assert.match(
   localProviderSource,
   /generationEpoch\+\+;/,

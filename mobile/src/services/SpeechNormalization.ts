@@ -344,13 +344,17 @@ const NON_TERMINAL_ABBREVIATIONS = new Set([
   "vol",
   "vs",
 ]);
+const LOCAL_CLAUSE_TARGET_CHARS = 150;
+const LOCAL_CLAUSE_MIN_CHARS = 55;
+const LOCAL_COMMA_PAUSE_MS = 85;
 
 /**
  * Build punctuation-free sentence/clause renders for rF AI. Supertonic has
  * occasionally verbalized a terminal period and applies inconsistent silence
  * to punctuation inside a long paragraph. We remove only true boundaries from
  * the model input and later stitch fixed PCM silence between the generated
- * pieces, retaining one continuous paragraph WAV for playback.
+ * pieces. The provider plays those pieces continuously and can begin with the
+ * first sentence while the remaining sentence audio is still being rendered.
  */
 export function buildLocalSpeechSegments(value: string): LocalSpeechSegment[] {
   const text = normalizeLocalSpeechText(value);
@@ -371,18 +375,41 @@ export function buildLocalSpeechSegments(value: string): LocalSpeechSegment[] {
 
     const spoken = text.slice(cursor, match.index).trim();
     if (spoken) {
-      segments.push({
-        text: spoken,
-        pauseAfterMs: pauseForBoundary(marks),
-      });
+      appendResponsiveSpeechSegments(segments, spoken, pauseForBoundary(marks));
     }
     cursor = boundary.lastIndex;
     while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
   }
 
   const tail = text.slice(cursor).trim();
-  if (tail) segments.push({ text: tail, pauseAfterMs: 0 });
+  if (tail) appendResponsiveSpeechSegments(segments, tail, 0);
   return segments.length ? segments : [{ text, pauseAfterMs: 0 }];
+}
+
+function appendResponsiveSpeechSegments(
+  target: LocalSpeechSegment[],
+  value: string,
+  finalPauseMs: number
+) {
+  let start = 0;
+  while (value.length - start > LOCAL_CLAUSE_TARGET_CHARS) {
+    const preferredEnd = start + LOCAL_CLAUSE_TARGET_CHARS;
+    const minimumEnd = start + LOCAL_CLAUSE_MIN_CHARS;
+    let comma = value.lastIndexOf(",", preferredEnd);
+    if (comma < minimumEnd) {
+      const following = value.indexOf(",", preferredEnd);
+      comma = following >= minimumEnd && following - start <= 190 ? following : -1;
+    }
+    if (comma < minimumEnd) break;
+
+    const clause = value.slice(start, comma).trim();
+    if (clause) target.push({ text: clause, pauseAfterMs: LOCAL_COMMA_PAUSE_MS });
+    start = comma + 1;
+    while (start < value.length && /\s/.test(value[start])) start++;
+  }
+
+  const tail = value.slice(start).trim();
+  if (tail) target.push({ text: tail, pauseAfterMs: finalPauseMs });
 }
 
 function pauseForBoundary(marks: string): number {

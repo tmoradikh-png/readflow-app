@@ -1,3 +1,17 @@
+diff --git a/node_modules/react-native-sherpa-onnx/android/src/main/java/com/sherpaonnx/SherpaOnnxTtsHelper.kt b/node_modules/react-native-sherpa-onnx/android/src/main/java/com/sherpaonnx/SherpaOnnxTtsHelper.kt
+--- a/node_modules/react-native-sherpa-onnx/android/src/main/java/com/sherpaonnx/SherpaOnnxTtsHelper.kt
++++ b/node_modules/react-native-sherpa-onnx/android/src/main/java/com/sherpaonnx/SherpaOnnxTtsHelper.kt
+@@ -458,6 +458,10 @@ object SherpaOnnxTtsHelper {
+           )
+           return
+         }
++        options?.hasKey("extra") == true -> {
++          val config = parseGenerationConfig(options) ?: GenerationConfig(speed = speed, sid = sid)
++          inst.tts!!.generateWithConfig(text, config)
++        }
+         else -> dispatchGenerate(inst, text, sid, speed)
+           ?: run {
+             Log.e("SherpaOnnxTts", "TTS_GENERATE_ERROR: TTS not initialized")
 diff --git a/node_modules/react-native-sherpa-onnx/lib/module/tts/index.js b/node_modules/react-native-sherpa-onnx/lib/module/tts/index.js
 index 399e39b..c26f0a7 100644
 --- a/node_modules/react-native-sherpa-onnx/lib/module/tts/index.js

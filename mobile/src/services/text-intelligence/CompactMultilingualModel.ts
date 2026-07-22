@@ -59,6 +59,12 @@ export class CompactMultilingualModel implements LocalTextIntelligenceModel {
         scoreFor(kind, features),
       ])
     ) as Record<TextStructure, number>;
+    // A short sentence between two body paragraphs is ordinary prose unless
+    // the document parser also found real isolation/layout evidence. This
+    // prevents nearby chapter text from slowing and emphasizing body prose.
+    if (input.layout?.kind === "body" && !input.layout.isolated) {
+      scores.heading = Number.NEGATIVE_INFINITY;
+    }
     const ranked = (Object.entries(scores) as Array<[TextStructure, number]>).sort(
       (a, b) => b[1] - a[1]
     );
@@ -111,7 +117,7 @@ function extractFeatures(input: TextIntelligenceInput): Record<FeatureName, numb
   return {
     source_heading: input.layout?.kind === "heading" ? 1 : 0,
     short: words.length <= 14 ? 1 : 0,
-    isolated: input.layout?.isolated || (words.length <= 14 && neighborBody > 0) ? 1 : 0,
+    isolated: input.layout?.isolated ? 1 : 0,
     no_terminal: terminalCount === 0 ? 1 : 0,
     chapter_context: previous?.kind === "heading" || next?.kind === "heading" ? 1 : 0,
     all_caps: letters >= 3 && text === text.toLocaleUpperCase() ? 1 : 0,

@@ -22,7 +22,8 @@ npm run check:release
 paragraph layout, bounded long-paragraph continuity with exact word retention,
 page-boundary sentence continuity, silent reference markers, clean speech
 normalization, text-intelligence structure/fidelity/fallback behavior, Unicode
-source mapping, and the Android Supertonic 3 runtime/model configuration.
+source mapping, progressive local-AI sentence playback, and the Android
+Supertonic 3 runtime/model configuration.
 
 ## Permanent Regression Matrix
 
@@ -36,10 +37,10 @@ source mapping, and the Android Supertonic 3 runtime/model configuration.
 | RF-R06 | Lock/unlock or rotation makes the reader race up and down | Preserve one anchor and perform at most one quiet restore | Layout signature and bounded restore logic; test lock, unlock, portrait, landscape |
 | RF-R07 | Highlight is missing, one paragraph behind, or accumulates line by line | Exactly one rendered line is highlighted and it follows the audible text | Independent active-line rows plus source-offset mapping |
 | RF-R08 | rF/Cloud voice omits the end of a paragraph | Let the audio finish and retain a tail guard before handoff | Provider tail guards; listen to the final five words of several chunks |
-| RF-R09 | Long silence occurs between rF/Cloud chunks | Prefetch upcoming chunks and reuse the player | Provider prefetch/cache and reusable players |
+| RF-R09 | Long silence occurs between rF/Cloud chunks | Queue the current paragraph's safe sentences first, start as soon as sentence one is ready, then prefetch the next paragraph | Progressive rF AI generation/playback, provider cache, and reusable player; phone timing gate required |
 | RF-R10 | Chapter/title looks or sounds like body text | Render a separate heading and read only its displayed words at a slower rate with a short trailing pause | Structured heading units and distinct typography; no invisible spoken cue |
 | RF-R11 | A sentence split between PDF pages is read as two bad fragments | Keep the page divider visually but synthesize the unfinished sentence as one audio unit | `SpeechChunk` cross-page continuation; automated fixture covers pages 42-43 |
-| RF-R12 | rF AI omits small words such as `would have`, `to`, `as`, or `evidence` | Preserve the exact speech text and use the model designed to reduce skip/repeat failures | Android Supertonic 3, clean normalization, exact chunk reassembly test, and render cache `stitched0.3`; human listening remains required |
+| RF-R12 | rF AI omits small words such as `would have`, `to`, `as`, or `evidence` | Preserve the exact speech text and use the model designed to reduce skip/repeat failures | Android Supertonic 3, clean normalization, exact page-39/page-58 chunk fidelity tests, explicit language metadata through native `generateWithConfig`, and render cache `segments0.6`; human listening remains required |
 | RF-R13 | Footnote/reference numbers are body-sized or spoken | Display common markers as superscripts and remove them from every voice input, including adjacent citations flattened into one digit run | Reference marker/source-map pipeline; automated `communities.2` and `.11013` checks |
 | RF-R14 | Voice reads page numbers, repeated headers, watermarks, or footnote blocks | Remove non-book boilerplate before rendering and speech | `stripNonReadingLines` and repeated-line detection; multilingual sample check |
 | RF-R15 | Wrong voice silently substitutes Device voice | Show the selected engine, require its entitlement/model, and show an upgrade/download explanation | Voice panel gating and provider fallback notice |
@@ -54,7 +55,7 @@ source mapping, and the Android Supertonic 3 runtime/model configuration.
 | RF-R24 | Page-43 `Loyalty that refuses` is formatted and spoken as body text | Render it as a separate heading and read exactly those displayed words more slowly | Sentence-case heading recovery plus exact manuscript fixture |
 | RF-R25 | rF AI omits `and` in `emperors, and people` | The conjunction must be clearly audible while displayed and synthesized prose stay unchanged | Supertonic 3 plus an assertion that reported prose receives no phrase-specific rewrite |
 | RF-R26 | rF AI stutters or reduces words such as `become`, `his`, or `belonged` | Avoid repeated/omitted syllables without mutating individual phrases | Supertonic 3 replaces phrase patches; repeat-listening QA remains mandatory |
-| RF-R27 | rF AI player handoffs between short chunks create audible glitches | Render a normal source paragraph as one WAV and hand off only at safe boundaries | One paragraph per block; exceptionally long paragraphs split after complete sentences around a 1,000-character soft cap, with a 260-character guard only for an unbroken clause |
+| RF-R27 | rF AI player handoffs between short chunks create audible glitches | Keep a paragraph as one logical reading/highlight unit while progressively playing punctuation-safe sentence WAVs with deterministic embedded pauses | Ordinary punctuated paragraphs remain intact up to the 1,000-character soft cap; 260 characters guards only a genuinely unbroken sentence |
 | RF-R28 | A 1,000-word paragraph creates an unbounded native bridge payload or loses text | Use bounded grammatical clips and resume at an exact in-paragraph source offset | Automated multi-clip reassembly must reproduce every source word exactly; pathological unbroken local-AI requests use a lossless safety split |
 | RF-R29 | Reflowed text looks far more fragmented than the source book | Render native PDF source paragraphs as wrapping paragraph blocks | Backend preserves geometry-derived paragraph gaps; `TextReflow` retains them and conservatively recovers older cached hard wraps; page-45 fixture must render exactly six source paragraphs |
 | RF-R30 | Correct book wording is mistaken for TTS invention and patched away | Compare the rendered PDF, extracted text, and manuscript before changing prose | Page-44/45 source verification keeps `the United States Army` and `the later leaders` unchanged |
@@ -64,7 +65,7 @@ source mapping, and the Android Supertonic 3 runtime/model configuration.
 | RF-R34 | The floating AI/AI Pro launcher covers book words | Reader controls must never overlay prose | AI/AI Pro is an in-flow button in the fixed page-navigation strip; no reader FAB remains |
 | RF-R35 | A raised citation after a number becomes normal text or is spoken as `dot/point eleven` | Preserve font-size/baseline superscript geometry, make legacy cached text canonical, and remove only the marker from speech | Backend converts raised 5-point items beside 11-point body text to Unicode superscripts; legacy `2024.11 This` is canonicalized for display/copy/speech/highlighting/AI context, with a true-decimal counterexample automated |
 | RF-R36 | The voice says words that are not displayed | Speech input must be a mapped projection of visible source prose, except that displayed citation markers remain intentionally silent | Invisible `Title` cue removed; chunk text and source-offset map are the single speech source |
-| RF-R37 | rF AI says `dot` or applies irregular model-controlled sentence gaps | Never send true terminal punctuation to Supertonic; stitch one deterministic PCM pause for each source boundary | `buildLocalSpeechSegments` retains decimals/abbreviations, removes terminal marks, and emits fixed period/question/semicolon/colon durations; exact fixtures cover the reported page-46 prose |
+| RF-R37 | rF AI says `dot` or applies irregular model-controlled sentence gaps | Never send true terminal punctuation to Supertonic; append one deterministic PCM pause to each punctuation-safe segment without adding a second Reader pause | `buildLocalSpeechSegments` retains decimals/abbreviations, removes terminal marks, and emits fixed period/question/semicolon/colon durations; exact fixtures cover the reported page-46 prose |
 | RF-R38 | Pressing Play crashes Android while rF AI initializes | Construct the native TTS engine with a valid positive silence scale, even though segment generation uses no model silence | Engine scale `0.2` and segment scale `0` are pinned by source regression checks; each QA candidate must start Play with an empty native crash buffer |
 | RF-R39 | Words disappear from a paragraph while its active line is highlighted, then return later | The displayed paragraph must always come from its complete canonical source text | Android line measurements provide highlight ranges only; the renderer decorates tokens inside the single authoritative paragraph and never reconstructs visible prose from native line fragments |
 | RF-R40 | An isolated sentence-case title surrounded by blank lines renders as ordinary body text | Look through separator blank lines when evaluating the neighboring prose and retain the isolated title as a heading | Exact page-47 fixture requires `Whoever owns the window` to be a heading while both adjacent paragraphs remain body text |
@@ -78,6 +79,7 @@ source mapping, and the Android Supertonic 3 runtime/model configuration.
 | RF-R48 | Improving pronunciation changes displayed text or breaks highlighting | Keep the canonical displayed book unchanged and map every prepared speech character to its source offset | `SpeakableText.sourceOffsets`; tests cover Roman heading expansion, list-marker removal, table separators, and exact display-source retention |
 | RF-R49 | Ambiguous text silently triggers paid AI or an online rewrite drops words | Offline preparation remains the default; online fallback is explicit, entitled, capped, and fidelity-checked | Reader pins `allowOnlineFallback:false`; mobile and backend reject output that changes lexical token order/content |
 | RF-R50 | A multilingual preparation feature is mistaken for multilingual OCR or rF voices | Handle structure across Unicode scripts without claiming unsupported extraction or pronunciation | Script/language metadata is universal; OCR packs and TTS voice-language support remain separate product capabilities |
+| RF-R51 | Tapping text takes many seconds to speak, or rF AI stalls mid-paragraph | Begin playback after the first safe sentence is synthesized and render the remaining sentences during playback | Progressive `segments0.6` pipeline; safe long-comma clauses shorten synthesis starvation, one bounded standby player removes player creation from handoff, and source checks pin text fidelity/progress; measure cold and warm tap latency on every phone candidate |
 
 ## Connected-Phone Candidate Gate
 
@@ -125,12 +127,24 @@ source mapping, and the Android Supertonic 3 runtime/model configuration.
 18. Keep the phone offline and confirm normal preparation/playback works. No
    `/api/text-intelligence` request is allowed unless a future paid online
    fallback setting is explicitly enabled.
+19. Stop playback, tap an uncached body sentence, and measure tap-to-audio for
+    both a cold paragraph and an immediately repeated warm paragraph. Playback
+    must start from sentence one rather than waiting for the complete paragraph.
+20. Listen through at least five consecutive sentences in one long paragraph.
+    There must be no unexplained mid-sentence silence or duplicated paragraph
+    pause, and highlighting must remain one line aligned to the audible words.
 
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.
 
-Latest record: `1.0.45 (51)`, Samsung SM-S918B, QA Reviewer, retained 283-page
-Rousseau PDF page 9. rF AI playback and one-line mapped highlight passed; focused
-crash/ANR/ReactNativeJS/OOM logs passed. Audible multilingual/structure cases
-and the observed transient blank Follow reposition remain open before public
-promotion.
+Latest record: `1.0.49 (55)`, Samsung SM-S918B, QA Reviewer. The signed QA APK
+was installed in place with the retained library/model. Progressive rF AI
+speech text preserves the reported page-58 names plus page-39 `would have`
+exactly before synthesis. The preceding `1.0.46` phone trace found ordinary
+track gaps of about 0.7-0.95 seconds and occasional 2.5-5.3 second stalls;
+`1.0.48` removed the multi-second stalls in an eight-track trace but retained
+0.48-0.67 second player-creation gaps. `1.0.49` pre-creates one next player and
+routes the explicit language hint through native Supertonic generation.
+`1.0.49` cold/warm timing, subjective pronunciation, five-sentence continuity,
+and the older transient blank Follow reposition must still pass the connected-
+phone listening gate before public promotion.

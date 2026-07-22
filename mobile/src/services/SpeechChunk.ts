@@ -184,31 +184,31 @@ function safeBlockEnd(
 ): number {
   const start = nextReadableOffset(text, sourceStart);
   const softEnd = Math.min(text.length, start + maxChars);
-  if (softEnd >= text.length) {
-    return text.length - start <= unbrokenMaxChars
-      ? text.length
-      : emergencyBlockEnd(text, start, unbrokenMaxChars);
-  }
-
   const boundaries = sentenceEnds(text, start);
-  let prior = -1;
+  if (boundaries[boundaries.length - 1] !== text.length) boundaries.push(text.length);
+
+  let sentenceStart = start;
+  let lastSafeEnd = start;
   for (const end of boundaries) {
-    if (end <= softEnd) {
-      prior = end;
-      continue;
-    }
-    if (prior > start) {
-      return prior - start <= unbrokenMaxChars
-        ? prior
+    const readableStart = nextReadableOffset(text, sentenceStart);
+    const sentenceLength = Math.max(0, end - readableStart);
+
+    // The local guard applies to one genuinely unbroken sentence, not to the
+    // combined length of a well-punctuated paragraph. The provider renders the
+    // safe sentences separately while keeping them in one reading unit.
+    if (sentenceLength > unbrokenMaxChars) {
+      return lastSafeEnd > start
+        ? lastSafeEnd
         : emergencyBlockEnd(text, start, unbrokenMaxChars);
     }
-    return end - start <= unbrokenMaxChars
-      ? end
-      : emergencyBlockEnd(text, start, unbrokenMaxChars);
+    if (end > softEnd) break;
+    lastSafeEnd = end;
+    sentenceStart = end;
   }
-  return text.length - start <= unbrokenMaxChars
-    ? text.length
-    : emergencyBlockEnd(text, start, unbrokenMaxChars);
+
+  if (softEnd >= text.length && lastSafeEnd === text.length) return text.length;
+  if (lastSafeEnd > start) return lastSafeEnd;
+  return emergencyBlockEnd(text, start, Math.min(maxChars, unbrokenMaxChars));
 }
 
 function emergencyBlockEnd(text: string, start: number, maxChars: number): number {

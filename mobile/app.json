@@ -2,7 +2,7 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.45",
+    "version": "1.0.49",
     "orientation": "default",
     "userInterfaceStyle": "light",
     "scheme": "readflow",
@@ -20,14 +20,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.urmiaworks.readflow",
-      "buildNumber": "45",
+      "buildNumber": "49",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 51,
+      "versionCode": 55,
       "permissions": [
         "INTERNET",
         "android.permission.FOREGROUND_SERVICE",

@@ -10,7 +10,12 @@ export interface SpeakOptions {
   rate?: number; // 1.0 = normal
   pitch?: number;
   onStart?: () => void;
-  onProgress?: (progress: { currentTime: number; duration: number }) => void;
+  onProgress?: (progress: {
+    currentTime: number;
+    duration: number;
+    /** Speech-text progress when audio is played as multiple prepared clips. */
+    textRatio?: number;
+  }) => void;
   onDone?: () => void;
   onError?: (e?: unknown) => void;
   /** Metadata shown by providers that support lock-screen controls. */
@@ -19,6 +24,8 @@ export interface SpeakOptions {
   lockScreenAlbum?: string;
   /** Keep generated audio active after locking/leaving the app on eligible plans. */
   allowBackgroundPlayback?: boolean;
+  /** Deterministic silence appended after the final local-AI clip. */
+  finalPauseMs?: number;
   /** Provider-specific voice identifier. Device uses OS voice ids; cloud uses OpenAI voice ids. */
   voiceId?: string;
   /** Device voice to use if a paid/cloud provider falls back locally. */

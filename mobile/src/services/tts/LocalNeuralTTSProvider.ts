@@ -16,7 +16,7 @@ import {
 } from "../SpeechNormalization";
 
 let audioModeBackground: boolean | null = null;
-const LOCAL_TTS_RENDER_VERSION = "stitched0.3";
+const LOCAL_TTS_RENDER_VERSION = "segments0.6";
 // Sentence/clause silence is stitched into PCM below. Disable model-controlled
 // sentence gaps so pauses do not vary with punctuation or stack twice.
 // Supertonic requires a positive engine-level value while it constructs its
@@ -26,7 +26,11 @@ const LOCAL_TTS_RENDER_VERSION = "stitched0.3";
 // stays at zero, so the fixed PCM pauses below remain the only audible gaps.
 const LOCAL_TTS_ENGINE_SILENCE_SCALE = 0.2;
 const LOCAL_TTS_SEGMENT_SILENCE_SCALE = 0;
-const LOCAL_TTS_PARAGRAPH_PAUSE_MS = 360;
+const LOCAL_TTS_DEFAULT_FINAL_PAUSE_MS = 240;
+// Every generated non-final segment already ends with at least 85 ms of
+// silence. Start the next ready player inside the final part of that silence
+// instead of waiting for Expo's delayed didJustFinish callback.
+const LOCAL_TTS_HANDOFF_LEAD_SECONDS = 0.05;
 
 async function ensureAudioMode(allowBackgroundPlayback = false) {
   if (audioModeBackground === allowBackgroundPlayback) return;
@@ -56,11 +60,17 @@ export class LocalNeuralTTSProvider implements TTSProvider {
   private fileCache = new Map<string, string>();
   private inflightCache = new Map<string, { epoch: number; promise: Promise<string> }>();
   private removeListener: (() => void) | null = null;
+  private standbyPlayer: {
+    index: number;
+    uri: string;
+    seq: number;
+    player: AudioPlayer;
+  } | null = null;
   private finishTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetchTimers: ReturnType<typeof setTimeout>[] = [];
 
-  private keyFor(text: string, speed: number) {
-    return `${LOCAL_NEURAL_MODEL_ID}|${LOCAL_TTS_RENDER_VERSION}|${speed.toFixed(2)}|${text}`;
+  private keyFor(text: string, speed: number, pauseAfterMs: number) {
+    return `${LOCAL_NEURAL_MODEL_ID}|${LOCAL_TTS_RENDER_VERSION}|${speed.toFixed(2)}|${pauseAfterMs}|${text}`;
   }
 
   private async getEngine(): Promise<TtsEngine> {
@@ -85,9 +95,14 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     });
   }
 
-  private async fetchAudio(text: string, speed: number, epoch = this.generationEpoch): Promise<string> {
+  private async fetchAudio(
+    text: string,
+    speed: number,
+    pauseAfterMs: number,
+    epoch = this.generationEpoch
+  ): Promise<string> {
     this.assertGenerationCurrent(epoch);
-    const key = this.keyFor(text, speed);
+    const key = this.keyFor(text, speed, pauseAfterMs);
     const cached = this.fileCache.get(key);
     if (cached) return cached;
 
@@ -96,7 +111,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
     let pending!: Promise<string>;
     pending = this.runGeneration(
-      () => this.generateAudio(key, text, speed, epoch),
+      () => this.generateAudio(key, text, speed, pauseAfterMs, epoch),
       epoch
     ).finally(() => {
       if (this.inflightCache.get(key)?.promise === pending) this.inflightCache.delete(key);
@@ -119,6 +134,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     key: string,
     text: string,
     speed: number,
+    pauseAfterMs: number,
     epoch: number
   ): Promise<string> {
     this.assertGenerationCurrent(epoch);
@@ -142,10 +158,11 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       return uri;
     }
 
-    const audio = await generateStitchedParagraph(
+    const audio = await generateSpeechSegment(
       engine,
       text,
       speed,
+      pauseAfterMs,
       () => epoch === this.generationEpoch
     );
     this.assertGenerationCurrent(epoch);
@@ -160,10 +177,18 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     const t = normalizeLocalSpeechText(text);
     if (!t) return;
     const epoch = this.generationEpoch;
+    const segments = playbackSegments(t, opts.finalPauseMs);
 
     const timer = setTimeout(() => {
       this.prefetchTimers = this.prefetchTimers.filter((item) => item !== timer);
-      this.fetchAudio(t, clampSpeed(opts.rate), epoch).catch(() => {});
+      for (const segment of segments) {
+        void this.fetchAudio(
+          segment.text,
+          clampSpeed(opts.rate),
+          segment.pauseAfterMs,
+          epoch
+        ).catch(() => {});
+      }
     }, 120);
     this.prefetchTimers.push(timer);
   }
@@ -178,103 +203,206 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       opts.onDone?.();
       return;
     }
-
-    await ensureAudioMode(Boolean(opts.allowBackgroundPlayback));
-
-    let uri: string;
-    try {
-      uri = await this.fetchAudio(t, speed, generationEpoch);
-    } catch (e) {
-      if (mySeq !== this.seq) return;
-      if (e instanceof GenerationCancelledError) return;
-      opts.onFallback?.({
-        reason: "local_unavailable",
-        message: "rF AI is not ready on this phone. Download rF AI before using this voice.",
-      });
-      opts.onError?.(e);
+    const segments = playbackSegments(t, opts.finalPauseMs);
+    if (!segments.length) {
+      opts.onDone?.();
       return;
     }
-    if (mySeq !== this.seq) return;
 
-    try {
-      this.clearFinishTimer();
-      this.removeListener?.();
-      this.removeListener = null;
-      const reusablePlayer = this.player && !this.player.playing ? this.player : null;
-      if (!reusablePlayer) this.releasePlayer();
+    await ensureAudioMode(Boolean(opts.allowBackgroundPlayback));
+    this.clearFinishTimer();
+    this.removeListener?.();
+    this.removeListener = null;
+    this.releaseStandbyPlayer();
 
-      const player =
-        reusablePlayer ||
-        createAudioPlayer(uri, {
-          updateInterval: 40,
-          keepAudioSessionActive: true,
-        });
-      if (reusablePlayer) reusablePlayer.replace(uri);
-      this.player = player;
-
-      let started = false;
-      let finished = false;
-
-      const finish = () => {
-        if (mySeq !== this.seq) return;
-        if (!started || finished) return;
-        finished = true;
-        this.removeListener?.();
-        this.removeListener = null;
-        this.clearFinishTimer();
-        this.finishTimer = setTimeout(() => {
-          if (mySeq !== this.seq) return;
-          this.finishTimer = null;
-          opts.onDone?.();
-        }, tailGuardMs(speed));
-      };
-
-      const sub = player.addListener("playbackStatusUpdate", (status) => {
-        if (mySeq !== this.seq) return;
-        if (status.playing) started = true;
-        const duration = Number(status.duration || 0);
-        const currentTime = Number(status.currentTime || 0);
-        if (duration > 0 && currentTime >= 0) {
-          opts.onProgress?.({
-            currentTime: Math.min(currentTime, duration),
-            duration,
-          });
-        }
-        if (status.didJustFinish) finish();
-      });
-      this.removeListener = () => sub.remove();
-
+    // Queue every sentence in this reading unit before future prefetch work can
+    // enter the native engine. Playback starts as soon as sentence one is ready;
+    // the remaining sentences render while it is being heard.
+    const audioResults = segments.map(async (segment) => {
       try {
-        const metadata = {
-          title: opts.lockScreenTitle || "readFlow",
-          artist: opts.lockScreenSubtitle || "rF AI",
-          albumTitle: opts.lockScreenAlbum || "readFlow",
-        };
-        player.setActiveForLockScreen(
-          true,
-          { ...metadata },
-          {
-            showSeekBackward: false,
-            showSeekForward: false,
-          }
-        );
-        player.updateLockScreenMetadata(metadata);
-      } catch {
-        /* lock-screen controls are best-effort */
+        return {
+          uri: await this.fetchAudio(
+            segment.text,
+            speed,
+            segment.pauseAfterMs,
+            generationEpoch
+          ),
+        } as const;
+      } catch (error) {
+        return { error } as const;
       }
+    });
+    const totalWeight = Math.max(
+      1,
+      segments.reduce((total, segment) => total + segment.text.length, 0)
+    );
+    let completedWeight = 0;
+    let completedSeconds = 0;
+    let notifiedStart = false;
+    let standbyIndex = -1;
+    let standbyPromise: Promise<void> | null = null;
 
-      player.play();
-      started = true;
-      opts.onStart?.();
-    } catch (e) {
-      if (mySeq !== this.seq) return;
+    const fail = (error: unknown) => {
+      if (mySeq !== this.seq || error instanceof GenerationCancelledError) return;
       opts.onFallback?.({
         reason: "local_unavailable",
         message: "rF AI could not play on this phone. Use Phone voice or Cloud AI on an eligible plan for now.",
       });
-      opts.onError?.(e);
-      return;
-    }
+      opts.onError?.(error);
+    };
+
+    const prepareStandby = (index: number) => {
+      if (index < 0 || index >= segments.length || mySeq !== this.seq) return;
+      standbyIndex = index;
+      standbyPromise = (async () => {
+        const result = await audioResults[index];
+        if (mySeq !== this.seq || "error" in result) return;
+        if (
+          this.standbyPlayer?.seq === mySeq &&
+          this.standbyPlayer.index === index &&
+          this.standbyPlayer.uri === result.uri
+        ) {
+          return;
+        }
+
+        this.releaseStandbyPlayer();
+        const player = createAudioPlayer(result.uri, {
+          updateInterval: 40,
+          keepAudioSessionActive: true,
+        });
+        if (mySeq !== this.seq) {
+          this.releasePlayer(player);
+          return;
+        }
+        this.standbyPlayer = { index, uri: result.uri, seq: mySeq, player };
+      })();
+    };
+
+    const playSegment = async (index: number): Promise<void> => {
+      const result = await audioResults[index];
+      if (mySeq !== this.seq) return;
+      if ("error" in result) {
+        fail(result.error);
+        return;
+      }
+
+      if (standbyIndex === index && standbyPromise) await standbyPromise;
+      if (mySeq !== this.seq) return;
+
+      try {
+        this.clearFinishTimer();
+        this.removeListener?.();
+        this.removeListener = null;
+        const outgoingPlayer = this.player;
+        const standbyPlayer = this.takeStandbyPlayer(index, result.uri, mySeq);
+        const reusablePlayer =
+          !standbyPlayer && outgoingPlayer && !outgoingPlayer.playing
+            ? outgoingPlayer
+            : null;
+        let outgoingReleased = false;
+        if (!standbyPlayer && !reusablePlayer) {
+          this.releasePlayer(outgoingPlayer);
+          outgoingReleased = true;
+        }
+
+        const player =
+          standbyPlayer ||
+          reusablePlayer ||
+          createAudioPlayer(result.uri, {
+            updateInterval: 40,
+            keepAudioSessionActive: true,
+          });
+        if (reusablePlayer) reusablePlayer.replace(result.uri);
+        this.player = player;
+
+        let started = false;
+        let finished = false;
+        let segmentDuration = 0;
+        const segmentWeight = Math.max(1, segments[index].text.length);
+        const finish = () => {
+          if (mySeq !== this.seq || !started || finished) return;
+          finished = true;
+          this.removeListener?.();
+          this.removeListener = null;
+          completedSeconds += segmentDuration;
+          completedWeight += segmentWeight;
+
+          if (index + 1 < segments.length) {
+            void playSegment(index + 1);
+            return;
+          }
+          this.clearFinishTimer();
+          this.finishTimer = setTimeout(() => {
+            if (mySeq !== this.seq) return;
+            this.finishTimer = null;
+            opts.onDone?.();
+          }, tailGuardMs(speed));
+        };
+
+        const sub = player.addListener("playbackStatusUpdate", (status) => {
+          if (mySeq !== this.seq) return;
+          if (status.playing) started = true;
+          const duration = Number(status.duration || 0);
+          const currentTime = Number(status.currentTime || 0);
+          if (duration > 0 && currentTime >= 0) {
+            segmentDuration = duration;
+            const segmentRatio = Math.max(0, Math.min(1, currentTime / duration));
+            opts.onProgress?.({
+              currentTime: completedSeconds + Math.min(currentTime, duration),
+              duration: completedSeconds + duration,
+              textRatio: Math.min(
+                0.999,
+                (completedWeight + segmentWeight * segmentRatio) / totalWeight
+              ),
+            });
+          }
+          if (
+            index + 1 < segments.length &&
+            duration > 0 &&
+            currentTime >= Math.max(0, duration - LOCAL_TTS_HANDOFF_LEAD_SECONDS)
+          ) {
+            finish();
+          } else if (status.didJustFinish) {
+            finish();
+          }
+        });
+        this.removeListener = () => sub.remove();
+
+        try {
+          const metadata = {
+            title: opts.lockScreenTitle || "readFlow",
+            artist: opts.lockScreenSubtitle || "rF AI",
+            albumTitle: opts.lockScreenAlbum || "readFlow",
+          };
+          player.setActiveForLockScreen(
+            true,
+            { ...metadata },
+            {
+              showSeekBackward: false,
+              showSeekForward: false,
+            }
+          );
+          player.updateLockScreenMetadata(metadata);
+        } catch {
+          /* lock-screen controls are best-effort */
+        }
+
+        player.play();
+        started = true;
+        if (outgoingPlayer && outgoingPlayer !== player && !outgoingReleased) {
+          this.releasePlayer(outgoingPlayer);
+        }
+        prepareStandby(index + 1);
+        if (!notifiedStart) {
+          notifiedStart = true;
+          opts.onStart?.();
+        }
+      } catch (error) {
+        fail(error);
+      }
+    };
+
+    await playSegment(0);
   }
 
   async stop(): Promise<void> {
@@ -284,6 +412,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.clearFinishTimer();
     this.removeListener?.();
     this.removeListener = null;
+    this.releaseStandbyPlayer();
     try {
       this.player?.clearLockScreenControls();
     } catch {}
@@ -297,6 +426,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.clearFinishTimer();
     this.removeListener?.();
     this.removeListener = null;
+    this.releaseStandbyPlayer();
     try {
       this.player?.pause();
     } catch {}
@@ -359,6 +489,21 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     if (player === this.player) this.player = null;
   }
 
+  private takeStandbyPlayer(index: number, uri: string, seq: number): AudioPlayer | null {
+    const standby = this.standbyPlayer;
+    if (!standby || standby.index !== index || standby.uri !== uri || standby.seq !== seq) {
+      return null;
+    }
+    this.standbyPlayer = null;
+    return standby.player;
+  }
+
+  private releaseStandbyPlayer() {
+    const standby = this.standbyPlayer;
+    this.standbyPlayer = null;
+    if (standby) this.releasePlayer(standby.player);
+  }
+
   private assertGenerationCurrent(epoch: number) {
     if (epoch !== this.generationEpoch) throw new GenerationCancelledError();
   }
@@ -398,39 +543,49 @@ function hashKey(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
-async function generateStitchedParagraph(
+interface PlaybackSegment {
+  text: string;
+  pauseAfterMs: number;
+}
+
+function playbackSegments(text: string, finalPauseMs?: number): PlaybackSegment[] {
+  const segments = buildLocalSpeechSegments(text);
+  if (!segments.length) return [];
+
+  const requestedFinalPause = Number(finalPauseMs);
+  const finalPause = Number.isFinite(requestedFinalPause)
+    ? Math.max(0, Math.round(requestedFinalPause))
+    : LOCAL_TTS_DEFAULT_FINAL_PAUSE_MS;
+
+  return segments.map((segment, index) => ({
+    text: segment.text,
+    pauseAfterMs:
+      index === segments.length - 1
+        ? Math.max(segment.pauseAfterMs, finalPause)
+        : segment.pauseAfterMs,
+  }));
+}
+
+async function generateSpeechSegment(
   engine: TtsEngine,
   text: string,
   speed: number,
+  pauseAfterMs: number,
   shouldContinue: () => boolean
 ): Promise<GeneratedAudio> {
-  const segments = buildLocalSpeechSegments(text);
-  if (!segments.length) return { samples: [], sampleRate: 0 };
+  if (!shouldContinue()) throw new GenerationCancelledError();
+  const audio = await engine.generateSpeech(text, {
+    sid: LOCAL_NEURAL_SPEAKER_ID,
+    speed,
+    silenceScale: LOCAL_TTS_SEGMENT_SILENCE_SCALE,
+    extra: { lang: "en" },
+  });
+  if (!shouldContinue()) throw new GenerationCancelledError();
+  if (!audio.sampleRate) throw new Error("rF AI returned invalid audio.");
 
-  const samples: number[] = [];
-  let sampleRate = 0;
-  for (let index = 0; index < segments.length; index++) {
-    if (!shouldContinue()) throw new GenerationCancelledError();
-    const segment = segments[index];
-    const audio = await engine.generateSpeech(segment.text, {
-      sid: LOCAL_NEURAL_SPEAKER_ID,
-      speed,
-      silenceScale: LOCAL_TTS_SEGMENT_SILENCE_SCALE,
-    });
-    if (!shouldContinue()) throw new GenerationCancelledError();
-    if (!sampleRate) sampleRate = audio.sampleRate;
-    if (!audio.sampleRate || audio.sampleRate !== sampleRate) {
-      throw new Error("rF AI returned inconsistent audio sample rates.");
-    }
-
-    appendSamples(samples, trimGeneratedSilence(audio.samples, sampleRate));
-    const pauseMs =
-      index === segments.length - 1
-        ? Math.max(segment.pauseAfterMs, LOCAL_TTS_PARAGRAPH_PAUSE_MS)
-        : segment.pauseAfterMs;
-    appendSilence(samples, sampleRate, pauseMs);
-  }
-  return { samples, sampleRate };
+  const samples = trimGeneratedSilence(audio.samples, audio.sampleRate);
+  appendSilence(samples, audio.sampleRate, pauseAfterMs);
+  return { samples, sampleRate: audio.sampleRate };
 }
 
 function trimGeneratedSilence(source: number[], sampleRate: number): number[] {
@@ -444,12 +599,6 @@ function trimGeneratedSilence(source: number[], sampleRate: number): number[] {
 
   const edge = Math.max(1, Math.round(sampleRate * 0.025));
   return source.slice(Math.max(0, first - edge), Math.min(source.length, last + edge + 1));
-}
-
-function appendSamples(target: number[], source: number[]) {
-  // Avoid spreading large PCM arrays, which can exceed the JavaScript call
-  // stack on long paragraphs.
-  for (let index = 0; index < source.length; index++) target.push(source[index]);
 }
 
 function appendSilence(target: number[], sampleRate: number, milliseconds: number) {
