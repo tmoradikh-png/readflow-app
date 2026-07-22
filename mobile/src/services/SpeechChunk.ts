@@ -14,6 +14,8 @@ export interface SpeechChunk {
   text: string;
   spans: SpeechChunkSpan[];
   nextIndex: number;
+  /** Source offset when the next block continues inside the same rendered paragraph. */
+  nextOffset: number;
   lastPage: number;
   lastWithin: number;
 }
@@ -24,9 +26,28 @@ interface BuildSpeechChunkOptions {
   firstOffset?: number;
 }
 
-const LOCAL_AI_MAX_CHARS = 420;
-const LOCAL_AI_MAX_SENTENCES = 2;
-const PAGE_CONTINUATION_MAX_CHARS = 760;
+// Keep normal paragraphs intact. Exceptionally long paragraphs are divided only
+// at grammatical sentence boundaries so a 1,000-word paragraph cannot create a
+// multi-hundred-megabyte PCM bridge payload. A single long sentence is allowed
+// to exceed the soft cap rather than being cut mid-sentence.
+const LOCAL_AI_BLOCK_MAX_CHARS = 1000;
+const CLOUD_AI_BLOCK_MAX_CHARS = 1100;
+const DEVICE_BLOCK_MAX_CHARS = 1000;
+const NON_TERMINAL_ABBREVIATIONS = new Set([
+  "dr",
+  "mr",
+  "mrs",
+  "ms",
+  "prof",
+  "sr",
+  "jr",
+  "st",
+  "no",
+  "fig",
+  "eq",
+  "vol",
+  "vs",
+]);
 
 /**
  * Builds one natural speech unit while retaining source offsets for line
@@ -40,41 +61,44 @@ export function buildSpeechChunk(
 ): SpeechChunk | null {
   const first = list[startIndex];
   if (!first) return null;
+  if (first.page > options.pageCap) return null;
 
   const firstOffset = Math.max(0, options.firstOffset || 0);
-  const maxSentences =
-    first.kind === "heading" ? 1 : options.mode === "local" ? LOCAL_AI_MAX_SENTENCES : 1;
-  const maxChars =
-    options.mode === "local" ? LOCAL_AI_MAX_CHARS : Number.POSITIVE_INFINITY;
   const spans: SpeechChunkSpan[] = [];
   const parts: string[] = [];
   let charCursor = 0;
-  let index = startIndex;
-
-  while (index < list.length && spans.length < maxSentences) {
-    const sentence = list[index];
-    if (!sentence || sentence.page > options.pageCap) break;
-    if (sentence.page !== first.page) break;
-    if (sentence.kind !== first.kind) break;
-
-    const sourceStart =
-      index === startIndex
-        ? Math.min(firstOffset, sentence.text.length)
-        : 0;
-    const prepared = TextReflow.speechText(sentence.text, sentence.kind, sourceStart);
-    if (!prepared.text.trim()) {
-      index++;
-      continue;
-    }
-
-    const separator = parts.length > 0 ? " " : "";
-    const projectedLength = charCursor + separator.length + prepared.text.length;
-    if (parts.length > 0 && projectedLength > maxChars) break;
-
-    appendSpan(sentence, sourceStart, prepared, separator, spans, parts, charCursor);
-    charCursor = projectedLength;
-    index++;
+  const sourceStart = Math.min(firstOffset, first.text.length);
+  const sourceEnd =
+    first.kind === "heading"
+      ? first.text.length
+      : safeBlockEnd(first.text, sourceStart, maxCharsFor(options.mode));
+  const prepared = TextReflow.speechText(first.text, first.kind, sourceStart, sourceEnd);
+  if (!prepared.text.trim()) {
+    return buildSpeechChunk(
+      sourceEnd < first.text.length ? startIndex : startIndex + 1,
+      list,
+      {
+        ...options,
+        firstOffset: sourceEnd < first.text.length ? sourceEnd : 0,
+      }
+    );
   }
+
+  appendSpan(first, sourceStart, prepared, "", spans, parts, charCursor);
+  charCursor = prepared.text.length;
+
+  if (sourceEnd < first.text.length) {
+    return {
+      text: parts.join(""),
+      spans,
+      nextIndex: startIndex,
+      nextOffset: nextReadableOffset(first.text, sourceEnd),
+      lastPage: first.page,
+      lastWithin: pageWithinIndex(first, list),
+    };
+  }
+
+  let index = startIndex + 1;
 
   // A visual page boundary is not a language boundary. If the last row has no
   // sentence-ending punctuation, append the first body row from the next page.
@@ -86,18 +110,34 @@ export function buildSpeechChunk(
     if (!TextReflow.continuesAcrossPage(previous, continuation)) break;
     if (continuation.page > options.pageCap) break;
 
-    const prepared = TextReflow.speechText(continuation.text, continuation.kind, 0);
-    if (!prepared.text.trim()) {
+    const continuationEnd = firstSentenceEnd(continuation.text);
+    const continuationSpeech = TextReflow.speechText(
+      continuation.text,
+      continuation.kind,
+      0,
+      continuationEnd
+    );
+    if (!continuationSpeech.text.trim()) {
       index++;
       continue;
     }
 
-    const separator = pageContinuationSeparator(parts[parts.length - 1], prepared.text);
-    const projectedLength = charCursor + separator.length + prepared.text.length;
-    if (projectedLength > PAGE_CONTINUATION_MAX_CHARS) break;
+    const separator = pageContinuationSeparator(parts[parts.length - 1], continuationSpeech.text);
+    const projectedLength = charCursor + separator.length + continuationSpeech.text.length;
 
-    appendSpan(continuation, 0, prepared, separator, spans, parts, charCursor);
+    appendSpan(continuation, 0, continuationSpeech, separator, spans, parts, charCursor);
     charCursor = projectedLength;
+
+    if (continuationEnd < continuation.text.length) {
+      return {
+        text: parts.join(""),
+        spans,
+        nextIndex: index,
+        nextOffset: nextReadableOffset(continuation.text, continuationEnd),
+        lastPage: continuation.page,
+        lastWithin: pageWithinIndex(continuation, list),
+      };
+    }
     index++;
   }
 
@@ -107,9 +147,79 @@ export function buildSpeechChunk(
     text: parts.join(""),
     spans,
     nextIndex: index,
+    nextOffset: 0,
     lastPage: last.page,
     lastWithin: pageWithinIndex(last, list),
   };
+}
+
+/** Resume at the beginning of the current grammatical sentence. */
+export function resumeSpeechOffset(text: string, approximateOffset: number): number {
+  const bounded = Math.max(0, Math.min(text.length, approximateOffset));
+  let start = 0;
+  for (const end of sentenceEnds(text, 0)) {
+    if (end >= bounded) break;
+    start = nextReadableOffset(text, end);
+  }
+  return start;
+}
+
+function maxCharsFor(mode: SpeechChunkMode): number {
+  if (mode === "local") return LOCAL_AI_BLOCK_MAX_CHARS;
+  if (mode === "natural") return CLOUD_AI_BLOCK_MAX_CHARS;
+  return DEVICE_BLOCK_MAX_CHARS;
+}
+
+function safeBlockEnd(text: string, sourceStart: number, maxChars: number): number {
+  const start = nextReadableOffset(text, sourceStart);
+  const softEnd = Math.min(text.length, start + maxChars);
+  if (softEnd >= text.length) return text.length;
+
+  const boundaries = sentenceEnds(text, start);
+  let prior = -1;
+  for (const end of boundaries) {
+    if (end <= softEnd) {
+      prior = end;
+      continue;
+    }
+    // No complete sentence fits under the cap. Keep this one sentence whole.
+    return prior > start ? prior : end;
+  }
+  return text.length;
+}
+
+function firstSentenceEnd(text: string): number {
+  return sentenceEnds(text, 0)[0] ?? text.length;
+}
+
+function sentenceEnds(text: string, sourceStart: number): number[] {
+  const out: number[] = [];
+  const re = /[.!?。！？؟…]["”’')\]]?(?=\s|$)/g;
+  re.lastIndex = Math.max(0, sourceStart);
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(text)) !== null) {
+    const end = match.index + match[0].length;
+    if (text[match.index] === "." && isNonTerminalPeriod(text, match.index, end)) continue;
+    out.push(end);
+  }
+  return out;
+}
+
+function isNonTerminalPeriod(text: string, periodIndex: number, matchEnd: number): boolean {
+  const prefix = text.slice(Math.max(0, periodIndex - 24), periodIndex + 1);
+  const token = prefix.match(/([A-Za-z][A-Za-z.]*)\.$/)?.[1] || "";
+  const lower = token.toLowerCase();
+  if (NON_TERMINAL_ABBREVIATIONS.has(lower)) return true;
+  if (/(?:\b[A-Za-z]\.){2,}$/.test(prefix) || /\b[A-Z]\.$/.test(prefix)) return true;
+
+  const next = text.slice(matchEnd).match(/\S/)?.[0];
+  return Boolean(next && /[a-z\u00df-\u024f]/.test(next));
+}
+
+function nextReadableOffset(text: string, offset: number): number {
+  let next = Math.max(0, Math.min(text.length, offset));
+  while (next < text.length && /\s/.test(text[next])) next++;
+  return next;
 }
 
 function appendSpan(

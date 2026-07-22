@@ -21,6 +21,7 @@ export interface ExtractedDocument {
 interface PositionedTextItem {
   str: string;
   dir?: string;
+  fontName?: string;
   x: number;
   y: number;
   width: number;
@@ -39,6 +40,13 @@ const RTL_WORD_RUN = "\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70
 const CJK_CHAR_RE = /[\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]/;
 const NO_SPACE_BEFORE_RE = /^[,.;:!?،؛؟)\]}”’"»٪%]/;
 const NO_SPACE_AFTER_RE = /[(\[{“‘"«]$/;
+const RAISED_REFERENCE_START = "\uE000";
+const RAISED_REFERENCE_END = "\uE001";
+// Private internal markers preserve PDF heading geometry through the text-only
+// API. Mobile removes them before display/copy/speech and uses them only to set
+// the block kind. PUA avoids collisions with ordinary manuscript characters.
+const STRUCTURAL_HEADING_START = "\uE100";
+const STRUCTURAL_HEADING_END = "\uE101";
 
 /**
  * Extracts text per page from a clean (text-based) PDF buffer.
@@ -78,7 +86,62 @@ export function renderPdfTextItems(rawItems: any[]): string {
   if (items.length === 0) return "";
 
   const lines = groupIntoLines(items);
-  return lines.map(renderLine).filter(Boolean).join("\n");
+  const paragraphGap = paragraphGapThreshold(lines);
+  const typography = dominantPageTypography(lines);
+  const ordinaryGap = ordinaryLineGap(lines, typography.bodyHeight);
+  let out = "";
+  let previous: TextLine | null = null;
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    const rendered = renderLine(line);
+    if (!rendered) continue;
+    if (out) {
+      const gap = previous ? previous.y - line.y : 0;
+      out += gap > paragraphGap ? "\n\n" : "\n";
+    }
+    out += isGeometricHeading(line, rendered, typography, {
+      before: lineIndex > 0 ? lines[lineIndex - 1].y - line.y : 0,
+      after: lineIndex + 1 < lines.length ? line.y - lines[lineIndex + 1].y : 0,
+      ordinary: ordinaryGap,
+    })
+      ? `${STRUCTURAL_HEADING_START}${rendered}${STRUCTURAL_HEADING_END}`
+      : rendered;
+    previous = line;
+  }
+  return out;
+}
+
+/** Preserve the larger baseline gap that visually separates PDF paragraphs. */
+function paragraphGapThreshold(lines: TextLine[]): number {
+  if (lines.length < 2) return Number.POSITIVE_INFINITY;
+  const gaps = lines
+    .slice(1)
+    .map((line, index) => lines[index].y - line.y)
+    .filter((gap) => Number.isFinite(gap) && gap > 0)
+    .sort((a, b) => a - b);
+  if (!gaps.length) return Number.POSITIVE_INFINITY;
+
+  // The lower quartile represents ordinary line leading even on a page with
+  // several paragraph, heading, or footer gaps.
+  const ordinaryGap = gaps[Math.floor((gaps.length - 1) * 0.25)];
+  const heights = lines
+    .flatMap((line) => line.items.map((item) => item.height))
+    .filter((height) => Number.isFinite(height) && height > 0)
+    .sort((a, b) => a - b);
+  const medianHeight = heights.length ? heights[Math.floor(heights.length / 2)] : 0;
+  return Math.max(ordinaryGap * 1.35, medianHeight * 1.55, ordinaryGap + 2);
+}
+
+/** Estimate normal baseline leading without allowing a sparse page to inflate it. */
+function ordinaryLineGap(lines: TextLine[], bodyHeight: number): number {
+  const gaps = lines
+    .slice(1)
+    .map((line, index) => lines[index].y - line.y)
+    .filter((gap) => Number.isFinite(gap) && gap > 0)
+    .sort((a, b) => a - b);
+  if (!gaps.length) return bodyHeight > 0 ? bodyHeight * 1.5 : 0;
+  const lowerQuartile = gaps[Math.floor((gaps.length - 1) * 0.25)];
+  return bodyHeight > 0 ? Math.min(lowerQuartile, bodyHeight * 1.65) : lowerQuartile;
 }
 
 function toPositionedItem(item: any, index: number): PositionedTextItem | null {
@@ -93,6 +156,7 @@ function toPositionedItem(item: any, index: number): PositionedTextItem | null {
   return {
     str,
     dir: typeof item.dir === "string" ? item.dir : undefined,
+    fontName: typeof item.fontName === "string" ? item.fontName : undefined,
     x,
     y,
     width: Number.isFinite(width) ? width : 0,
@@ -134,16 +198,168 @@ function renderLine(line: TextLine): string {
 
   let out = "";
   let previous: PositionedTextItem | null = null;
-  for (const item of sorted) {
+  for (let index = 0; index < sorted.length; index++) {
+    const item = sorted[index];
+    const renderedItem = raisedReferenceDigits(sorted, index, rtl);
+    const itemText = renderedItem
+      ? `${RAISED_REFERENCE_START}${renderedItem}${RAISED_REFERENCE_END}`
+      : item.str;
     if (!out) {
-      out = item.str;
+      out = itemText;
     } else {
       if (previous && shouldInsertSpace(previous, item, rtl)) out += " ";
-      out += item.str;
+      out += itemText;
     }
     previous = item;
   }
-  return cleanExtractedLine(out, rtl);
+  return restoreRaisedReferences(cleanExtractedLine(out, rtl));
+}
+
+interface PageTypography {
+  bodyHeight: number;
+  bodyFontName?: string;
+}
+
+/** Infer body typography from the character-weighted majority on this page. */
+function dominantPageTypography(lines: TextLine[]): PageTypography {
+  const items = lines
+    .flatMap((line) => line.items)
+    .filter((item) => item.height > 0 && /[\p{L}\p{N}]/u.test(item.str));
+  if (!items.length) return { bodyHeight: 0 };
+
+  const heightWeights = new Map<number, number>();
+  const fontWeights = new Map<string, number>();
+  for (const item of items) {
+    const weight = Math.max(1, item.str.replace(/\s/g, "").length);
+    // PDF transforms contain tiny floating-point differences for one font size.
+    const heightKey = Math.round(item.height * 20) / 20;
+    heightWeights.set(heightKey, (heightWeights.get(heightKey) || 0) + weight);
+    if (item.fontName) {
+      fontWeights.set(item.fontName, (fontWeights.get(item.fontName) || 0) + weight);
+    }
+  }
+
+  return {
+    bodyHeight: greatestWeightKey(heightWeights) || 0,
+    bodyFontName: greatestWeightKey(fontWeights) || undefined,
+  };
+}
+
+function greatestWeightKey<T>(weights: Map<T, number>): T | undefined {
+  let best: T | undefined;
+  let bestWeight = -1;
+  for (const [key, weight] of weights) {
+    if (weight > bestWeight) {
+      best = key;
+      bestWeight = weight;
+    }
+  }
+  return best;
+}
+
+/**
+ * Detect display headings from PDF typography instead of English capitalization
+ * or punctuation. All three independent layout signals are required: a larger
+ * size, a uniform dedicated font, and vertical separation from surrounding
+ * prose. Requiring the combination prevents an italic sentence or an inline
+ * bold span from becoming a heading merely because its font differs.
+ */
+function isGeometricHeading(
+  line: TextLine,
+  rendered: string,
+  typography: PageTypography,
+  separation: { before: number; after: number; ordinary: number }
+): boolean {
+  const value = rendered.trim();
+  if (!value || value.length > 180 || !/\p{L}/u.test(value)) return false;
+  const words = value.split(/\s+/).filter(Boolean);
+  if (words.length > 20 || !typography.bodyHeight) return false;
+
+  const visibleItems = line.items.filter((item) => item.height > 0 && item.str.trim());
+  if (!visibleItems.length) return false;
+  const lineHeight = greatestWeightKey(
+    visibleItems.reduce((weights, item) => {
+      const key = Math.round(item.height * 20) / 20;
+      weights.set(key, (weights.get(key) || 0) + Math.max(1, item.str.replace(/\s/g, "").length));
+      return weights;
+    }, new Map<number, number>())
+  ) || 0;
+
+  const fontWeights = new Map<string, number>();
+  let totalFontWeight = 0;
+  for (const item of visibleItems) {
+    if (!item.fontName) continue;
+    const weight = Math.max(1, item.str.replace(/\s/g, "").length);
+    fontWeights.set(item.fontName, (fontWeights.get(item.fontName) || 0) + weight);
+    totalFontWeight += weight;
+  }
+  const lineFont = greatestWeightKey(fontWeights);
+  const lineFontWeight = lineFont ? fontWeights.get(lineFont) || 0 : 0;
+  const uniformlyStyled = totalFontWeight === 0 || lineFontWeight / totalFontWeight >= 0.8;
+  const largerThanBody = lineHeight >= typography.bodyHeight * 1.11;
+  const hasDedicatedFont = Boolean(
+    lineFont && typography.bodyFontName && lineFont !== typography.bodyFontName
+  );
+  // When a PDF omits font names, a substantially larger size still provides a
+  // usable structural signal. With font metadata, require a dedicated font.
+  const fontSupportsHeading = hasDedicatedFont ||
+    (!lineFont && lineHeight >= typography.bodyHeight * 1.25);
+  const separationThreshold = Math.max(
+    separation.ordinary * 1.25,
+    typography.bodyHeight * 1.8
+  );
+  const verticallySeparated = Math.max(separation.before, separation.after) >= separationThreshold;
+  return largerThanBody && uniformlyStyled && fontSupportsHeading && verticallySeparated;
+}
+
+/**
+ * PDF text layers usually retain the smaller font and raised baseline of a
+ * citation even when they flatten its characters into the surrounding prose.
+ * Preserve that geometry as Unicode superscript digits before mobile reflow.
+ * This distinguishes `2024.¹¹` from a real decimal such as `2024.11` without
+ * guessing from punctuation alone.
+ */
+function raisedReferenceDigits(
+  sorted: PositionedTextItem[],
+  index: number,
+  rtl: boolean
+): string | null {
+  const item = sorted[index];
+  const digits = item.str.trim();
+  if (!/^\d{1,3}$/.test(digits) || sorted.length < 2 || item.height <= 0) return null;
+
+  const heights = sorted
+    .map((candidate) => candidate.height)
+    .filter((height) => Number.isFinite(height) && height > 0)
+    .sort((a, b) => a - b);
+  const dominantHeight = heights[Math.floor(heights.length / 2)] || 0;
+  if (!dominantHeight || item.height > dominantHeight * 0.72) return null;
+
+  const bodyItems = sorted.filter((candidate) => candidate.height >= dominantHeight * 0.82);
+  if (!bodyItems.length) return null;
+  const bodyBaselines = bodyItems.map((candidate) => candidate.y).sort((a, b) => a - b);
+  const bodyBaseline = bodyBaselines[Math.floor(bodyBaselines.length / 2)];
+  const rise = item.y - bodyBaseline;
+  if (rise < Math.max(0.5, dominantHeight * 0.08) || rise > dominantHeight * 0.65) return null;
+
+  const previous = sorted[index - 1];
+  if (!previous) return null;
+  const gap = rtl
+    ? previous.x - (item.x + item.width)
+    : item.x - (previous.x + previous.width);
+  const adjacentLimit = Math.max(4, dominantHeight * 0.6);
+  if (!Number.isFinite(gap) || gap < -1 || gap > adjacentLimit) return null;
+  return digits;
+}
+
+function restoreRaisedReferences(value: string): string {
+  const re = new RegExp(`${RAISED_REFERENCE_START}(\\d{1,3})${RAISED_REFERENCE_END}`, "g");
+  return value.replace(re, (_match, digits: string) =>
+    digits
+      .split("")
+      .map((digit) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[Number(digit)] || digit)
+      .join("")
+  );
 }
 
 function cleanExtractedLine(line: string, rtl: boolean): string {

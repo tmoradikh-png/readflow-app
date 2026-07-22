@@ -9,11 +9,24 @@ import {
   LOCAL_NEURAL_SPEAKER_ID,
   LOCAL_NEURAL_VOICE_ID,
 } from "../LocalNeuralVoice";
-import type { TtsEngine } from "react-native-sherpa-onnx/tts";
-import { normalizeLocalSpeechText } from "../SpeechNormalization";
+import type { GeneratedAudio, TtsEngine } from "react-native-sherpa-onnx/tts";
+import {
+  buildLocalSpeechSegments,
+  normalizeLocalSpeechText,
+} from "../SpeechNormalization";
 
 let audioModeBackground: boolean | null = null;
-const LOCAL_TTS_RENDER_VERSION = "ss0.22";
+const LOCAL_TTS_RENDER_VERSION = "stitched0.2";
+// Sentence/clause silence is stitched into PCM below. Disable model-controlled
+// sentence gaps so pauses do not vary with punctuation or stack twice.
+// Supertonic requires a positive engine-level value while it constructs its
+// native OfflineTts instance. Passing zero there can return a null native
+// handle and crash when the wrapper immediately reads its sample rate. Speech
+// segments contain no terminal punctuation, and their generation-level scale
+// stays at zero, so the fixed PCM pauses below remain the only audible gaps.
+const LOCAL_TTS_ENGINE_SILENCE_SCALE = 0.2;
+const LOCAL_TTS_SEGMENT_SILENCE_SCALE = 0;
+const LOCAL_TTS_PARAGRAPH_PAUSE_MS = 360;
 
 async function ensureAudioMode(allowBackgroundPlayback = false) {
   if (audioModeBackground === allowBackgroundPlayback) return;
@@ -65,8 +78,8 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       modelType: LOCAL_NEURAL_MODEL_TYPE,
       provider: "cpu",
       numThreads: 3,
-      maxNumSentences: 2,
-      silenceScale: 0.2,
+      maxNumSentences: 1,
+      silenceScale: LOCAL_TTS_ENGINE_SILENCE_SCALE,
     });
   }
 
@@ -110,11 +123,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       return uri;
     }
 
-    const audio = await engine.generateSpeech(text, {
-      sid: LOCAL_NEURAL_SPEAKER_ID,
-      speed,
-      silenceScale: 0.2,
-    });
+    const audio = await generateStitchedParagraph(engine, text, speed);
     const saved = await saveAudioToFile(audio, toNativePath(uri));
     const fileUri = toFileUri(saved || uri);
     this.fileCache.set(key, fileUri);
@@ -325,4 +334,60 @@ function hashKey(value: string): string {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(36);
+}
+
+async function generateStitchedParagraph(
+  engine: TtsEngine,
+  text: string,
+  speed: number
+): Promise<GeneratedAudio> {
+  const segments = buildLocalSpeechSegments(text);
+  if (!segments.length) return { samples: [], sampleRate: 0 };
+
+  const samples: number[] = [];
+  let sampleRate = 0;
+  for (let index = 0; index < segments.length; index++) {
+    const segment = segments[index];
+    const audio = await engine.generateSpeech(segment.text, {
+      sid: LOCAL_NEURAL_SPEAKER_ID,
+      speed,
+      silenceScale: LOCAL_TTS_SEGMENT_SILENCE_SCALE,
+    });
+    if (!sampleRate) sampleRate = audio.sampleRate;
+    if (!audio.sampleRate || audio.sampleRate !== sampleRate) {
+      throw new Error("rF AI returned inconsistent audio sample rates.");
+    }
+
+    appendSamples(samples, trimGeneratedSilence(audio.samples, sampleRate));
+    const pauseMs =
+      index === segments.length - 1
+        ? Math.max(segment.pauseAfterMs, LOCAL_TTS_PARAGRAPH_PAUSE_MS)
+        : segment.pauseAfterMs;
+    appendSilence(samples, sampleRate, pauseMs);
+  }
+  return { samples, sampleRate };
+}
+
+function trimGeneratedSilence(source: number[], sampleRate: number): number[] {
+  if (!source.length || sampleRate <= 0) return source;
+  const threshold = 0.00015;
+  let first = 0;
+  let last = source.length - 1;
+  while (first < source.length && Math.abs(source[first]) <= threshold) first++;
+  while (last > first && Math.abs(source[last]) <= threshold) last--;
+  if (first >= source.length) return [];
+
+  const edge = Math.max(1, Math.round(sampleRate * 0.025));
+  return source.slice(Math.max(0, first - edge), Math.min(source.length, last + edge + 1));
+}
+
+function appendSamples(target: number[], source: number[]) {
+  // Avoid spreading large PCM arrays, which can exceed the JavaScript call
+  // stack on long paragraphs.
+  for (let index = 0; index < source.length; index++) target.push(source[index]);
+}
+
+function appendSilence(target: number[], sampleRate: number, milliseconds: number) {
+  const count = Math.max(0, Math.round((sampleRate * milliseconds) / 1000));
+  for (let index = 0; index < count; index++) target.push(0);
 }

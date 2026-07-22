@@ -232,6 +232,16 @@ export function LibraryScreen({
       await refresh();
       onOpen(doc, item);
     } catch (e: any) {
+      if (isQuotaError(e)) {
+        setUpgrade({
+          title: "Monthly document limit reached",
+          body:
+            e?.message && !/quota_exceeded/i.test(e.message)
+              ? e.message
+              : "This month's document imports are used. Removing a local book does not reset a monthly server allowance. Upgrade for a higher limit, or use the installed QA build with Reviewer access while testing.",
+        });
+        return;
+      }
       setError(
         isNetworkError(e)
           ? importConnectionMessage()
@@ -300,7 +310,17 @@ export function LibraryScreen({
       await refresh();
       onOpen(doc, freshItem);
     } catch (e: any) {
-      setError(e?.message || "Could not reopen that document.");
+      if (isQuotaError(e)) {
+        setUpgrade({
+          title: "Monthly document limit reached",
+          body:
+            e?.message && !/quota_exceeded/i.test(e.message)
+              ? e.message
+              : "This month's document imports are used. Upgrade for a higher limit, or open the saved offline copy when available.",
+        });
+      } else {
+        setError(e?.message || "Could not reopen that document.");
+      }
     } finally {
       setBusyId(null);
     }

@@ -25,6 +25,7 @@ import { createTTSProvider } from "../services/tts";
 import { Controls, ReadingSettings } from "./Controls";
 import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
+import { ThemedNotice, type ThemedNoticeAction } from "./ThemedNotice";
 import { UpgradeSheet, type UpgradeBilling, type UpgradePlanKey } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
@@ -36,6 +37,7 @@ import {
 } from "../services/ReadingPosition";
 import {
   buildSpeechChunk as createSpeechChunk,
+  resumeSpeechOffset,
   SpeechChunk,
 } from "../services/SpeechChunk";
 import {
@@ -74,6 +76,9 @@ interface Props {
 interface LineRange {
   start: number;
   end: number;
+  /** Position inside the rendered paragraph, retained for line-aware Follow. */
+  y: number;
+  height: number;
 }
 
 interface ActiveLine {
@@ -92,7 +97,8 @@ const READER_WINDOW_BEFORE = 12;
 const READER_WINDOW_AFTER = 180;
 const READER_WINDOW_BACKWARD_EXPAND = 12;
 const READER_WINDOW_FORWARD_EXPAND = 120;
-const TITLE_PAUSE_MS = 420;
+const TITLE_PAUSE_MS = 220;
+const PAGE_DIVIDER_ESTIMATED_HEIGHT = 38;
 
 type RuntimeVoiceMode = "natural" | "device" | "local";
 
@@ -145,41 +151,13 @@ function voiceLabelFor(mode: RuntimeVoiceMode): string {
   return "Device voice";
 }
 
-const TITLE_CUES: Record<string, string> = {
-  ar: "العنوان",
-  da: "Titel",
-  de: "Titel",
-  en: "Title",
-  es: "Título",
-  fa: "عنوان",
-  fi: "Otsikko",
-  fr: "Titre",
-  hi: "शीर्षक",
-  id: "Judul",
-  it: "Titolo",
-  ja: "タイトル",
-  ko: "제목",
-  nb: "Tittel",
-  nl: "Titel",
-  no: "Tittel",
-  pt: "Título",
-  ru: "Заголовок",
-  sv: "Titel",
-  tr: "Başlık",
-  vi: "Tiêu đề",
-  zh: "标题",
-};
-
-function titleCueFor(language: string): string {
-  return TITLE_CUES[language.toLowerCase().split("-")[0]] || TITLE_CUES.en;
-}
-
-function speechForChunk(chunk: SpeechChunk, language: string, rate: number) {
+function speechForChunk(chunk: SpeechChunk, _language: string, rate: number) {
   const isHeading = chunk.spans.some((span) => span.sentence.kind === "heading");
-  const prefix = isHeading ? `${titleCueFor(language)}. ` : "";
   return {
-    text: `${prefix}${chunk.text}`,
-    prefixLength: prefix.length,
+    // Speech must be derived only from displayed source prose. Headings keep a
+    // slower rate and short trailing pause, but no invisible "Title" cue.
+    text: chunk.text,
+    prefixLength: 0,
     rate: isHeading ? Math.max(0.5, rate * 0.88) : rate,
     isHeading,
   };
@@ -253,6 +231,12 @@ export function Reader({
   const [showAI, setShowAI] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [readerNotice, setReaderNotice] = useState<{
+    title: string;
+    body: string;
+    primary?: ThemedNoticeAction;
+    secondary?: ThemedNoticeAction;
+  } | null>(null);
   const [localVoiceStatus, setLocalVoiceStatus] = useState<LocalNeuralVoiceStatus | null>(null);
   const [localVoiceSecondsToday, setLocalVoiceSecondsToday] = useState(0);
   const [voiceMode, setVoiceMode] = useState<RuntimeVoiceMode>(
@@ -372,6 +356,12 @@ export function Reader({
   const localVoiceWriteRef = useRef<Promise<number>>(Promise.resolve(0));
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
+  const readerViewportHeightRef = useRef(0);
+  const followPlacementRef = useRef<{
+    sentenceId: number;
+    lineY: number;
+    targetY: number;
+  } | null>(null);
   const initialJumpRef = useRef(false);
   const layoutSettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollInteractionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -413,6 +403,7 @@ export function Reader({
     anchorRef.current = null;
     activeCharRef.current = null;
     activeLineRef.current = { sentenceId: null, lineIndex: 0 };
+    followPlacementRef.current = null;
     lineRangesRef.current.clear();
     setActiveLine({ sentenceId: null, lineIndex: 0 });
     setOcrProgress(null);
@@ -552,6 +543,17 @@ export function Reader({
     );
   }
 
+  function openLocalVoiceSetupNotice(body?: string) {
+    setReaderNotice({
+      title: "Download rF AI",
+      body:
+        body ||
+        "Open Voice on the shelf and tap Download rF AI. The voice pack itself does not require registration or a subscription purchase.",
+      secondary: { label: "Not now", tone: "secondary" },
+      primary: { label: "Back to shelf", onPress: () => void handleBack() },
+    });
+  }
+
   function readAloudBlocked(): boolean {
     if (voiceMode !== "device" || canUseDeviceReadAloud) return false;
     openReadAloudOffer();
@@ -621,9 +623,8 @@ export function Reader({
       return;
     }
     if (engine === "local_ai" && localVoiceReady === false) {
-      openFeatureLock(
-        "Download rF AI",
-        "rF AI is not ready on this phone. Go to Voice on the shelf, download rF AI, then choose rF AI again. Until then, use Phone voice or Cloud AI on eligible plans."
+      openLocalVoiceSetupNotice(
+        "rF AI is not ready on this phone. Return to the shelf, open Voice, and download the one-time voice pack. This does not require registration or a subscription purchase."
       );
       return;
     }
@@ -679,9 +680,8 @@ export function Reader({
       return true;
     }
     if (localVoiceReady === false) {
-      openFeatureLock(
-        "Download rF AI",
-        "rF AI is not ready on this phone. Go to Voice on the shelf, download rF AI, then choose rF AI again."
+      openLocalVoiceSetupNotice(
+        "Return to the shelf, open Voice, and download the one-time rF AI voice pack. This does not require registration or a subscription purchase."
       );
       return true;
     }
@@ -742,6 +742,10 @@ export function Reader({
         setShowPaywall(false);
         return true;
       }
+      if (readerNotice) {
+        setReaderNotice(null);
+        return true;
+      }
       if (showAI) {
         setShowAI(false);
         return true;
@@ -759,7 +763,7 @@ export function Reader({
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [immersive, showAI, showBookmarks, showPaywall]);
+  }, [immersive, readerNotice, showAI, showBookmarks, showPaywall]);
 
   // Resume at the stable page-relative position from the Library.
   useEffect(() => {
@@ -821,9 +825,13 @@ export function Reader({
   function setActiveLineIndex(sentenceId: number | null, lineIndex: number) {
     const next = { sentenceId, lineIndex };
     const prev = activeLineRef.current;
-    if (prev.sentenceId === next.sentenceId && prev.lineIndex === next.lineIndex) return;
+    if (prev.sentenceId === next.sentenceId && prev.lineIndex === next.lineIndex) {
+      if (sentenceId != null) keepActiveLineVisible(sentenceId, lineIndex);
+      return;
+    }
     activeLineRef.current = next;
     setActiveLine(next);
+    if (sentenceId != null) keepActiveLineVisible(sentenceId, lineIndex);
   }
   function setActiveLineByChar(sentenceId: number, charOffset: number) {
     activeCharRef.current = { sentenceId, charOffset };
@@ -972,8 +980,15 @@ export function Reader({
         if (playingRef.current && followRef.current) {
           currentIdRef.current = target;
           setCurrentId(target);
+          followPlacementRef.current = null;
+          keepActiveLineVisible(
+            target,
+            activeLineRef.current.sentenceId === target ? activeLineRef.current.lineIndex : 0,
+            true
+          );
+        } else {
+          scrollToIndexSafe(target, false);
         }
-        scrollToIndexSafe(target, false);
       }
       layoutRestorePendingRef.current = false;
       layoutScrollQuietRef.current = false;
@@ -1056,11 +1071,78 @@ export function Reader({
     }
   }
 
+  /**
+   * Paragraphs intentionally remain whole visual rows. Follow therefore has to
+   * track the active wrapped line inside a row; scrolling only to the paragraph
+   * allowed later lines to disappear beneath the bottom controls. Re-anchor in
+   * small batches only when the projected line reaches the safe viewport edge.
+   */
+  function keepActiveLineVisible(sentenceId: number, lineIndex: number, force = false) {
+    if (!playingRef.current || !followRef.current || isUserScrollingRef.current) return;
+    if (sentenceId < 0 || sentenceId >= flatRef.current.length) return;
+
+    const currentWindowStart = windowStartRef.current;
+    const currentWindowEnd = windowEndRef.current;
+    if (sentenceId < currentWindowStart || sentenceId >= currentWindowEnd) {
+      resetWindowAround(sentenceId);
+      followPlacementRef.current = null;
+      return;
+    }
+
+    const viewportHeight = readerViewportHeightRef.current;
+    if (viewportHeight <= 0) {
+      scrollToIndexSafe(sentenceId, false);
+      return;
+    }
+
+    const ranges = lineRangesRef.current.get(sentenceId);
+    const range = ranges?.[lineIndex];
+    const sentence = flatRef.current[sentenceId];
+    const localIndex = sentenceId - currentWindowStart;
+    const previous = localIndex > 0 ? flatRef.current[sentenceId - 1] : undefined;
+    const dividerOffset = previous && previous.page !== sentence.page
+      ? PAGE_DIVIDER_ESTIMATED_HEIGHT
+      : 0;
+    const lineY = dividerOffset + (range?.y ?? lineIndex * lineHeight);
+    const targetY = Math.max(lineHeight * 1.4, viewportHeight * 0.3);
+    const safeTop = Math.max(8, lineHeight * 0.45);
+    const safeBottom = viewportHeight - Math.max(18, lineHeight * 1.65);
+    const placed = followPlacementRef.current;
+    const projectedY =
+      placed && placed.sentenceId === sentenceId
+        ? placed.targetY + (lineY - placed.lineY)
+        : Number.POSITIVE_INFINITY;
+
+    if (!force && projectedY >= safeTop && projectedY <= safeBottom) return;
+
+    try {
+      listRef.current?.scrollToIndex({
+        index: localIndex,
+        viewPosition: 0,
+        viewOffset: targetY - lineY,
+        animated: false,
+      });
+      followPlacementRef.current = { sentenceId, lineY, targetY };
+    } catch {
+      // The row will be measured by the existing bounded failure recovery.
+      scrollToIndexSafe(sentenceId, false);
+    }
+  }
+
   function toggleFollow() {
     const next = !followRef.current;
     followRef.current = next;
     setAutoFollow(next);
-    if (next && currentIdRef.current != null) scrollToIndexSafe(currentIdRef.current, false);
+    followPlacementRef.current = null;
+    if (next && currentIdRef.current != null) {
+      keepActiveLineVisible(
+        currentIdRef.current,
+        activeLineRef.current.sentenceId === currentIdRef.current
+          ? activeLineRef.current.lineIndex
+          : 0,
+        true
+      );
+    }
   }
 
   // onViewableItemsChanged / viewabilityConfig must be stable across renders.
@@ -1219,9 +1301,10 @@ export function Reader({
     // Warm upcoming clips through the provider's in-flight cache so natural
     // voice can hand off smoothly without charging/fetching duplicates.
     let nextIndex = chunk.nextIndex;
+    let nextOffset = chunk.nextOffset;
     const prefetchAhead = voiceMode === "local" ? LOCAL_AI_PREFETCH_AHEAD : TTS_PREFETCH_AHEAD;
     for (let ahead = 1; ahead <= prefetchAhead; ahead++) {
-      const nextChunk = buildSpeechChunk(nextIndex, f, voiceMode);
+      const nextChunk = buildSpeechChunk(nextIndex, f, voiceMode, nextOffset);
       if (!nextChunk) break;
       const nextSpeech = speechForChunk(nextChunk, language, settingsRef.current.speed);
       ttsRef.current
@@ -1233,6 +1316,7 @@ export function Reader({
         })
         .catch(() => {});
       nextIndex = nextChunk.nextIndex;
+      nextOffset = nextChunk.nextOffset;
     }
 
     // Advance from the ANCHORED position (re-resolved against the latest list) so
@@ -1242,7 +1326,13 @@ export function Reader({
       if (!playingRef.current || myEpoch !== epochRef.current) return;
       const continueReading = () => {
         if (!playingRef.current || myEpoch !== epochRef.current) return;
-        speakAt(resolvePageWithinIndex(chunk.lastPage, chunk.lastWithin) + 1);
+        const anchored = resolvePageWithinIndex(chunk.lastPage, chunk.lastWithin);
+        if (chunk.nextOffset > 0) {
+          pendingOffsetRef.current = chunk.nextOffset;
+          speakAt(anchored);
+        } else {
+          speakAt(anchored + 1);
+        }
       };
       if (speech.isHeading) setTimeout(continueReading, TITLE_PAUSE_MS);
       else continueReading();
@@ -1277,10 +1367,9 @@ export function Reader({
           ttsRef.current.stop();
           ttsRef.current = createTTSProvider("device");
           setVoiceMode("device");
-          openFeatureLock(
-            "rF AI not ready",
+          openLocalVoiceSetupNotice(
             info.message ||
-              "Download rF AI from the Voice panel, or keep reading with Phone voice on an eligible plan."
+              "Return to the shelf, open Voice, and download the one-time rF AI voice pack."
           );
         } else if (info.reason === "language_unsupported" && !cloudVoiceLanguageWarnedRef.current) {
           cloudVoiceLanguageWarnedRef.current = true;
@@ -1295,8 +1384,8 @@ export function Reader({
         if (myEpoch !== epochRef.current) return;
         const start = firstPosition?.sentence ?? s;
         setCurrent(start.id);
+        followPlacementRef.current = null;
         setActiveLineByChar(start.id, firstPosition?.charOffset ?? baseOffset);
-        if (followRef.current) scrollToIndexSafe(start.id, false);
       },
       onProgress: ({ currentTime, duration }) => {
         if (myEpoch !== epochRef.current || duration <= 0) return;
@@ -1312,7 +1401,7 @@ export function Reader({
         indexRef.current = position.sentence.id;
         if (currentIdRef.current !== position.sentence.id) {
           setCurrent(position.sentence.id);
-          if (followRef.current) scrollToIndexSafe(position.sentence.id, false);
+          followPlacementRef.current = null;
         }
         setActiveLineByChar(position.sentence.id, position.charOffset);
       },
@@ -1338,20 +1427,29 @@ export function Reader({
   }
 
   function pause() {
+    rememberSpeechResumePoint();
     epochRef.current++; // drop any in-flight onDone so it can't auto-advance
     playingRef.current = false;
     setIsPlaying(false);
-    ttsRef.current.stop(); // resume re-speaks current sentence (cross-platform safe)
+    ttsRef.current.stop(); // resume re-speaks only the current grammatical sentence
     flushLocalVoiceUsage();
   }
 
   function stop() {
+    rememberSpeechResumePoint();
     epochRef.current++;
     playingRef.current = false;
     setIsPlaying(false);
     ttsRef.current.stop();
     flushLocalVoiceUsage();
     saveLastRead(); // requirement: stopping saves the current position
+  }
+
+  function rememberSpeechResumePoint() {
+    const active = activeCharRef.current;
+    const sentence = active ? flatRef.current[active.sentenceId] : undefined;
+    if (!active || !sentence || sentence.id !== indexRef.current) return;
+    pendingOffsetRef.current = resumeSpeechOffset(sentence.text, active.charOffset);
   }
 
   function onPlayPause() {
@@ -1565,9 +1663,9 @@ export function Reader({
   const topPad = topInset + theme.spacing(immersive ? 0.5 : 1);
   // The control bar shows when listening (pinned) or when the chrome is revealed.
   const controlsShown = soundEnabled || chromeVisible;
-  // Float the AI button just above the controls; the bar height varies by state.
-  const fabBottom = (controlsOpen ? 330 : controlsShown ? 150 : 24) + insets.bottom;
-  const readerBottomPad = (controlsOpen ? 300 : controlsShown ? 132 : 56) + insets.bottom;
+  // Controls participate in flex layout, so the reading viewport already ends
+  // above them. Keep only ordinary page padding inside the list.
+  const readerBottomPad = theme.spacing(3);
 
   return (
     <View style={styles.container}>
@@ -1620,6 +1718,22 @@ export function Reader({
           <View style={styles.pageNav}>
             <Pressable onPress={() => goToPage(currentPage - 1)} hitSlop={8} disabled={currentPage <= 1}>
               <Text style={[styles.pageNavBtn, currentPage <= 1 && styles.disabled]}>Prev</Text>
+            </Pressable>
+            <Pressable
+              hitSlop={8}
+              style={styles.pageNavAi}
+              onPress={() => {
+                if (canUseAI) {
+                  setShowAI(true);
+                  return;
+                }
+                openFeatureLock(
+                  "Unlock AI",
+                  "Summaries, explanations, Q&A, and capped Cloud AI are part of AI Pro. Reader Plus keeps Phone voice available without cloud voice cost."
+                );
+              }}
+            >
+              <Text style={styles.pageNavAiText}>{canUseAI ? "AI" : "AI Pro"}</Text>
             </Pressable>
             <Pressable
               onPress={() => goToPage(currentPage + 1)}
@@ -1723,6 +1837,19 @@ export function Reader({
         )}
         style={styles.reader}
         contentContainerStyle={[styles.readerContent, { paddingBottom: readerBottomPad }]}
+        onLayout={(event) => {
+          const nextHeight = Number(event.nativeEvent.layout.height || 0);
+          if (Math.abs(nextHeight - readerViewportHeightRef.current) < 1) return;
+          readerViewportHeightRef.current = nextHeight;
+          followPlacementRef.current = null;
+          if (playingRef.current && followRef.current && activeLineRef.current.sentenceId != null) {
+            keepActiveLineVisible(
+              activeLineRef.current.sentenceId,
+              activeLineRef.current.lineIndex,
+              true
+            );
+          }
+        }}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         onScrollToIndexFailed={onScrollToIndexFailed}
@@ -1745,25 +1872,6 @@ export function Reader({
         onEndReachedThreshold={0.45}
         removeClippedSubviews={false}
       />
-
-      {/* AI launcher (compact) */}
-      {canUseAI ? (
-        <Pressable style={[styles.aiFab, { bottom: fabBottom }]} onPress={() => setShowAI(true)}>
-          <Text style={styles.aiFabText}>AI</Text>
-        </Pressable>
-      ) : (
-        <Pressable
-          style={[styles.aiFab, styles.aiFabLocked, { bottom: fabBottom }]}
-          onPress={() =>
-            openFeatureLock(
-              "Unlock AI",
-              "Summaries, explanations, Q&A, and capped Cloud AI are part of AI Pro. Reader Plus keeps Phone voice available without cloud voice cost."
-            )
-          }
-        >
-          <Text style={[styles.aiFabText, styles.aiFabTextLocked]}>AI Pro</Text>
-        </Pressable>
-      )}
 
       {/* controls — pinned while listening; otherwise reveal/hide with the chrome */}
       {controlsShown && (
@@ -1808,6 +1916,15 @@ export function Reader({
           onClose={() => setShowBookmarks(false)}
         />
       )}
+
+      <ThemedNotice
+        visible={Boolean(readerNotice)}
+        title={readerNotice?.title || ""}
+        body={readerNotice?.body || ""}
+        primary={readerNotice?.primary}
+        secondary={readerNotice?.secondary}
+        onClose={() => setReaderNotice(null)}
+      />
 
       {/* upgrade notice / paywall */}
       <UpgradeSheet
@@ -1873,10 +1990,7 @@ const SentenceRow = React.memo(function SentenceRow({
     const next = buildLineSegments(sentence.text, e?.nativeEvent?.lines || []);
     if (next.length === 0) return;
     setLines((prev) => (sameLineSegments(prev, next) ? prev : next));
-    onLineRanges(
-      sentence.id,
-      next.map((line) => ({ start: line.start, end: line.end }))
-    );
+    onLineRanges(sentence.id, next);
   }
 
   function renderWordText(word: string, absoluteStart: number) {
@@ -1908,13 +2022,29 @@ const SentenceRow = React.memo(function SentenceRow({
     return parts;
   }
 
-  function renderTokenText(tokenSource: { word: string; offset: number }[], baseOffset = 0) {
-    return tokenSource.map((t, wi) => (
-      <Text key={`${baseOffset}-${wi}`} onPress={() => onTapWord(sentence.id, baseOffset + t.offset)}>
+  function renderTokenText(
+    tokenSource: { word: string; offset: number }[],
+    baseOffset = 0,
+    highlightedRange?: LineRange
+  ) {
+    return tokenSource.map((t, wi) => {
+      const absoluteOffset = baseOffset + t.offset;
+      const highlighted = Boolean(
+        highlightedRange &&
+          absoluteOffset >= highlightedRange.start &&
+          absoluteOffset < highlightedRange.end
+      );
+      return (
+      <Text
+        key={`${baseOffset}-${wi}`}
+        onPress={() => onTapWord(sentence.id, absoluteOffset)}
+        style={highlighted ? styles.activeLine : undefined}
+      >
         {renderWordText(t.word, baseOffset + t.offset)}
         {wi < tokenSource.length - 1 ? " " : ""}
       </Text>
-    ));
+      );
+    });
   }
 
   const textStyle = {
@@ -1923,36 +2053,15 @@ const SentenceRow = React.memo(function SentenceRow({
     textAlign: rtl ? "right" : "left",
     writingDirection: rtl ? "rtl" : "ltr",
   } as const;
-  function renderMeasuredLines(measuredLines: LineSegment[]) {
-    return (
-      <View
-        style={[
-          styles.measuredBlock,
-          sentence.kind === "heading" && styles.measuredHeadingBlock,
-          rtl && styles.measuredBlockRtl,
-        ]}
-      >
-        {measuredLines.map((line, lineIndex) => {
-          const lineTokens = TextReflow.tokenizeWords(line.text);
-          const isActiveLine = activeLineIndex === lineIndex;
-          return (
-            <Text
-              key={`${line.start}-${lineIndex}:${isActiveLine ? "active" : "idle"}`}
-              style={[
-                styles.row,
-                sentence.kind === "heading" && styles.headingRow,
-                textStyle,
-                styles.measuredLine,
-                isActiveLine ? styles.activeLine : styles.inactiveLine,
-              ]}
-            >
-              {renderTokenText(lineTokens, line.start)}
-            </Text>
-          );
-        })}
-      </View>
-    );
-  }
+  // Android's onTextLayout output is useful for locating the active line, but
+  // it is not an authoritative copy of the paragraph. In particular, nested
+  // tappable/reference Text spans can make a reported line omit a word. Keep
+  // rendering the complete source paragraph and use only the measured source
+  // range to decorate its tokens; switching to reconstructed line Text nodes
+  // made those omitted measurements disappear from the page until playback
+  // advanced.
+  const highlightedRange =
+    active && activeLineIndex != null && lines?.length ? lines[activeLineIndex] : undefined;
 
   return (
     <View style={rtl ? styles.rtlRowWrap : undefined}>
@@ -1963,17 +2072,13 @@ const SentenceRow = React.memo(function SentenceRow({
           <View style={styles.pageDividerLine} />
         </View>
       ) : null}
-      {active && lines?.length ? (
-        renderMeasuredLines(lines)
-      ) : (
-        <Text
-          key={`${layoutKey}:${active ? "active" : measureForHighlight ? "measure" : "idle"}`}
-          style={[styles.row, sentence.kind === "heading" && styles.headingRow, textStyle]}
-          onTextLayout={measureForHighlight && !lines?.length ? handleTextLayout : undefined}
-        >
-          {renderTokenText(tokens)}
-        </Text>
-      )}
+      <Text
+        key={`${layoutKey}:${measureForHighlight ? "measure" : "idle"}`}
+        style={[styles.row, sentence.kind === "heading" && styles.headingRow, textStyle]}
+        onTextLayout={measureForHighlight ? handleTextLayout : undefined}
+      >
+        {renderTokenText(tokens, 0, highlightedRange)}
+      </Text>
     </View>
   );
 });
@@ -1999,12 +2104,30 @@ function buildLineSegments(text: string, nativeLines: any[]): LineSegment[] {
     }
 
     const end = Math.min(text.length, start + lineText.length);
-    out.push({ text: lineText, start, end });
+    out.push({
+      text: lineText,
+      start,
+      end,
+      y: Number.isFinite(Number(nativeLine?.y)) ? Number(nativeLine.y) : out.length * 1,
+      height: Number.isFinite(Number(nativeLine?.height)) ? Number(nativeLine.height) : 0,
+    });
     searchFrom = end;
     while (searchFrom < text.length && /\s/.test(text[searchFrom])) searchFrom++;
   }
 
-  return out.length ? out : [{ text, start: 0, end: text.length }];
+  // A native line report can omit the text of a nested span. Close any gap up
+  // to the next measured line so every source character still belongs to one
+  // highlight range. Rendering never consumes these fragments; they are only
+  // position/range metadata for the authoritative paragraph above.
+  for (let index = 0; index < out.length; index++) {
+    const nextStart = index + 1 < out.length ? out[index + 1].start : text.length;
+    if (nextStart > out[index].end) {
+      out[index].end = nextStart;
+      out[index].text = text.slice(out[index].start, nextStart).trimEnd();
+    }
+  }
+
+  return out.length ? out : [{ text, start: 0, end: text.length, y: 0, height: 0 }];
 }
 
 function sameLineSegments(prev: LineSegment[] | null, next: LineSegment[]): boolean {
@@ -2013,7 +2136,9 @@ function sameLineSegments(prev: LineSegment[] | null, next: LineSegment[]): bool
     (line, index) =>
       line.start === next[index].start &&
       line.end === next[index].end &&
-      line.text === next[index].text
+      line.text === next[index].text &&
+      Math.abs(line.y - next[index].y) < 0.5 &&
+      Math.abs(line.height - next[index].height) < 0.5
   );
 }
 
@@ -2212,6 +2337,19 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.textMute,
   },
   pageNavBtn: { color: theme.colors.accent, fontSize: 14, fontFamily: theme.fonts.sansSemiBold },
+  pageNavAi: {
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    borderRadius: 7,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  pageNavAiText: {
+    color: theme.colors.textDim,
+    fontSize: 12,
+    fontFamily: theme.fonts.sansSemiBold,
+  },
   reader: { flex: 1 },
   readerContent: { padding: theme.spacing(3) },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
@@ -2220,22 +2358,6 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sansSemiBold,
     paddingTop: theme.spacing(2.4),
     paddingBottom: theme.spacing(1.2),
-  },
-  measuredBlock: {
-    alignItems: "flex-start",
-    paddingVertical: 3,
-  },
-  measuredHeadingBlock: {
-    paddingTop: theme.spacing(2.4),
-    paddingBottom: theme.spacing(1.2),
-  },
-  measuredBlockRtl: {
-    alignItems: "flex-end",
-  },
-  measuredLine: {
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingVertical: 0,
   },
   rtlRowWrap: { alignItems: "stretch" },
   pageDivider: {
@@ -2256,35 +2378,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.highlight,
     color: theme.colors.text,
   },
-  inactiveLine: {
-    backgroundColor: "transparent",
-    color: theme.colors.text,
-  },
   referenceMarker: {
     color: theme.colors.textDim,
-  },
-  aiFab: {
-    position: "absolute",
-    right: theme.spacing(2),
-    bottom: 190,
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-  },
-  aiFabText: { color: theme.colors.onAccent, fontFamily: theme.fonts.sansSemiBold },
-  aiFabLocked: {
-    backgroundColor: theme.colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  aiFabTextLocked: {
-    color: theme.colors.text,
   },
   backBtn: {
     marginTop: 12,

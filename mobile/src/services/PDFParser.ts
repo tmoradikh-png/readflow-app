@@ -1,6 +1,7 @@
 import * as DocumentPicker from "expo-document-picker";
 import { API_BASE, apiHeaders } from "../config";
 import { loadAppUserId } from "./AppIdentity";
+import { contentDocumentId, fingerprintSourceFile } from "./DocumentIdentity";
 
 export interface PdfPage {
   page: number;
@@ -21,6 +22,8 @@ export interface ParsedPdf {
   ocrPages: number;
   /** Stable id for this document, used to key bookmarks. */
   docId: string;
+  /** Fingerprint of the exact imported source bytes used to prevent stale-text reuse. */
+  sourceFingerprint?: string;
   /** Local URI of the picked/stored source file (used by the Library). */
   sourceUri?: string;
   /** MIME type of the source file, if known. */
@@ -87,6 +90,9 @@ export const PDFParser = {
     forceOcr?: boolean;
   } & ImportProgressHooks): Promise<ParsedPdf> {
     await loadAppUserId();
+    // Start hashing before the upload so the native file read overlaps the
+    // network request for large books instead of adding a second wait.
+    const sourceFingerprintPromise = fingerprintSourceFile(args.uri);
     const form = new FormData();
     // React Native FormData file shape:
     form.append("file", {
@@ -112,6 +118,7 @@ export const PDFParser = {
       );
     }
     const fileName = args.fileName || "document";
+    const sourceFingerprint = await sourceFingerprintPromise;
     return {
       pageCount: data.pageCount,
       pages: data.pages,
@@ -119,7 +126,8 @@ export const PDFParser = {
       fileName,
       kind: data.kind === "docx" ? "docx" : "pdf",
       ocrPages: Number(data.ocrPages || 0),
-      docId: `${fileName}:${data.pageCount}`,
+      docId: contentDocumentId(fileName, data.pageCount, sourceFingerprint),
+      sourceFingerprint,
       sourceUri: args.uri,
       mimeType: args.mimeType,
       ocrLang: args.ocrLang,
@@ -181,13 +189,24 @@ function uploadForm(
         }
       } else {
         let msg = `Upload failed (${xhr.status}).`;
+        let code = `http_${xhr.status}`;
+        let feature: string | undefined;
         try {
           const j = JSON.parse(xhr.responseText);
-          if (j?.error) msg = String(j.error);
+          if (j?.error) code = String(j.error);
+          if (j?.message) msg = String(j.message);
+          else if (j?.error) msg = String(j.error);
+          if (typeof j?.feature === "string") feature = j.feature;
         } catch {
           /* keep default */
         }
-        reject(new Error(msg));
+        reject(
+          Object.assign(new Error(msg), {
+            code,
+            status: xhr.status,
+            feature,
+          })
+        );
       }
     };
     xhr.onerror = () => reject(new Error("Network error. Check your connection and try again."));

@@ -9,6 +9,8 @@ import { ParsedPdf } from "./PDFParser";
  */
 export interface LibraryItem {
   id: string; // === ParsedPdf.docId
+  /** Fingerprint of the imported file; revised editions receive a new id. */
+  sourceFingerprint?: string;
   title: string; // display name (file name without extension)
   fileName: string;
   kind: "pdf" | "docx";
@@ -104,6 +106,7 @@ export const Library = {
     const now = Date.now();
     const item: LibraryItem = {
       id: doc.docId,
+      sourceFingerprint: doc.sourceFingerprint,
       title: titleFromFileName(doc.fileName),
       fileName: doc.fileName,
       kind: doc.kind,

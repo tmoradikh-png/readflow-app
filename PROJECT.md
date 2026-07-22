@@ -36,9 +36,9 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.28`
-- Current source Android `versionCode`: `34`
-- Current source iOS `buildNumber`: `28`
+- Current source version: `1.0.42`
+- Current source Android `versionCode`: `48`
+- Current source iOS `buildNumber`: `42`
 - Latest finished Android EAS build: `1.0.28` / code `34`
 - Latest finished Android EAS build id: `d973d085-0e86-4818-9d48-f5e68aa157d4`
 - Latest finished Android AAB:
@@ -831,10 +831,28 @@ Highlighting:
 rF AI voice:
 - Current implementation uses `react-native-sherpa-onnx` and
   `@dr.pogodin/react-native-fs`.
-- Current model: `sherpa-onnx-supertonic-tts-int8-2026-03-06` (Supertonic
-  Reader/rF AI), downloaded on demand from the Sherpa model release.
-  Compressed download is about 81 MB; the model is not bundled in the app
-  package.
+- Current Android model:
+  `sherpa-onnx-supertonic-3-tts-int8-2026-05-11` (Supertonic 3 Reader/rF AI),
+  downloaded on demand from the Sherpa model release. The compressed download
+  is about 123 MiB; the model is not bundled in the app package. Android uses
+  sherpa-onnx runtime `1.13.2-1`. iOS retains the prior Supertonic 2 model until
+  a compatible native runtime is available and tested.
+- Native PDF extraction preserves a real paragraph break from the positioned
+  text's vertical gap. The mobile reflow path preserves that structure and also
+  recovers paragraphs conservatively from older cached, hard-wrapped extracts.
+  Display and speech therefore share the same source paragraph without changing
+  source wording.
+- Native PDF extraction also preserves small raised digit items as Unicode
+  superscript citations using their font height, baseline, and adjacency. This
+  prevents a source year plus citation from becoming a fake decimal such as
+  `2024.11`; true same-baseline decimals remain unchanged. Mobile has a narrow
+  legacy-cache repair for the unambiguous year/citation/sentence pattern. That
+  repair runs at the canonical reflow boundary, so display, copy, speech and
+  highlight offsets, and AI context all receive the same superscript text.
+- New document identities begin with a native MD5 fingerprint of the selected
+  source bytes. Filename and page count alone are not unique: revised editions
+  can retain both while changing words. Content-aware ids prevent a newer file
+  from inheriting an older edition's parsed text, OCR pages, or stored source.
 - Playback uses `LocalNeuralTTSProvider`, which generates WAV clips on-device,
   caches them in app cache, and reports progress through the same line-highlighter
   path as cloud voice.
@@ -844,8 +862,10 @@ rF AI voice:
   playback failure. The app suppresses that warning in LogBox and avoids refreshing the
   full model catalog during ordinary status checks.
 - If native support/model download is missing, the provider stops rF AI playback
-  and shows a one-time "rF AI not ready" message instead of silently switching
-  to Phone voice.
+  and opens a plain setup notice that returns the reader to the shelf's Voice
+  panel. A missing local pack must never open the plans/registration sheet or
+  imply that the one-time download requires a subscription. It also never
+  silently switches to Phone voice.
 - Treat rF AI as unlimited from readFlow's billing perspective because it uses
   phone CPU/battery instead of OpenAI. Product can still decide to make it a paid
   perk, but it has no per-character vendor bill.
@@ -886,6 +906,14 @@ Recommended manual phone tests after installing a new build:
   text before synthesis (ligatures, hidden soft hyphens, typographic quotes,
   and obvious app/document acronyms). Keep this conservative; broader word
   rewrites can create new mispronunciations.
+- rF AI speech is a mapped projection of displayed source prose. Do not add
+  invisible spoken labels such as `Title`; headings may change rate/pause but
+  not wording. Supertonic is initialized with the native-safe engine silence
+  scale `0.2`, but each punctuation-free speech segment uses scale `0`. The app
+  trims generated edge silence and stitches fixed PCM pauses at true terminal
+  punctuation; render cache `stitched0.2` prevents older timing from masking
+  the change. Do not set the engine initialization scale to zero: the Android
+  native wrapper can construct a null TTS handle and crash in `sampleRate()`.
 - AI voice modes must never silently downgrade to Device voice. If rF AI is
   not in the plan, not downloaded, or not supported for the language, show the
   themed upgrade/download explanation. If Cloud AI is not in the plan or
@@ -894,6 +922,9 @@ Recommended manual phone tests after installing a new build:
 - Reader manual scrolling disables Follow and ignores word taps until the drag
   settles. This prevents accidental chrome/padding changes while scrolling,
   which can look like the page jumps backward.
+- Follow tracks the measured wrapped line inside a source paragraph and keeps
+  it above the live viewport's bottom edge. The AI/AI Pro launcher lives in the
+  fixed Prev/Next strip; no floating control may cover book text.
 - Device voice reads in sync.
 - Natural/cloud voice reads the same text, highlights the current line, and does
   not skip final words.

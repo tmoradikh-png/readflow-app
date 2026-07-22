@@ -1,12 +1,13 @@
 /** Text repairs used only for the downloaded English rF AI voice model. */
 export function normalizeLocalSpeechText(value: string): string {
-  return (value || "")
+  const typography = (value || "")
     .normalize("NFKC")
     .replace(/\u00ad/g, "")
     .replace(/[“”„‟]/g, '"')
     .replace(/[‘’‚‛]/g, "'")
     .replace(/[‐‑‒–—―]/g, "-")
-    .replace(/[…]/g, "...")
+    .replace(/[…]/g, "...");
+  return normalizeEnglishNumbersForSpeech(typography)
     .replace(/&/g, " and ")
     .replace(/%/g, " percent ")
     .replace(/\bAI\b/g, "A I")
@@ -17,16 +18,334 @@ export function normalizeLocalSpeechText(value: string): string {
     .replace(/\bMrs\./g, "Missus")
     .replace(/\bMs\./g, "Miss")
     .replace(/\bProf\./g, "Professor")
-    // Supertonic can reduce these auxiliary pairs until they are inaudible at
-    // normal reading speed. A light comma keeps both words clear.
-    .replace(/\b(would|could|should|might|must)\s+have\b/gi, "$1, have")
-    // Preserve the conjunction in balanced clauses. The stronger speech-only
-    // boundary prevents rF AI from swallowing "and" between repeated subjects.
-    .replace(/\b((people|those|individuals) who [^.;!?]{1,180}),\s+and\s+(?=\2\b)/gi, "$1; and ")
-    // Keep the unstressed first syllable of "become" audible in this common
-    // modal phrase without changing the text shown in the reader.
-    .replace(/\bmust\s+not\s+become\b/gi, "must not, become")
+    // Initialisms are words/letters, not punctuation instructions. This also
+    // prevents a model from literally saying "dot" for forms such as U.S.
+    .replace(/\b(?:[A-Za-z]\.){2,}/g, (match) => match.replace(/\./g, " "))
     .replace(/\s+/g, " ")
     .replace(/\s+([,.;:!?])/g, "$1")
     .trim();
+}
+
+const SMALL_NUMBER_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+] as const;
+const TENS_NUMBER_WORDS = [
+  "",
+  "",
+  "twenty",
+  "thirty",
+  "forty",
+  "fifty",
+  "sixty",
+  "seventy",
+  "eighty",
+  "ninety",
+] as const;
+const LARGE_NUMBER_SCALES = ["", "thousand", "million", "billion", "trillion", "quadrillion"];
+const DIGIT_WORDS: Record<string, string> = {
+  "0": "zero",
+  "1": "one",
+  "2": "two",
+  "3": "three",
+  "4": "four",
+  "5": "five",
+  "6": "six",
+  "7": "seven",
+  "8": "eight",
+  "9": "nine",
+};
+
+/**
+ * Supertonic is trained primarily on words and is unreliable with longer
+ * numeric glyph runs. Convert English reading numbers generically before local
+ * synthesis. This is speech-only: displayed/copy/AI text remains byte-for-byte
+ * source prose.
+ */
+export function normalizeEnglishNumbersForSpeech(value: string): string {
+  let text = value || "";
+
+  // Currency with an optional magnitude is one semantic unit. In particular,
+  // `$1.12 billion` must become `one point one two billion dollars`, never a
+  // disconnected symbol, decimal, and scale word.
+  text = text.replace(
+    /([$£€])\s*(-?\d[\d,]*(?:\.\d+)?)(?:\s*(thousand|million|billion|trillion|mil|bn|[kmb]))?\b/gi,
+    (_match, symbol: string, amount: string, rawScale?: string) =>
+      currencyToWords(symbol, amount, rawScale)
+  );
+
+  text = text.replace(
+    /\b(-?\d[\d,]*(?:\.\d+)?)\s+(thousand|million|billion|trillion|mil|bn)\b/gi,
+    (_match, amount: string, rawScale: string) =>
+      `${decimalNumberToWords(amount)} ${normalizeMagnitude(rawScale)}`
+  );
+
+  // ISO dates are handled before ordinary ranges so neither hyphen is mistaken
+  // for a subtraction/negative sign.
+  text = text.replace(
+    /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/g,
+    (_match, year: string, month: string, day: string) => {
+      const monthName = [
+        "",
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ][Number(month)];
+      if (!monthName || Number(day) < 1 || Number(day) > 31) return _match;
+      return `${monthName} ${integerToOrdinalWords(day)}, ${integerNumberToWords(year)}`;
+    }
+  );
+
+  text = text.replace(
+    /\b(\d[\d,]*(?:\.\d+)?)\s*-\s*(\d[\d,]*(?:\.\d+)?)\b/g,
+    (_match, start: string, end: string) =>
+      `${decimalNumberToWords(start)} to ${decimalNumberToWords(end)}`
+  );
+  text = text.replace(
+    /\b(\d{1,6}):(\d{1,6})\b/g,
+    (_match, left: string, right: string) =>
+      `${integerNumberToWords(left)} ${integerNumberToWords(right)}`
+  );
+  text = text.replace(
+    /\b(-?\d[\d,]*(?:\.\d+)?)\s*%/g,
+    (_match, amount: string) => `${decimalNumberToWords(amount)} percent`
+  );
+  text = text.replace(
+    /\b(\d[\d,]*)(?:st|nd|rd|th)\b/gi,
+    (_match, amount: string) => integerToOrdinalWords(amount)
+  );
+
+  // Do not touch letters-and-digits identifiers (CO2, MP3) or dotted versions
+  // such as 1.0.41. The captured prefix avoids a lookbehind requirement on
+  // older Hermes runtimes.
+  text = text.replace(
+    /(^|[^A-Za-z0-9.])(-?\d[\d,]*(?:\.\d+)?)(?![A-Za-z0-9]|\.\d)/g,
+    (_match, prefix: string, amount: string) => `${prefix}${decimalNumberToWords(amount)}`
+  );
+  return text;
+}
+
+function currencyToWords(symbol: string, rawAmount: string, rawScale?: string): string {
+  const currency = symbol === "£" ? "pound" : symbol === "€" ? "euro" : "dollar";
+  const scale = rawScale ? normalizeMagnitude(rawScale) : "";
+  if (scale) return `${decimalNumberToWords(rawAmount)} ${scale} ${currency}s`;
+
+  const negative = rawAmount.startsWith("-");
+  const unsigned = rawAmount.replace(/^-/, "").replace(/,/g, "");
+  const [wholeRaw, fractionRaw = ""] = unsigned.split(".");
+  if (fractionRaw.length <= 2 && fractionRaw) {
+    const cents = Number(fractionRaw.padEnd(2, "0"));
+    const whole = Number(wholeRaw || "0");
+    const sign = negative ? "minus " : "";
+    const wholePhrase = whole
+      ? `${integerNumberToWords(wholeRaw)} ${currency}${whole === 1 ? "" : "s"}`
+      : "";
+    const centPhrase = cents
+      ? `${integerNumberToWords(String(cents))} cent${cents === 1 ? "" : "s"}`
+      : "";
+    if (wholePhrase && centPhrase) return `${sign}${wholePhrase} and ${centPhrase}`;
+    if (wholePhrase) return `${sign}${wholePhrase}`;
+    if (centPhrase) return `${sign}${centPhrase}`;
+  }
+
+  const exactOne = !negative && /^1(?:\.0+)?$/.test(unsigned);
+  return `${decimalNumberToWords(rawAmount)} ${currency}${exactOne ? "" : "s"}`;
+}
+
+function normalizeMagnitude(value: string): string {
+  const scale = value.toLowerCase();
+  if (scale === "k") return "thousand";
+  if (scale === "m" || scale === "mil") return "million";
+  if (scale === "b" || scale === "bn") return "billion";
+  return scale;
+}
+
+function decimalNumberToWords(rawValue: string): string {
+  const negative = rawValue.startsWith("-");
+  const normalized = rawValue.replace(/^-/, "").replace(/,/g, "");
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return rawValue;
+  const [whole, fraction] = normalized.split(".");
+  const sign = negative ? "minus " : "";
+  if (!fraction) return `${sign}${integerNumberToWords(whole)}`;
+  return `${sign}${integerNumberToWords(whole)} point ${fraction
+    .split("")
+    .map((digit) => DIGIT_WORDS[digit])
+    .join(" ")}`;
+}
+
+function integerNumberToWords(rawDigits: string): string {
+  const digits = rawDigits.replace(/,/g, "").replace(/^\+/, "");
+  if (!/^\d+$/.test(digits)) return rawDigits;
+  if (digits.length > 1 && digits.startsWith("0")) {
+    return digits.split("").map((digit) => DIGIT_WORDS[digit]).join(" ");
+  }
+  const compact = digits.replace(/^0+(?=\d)/, "");
+  if (compact.length > LARGE_NUMBER_SCALES.length * 3) {
+    return compact.split("").map((digit) => DIGIT_WORDS[digit]).join(" ");
+  }
+
+  const groups: string[] = [];
+  for (let end = compact.length; end > 0; end -= 3) {
+    groups.unshift(compact.slice(Math.max(0, end - 3), end));
+  }
+  const words: string[] = [];
+  for (let index = 0; index < groups.length; index++) {
+    const amount = Number(groups[index]);
+    if (!amount) continue;
+    const scaleIndex = groups.length - index - 1;
+    words.push(underThousandToWords(amount));
+    if (LARGE_NUMBER_SCALES[scaleIndex]) words.push(LARGE_NUMBER_SCALES[scaleIndex]);
+  }
+  return words.join(" ") || "zero";
+}
+
+function underThousandToWords(value: number): string {
+  const words: string[] = [];
+  let remainder = Math.max(0, Math.min(999, Math.floor(value)));
+  if (remainder >= 100) {
+    words.push(SMALL_NUMBER_WORDS[Math.floor(remainder / 100)], "hundred");
+    remainder %= 100;
+  }
+  if (remainder >= 20) {
+    words.push(TENS_NUMBER_WORDS[Math.floor(remainder / 10)]);
+    remainder %= 10;
+  }
+  if (remainder > 0) words.push(SMALL_NUMBER_WORDS[remainder]);
+  return words.join(" ");
+}
+
+function integerToOrdinalWords(rawDigits: string): string {
+  const cardinal = integerNumberToWords(rawDigits);
+  const words = cardinal.split(" ");
+  const last = words.pop() || "zero";
+  const irregular: Record<string, string> = {
+    zero: "zeroth",
+    one: "first",
+    two: "second",
+    three: "third",
+    four: "fourth",
+    five: "fifth",
+    eight: "eighth",
+    nine: "ninth",
+    twelve: "twelfth",
+    twenty: "twentieth",
+    thirty: "thirtieth",
+    forty: "fortieth",
+    fifty: "fiftieth",
+    sixty: "sixtieth",
+    seventy: "seventieth",
+    eighty: "eightieth",
+    ninety: "ninetieth",
+    hundred: "hundredth",
+    thousand: "thousandth",
+    million: "millionth",
+    billion: "billionth",
+    trillion: "trillionth",
+    quadrillion: "quadrillionth",
+  };
+  words.push(irregular[last] || `${last}th`);
+  return words.join(" ");
+}
+
+export interface LocalSpeechSegment {
+  /** Punctuation-safe words sent to Supertonic. */
+  text: string;
+  /** Deterministic silence stitched after this segment. */
+  pauseAfterMs: number;
+}
+
+const NON_TERMINAL_ABBREVIATIONS = new Set([
+  "dr",
+  "mr",
+  "mrs",
+  "ms",
+  "prof",
+  "sr",
+  "jr",
+  "st",
+  "no",
+  "fig",
+  "eq",
+  "vol",
+  "vs",
+]);
+
+/**
+ * Build punctuation-free sentence/clause renders for rF AI. Supertonic has
+ * occasionally verbalized a terminal period and applies inconsistent silence
+ * to punctuation inside a long paragraph. We remove only true boundaries from
+ * the model input and later stitch fixed PCM silence between the generated
+ * pieces, retaining one continuous paragraph WAV for playback.
+ */
+export function buildLocalSpeechSegments(value: string): LocalSpeechSegment[] {
+  const text = normalizeLocalSpeechText(value);
+  if (!text) return [];
+
+  const segments: LocalSpeechSegment[] = [];
+  const boundary = /([.!?;:]+)(["']?)(?=\s|$)/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = boundary.exec(text)) !== null) {
+    const marks = match[1];
+    if (marks === "." && isNonTerminalPeriod(text, match.index, boundary.lastIndex)) continue;
+
+    const spoken = text.slice(cursor, match.index).trim();
+    if (spoken) {
+      segments.push({
+        text: spoken,
+        pauseAfterMs: pauseForBoundary(marks),
+      });
+    }
+    cursor = boundary.lastIndex;
+    while (cursor < text.length && /\s/.test(text[cursor])) cursor++;
+  }
+
+  const tail = text.slice(cursor).trim();
+  if (tail) segments.push({ text: tail, pauseAfterMs: 0 });
+  return segments.length ? segments : [{ text, pauseAfterMs: 0 }];
+}
+
+function pauseForBoundary(marks: string): number {
+  if (marks.includes("?") || marks.includes("!")) return 340;
+  if (marks.includes(".")) return 300;
+  if (marks.includes(";")) return 190;
+  return 150;
+}
+
+function isNonTerminalPeriod(text: string, periodIndex: number, matchEnd: number): boolean {
+  const prefix = text.slice(Math.max(0, periodIndex - 24), periodIndex + 1);
+  const token = prefix.match(/([A-Za-z][A-Za-z.]*)\.$/)?.[1]?.toLowerCase() || "";
+  if (NON_TERMINAL_ABBREVIATIONS.has(token)) return true;
+  if (/(?:\b[A-Za-z]\.){2,}$/.test(prefix) || /\b[A-Z]\.$/.test(prefix)) return true;
+
+  const next = text.slice(matchEnd).match(/\S/)?.[0];
+  return Boolean(next && /[a-z\u00df-\u024f]/.test(next));
 }

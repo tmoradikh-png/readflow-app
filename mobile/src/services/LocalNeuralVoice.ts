@@ -1,11 +1,20 @@
 import { Platform } from "react-native";
 
-export const LOCAL_NEURAL_MODEL_ID = "sherpa-onnx-supertonic-tts-int8-2026-03-06";
+const IS_ANDROID = Platform.OS === "android";
+
+// Supertonic 3 specifically targets skipped/repeated-word failures. Android
+// ships the newer sherpa runtime required by v3; iOS stays on the proven v2
+// model until a matching native framework is available and tested.
+export const LOCAL_NEURAL_MODEL_ID = IS_ANDROID
+  ? "sherpa-onnx-supertonic-3-tts-int8-2026-05-11"
+  : "sherpa-onnx-supertonic-tts-int8-2026-03-06";
 export const LOCAL_NEURAL_VOICE_ID = "supertonic-reader-int8";
-export const LOCAL_NEURAL_MODEL_NAME = "Supertonic Reader";
+export const LOCAL_NEURAL_MODEL_NAME = IS_ANDROID ? "Supertonic 3 Reader" : "Supertonic Reader";
 export const LOCAL_NEURAL_MODEL_TYPE = "supertonic";
 export const LOCAL_NEURAL_SPEAKER_ID = 0;
-export const LOCAL_NEURAL_MODEL_SIZE_BYTES = Math.round(80.8 * 1024 * 1024);
+export const LOCAL_NEURAL_MODEL_SIZE_BYTES = IS_ANDROID
+  ? 128_774_318
+  : Math.round(80.8 * 1024 * 1024);
 
 export interface LocalNeuralVoiceStatus {
   supportedDevice: boolean;

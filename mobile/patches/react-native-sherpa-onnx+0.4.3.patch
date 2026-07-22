@@ -45,3 +45,10 @@ index b6c21b3..7fc6fcc 100644
      ruleFsts,
      ruleFars,
      maxNumSentences,
+diff --git a/node_modules/react-native-sherpa-onnx/third_party/sherpa-onnx-prebuilt/ANDROID_RELEASE_TAG b/node_modules/react-native-sherpa-onnx/third_party/sherpa-onnx-prebuilt/ANDROID_RELEASE_TAG
+index 99b0edf..b5ce8fb 100644
+--- a/node_modules/react-native-sherpa-onnx/third_party/sherpa-onnx-prebuilt/ANDROID_RELEASE_TAG
++++ b/node_modules/react-native-sherpa-onnx/third_party/sherpa-onnx-prebuilt/ANDROID_RELEASE_TAG
+@@ -1 +1 @@
+-sherpa-onnx-android-v1.12.34-2
++sherpa-onnx-android-v1.13.2-1

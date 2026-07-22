@@ -12,6 +12,8 @@ import { ParsedPdf, PdfPage } from "./PDFParser";
 export interface CachedDoc {
   cacheVersion?: number;
   docId: string;
+  /** Fingerprint of the source bytes from which these pages were extracted. */
+  sourceFingerprint?: string;
   fileName: string;
   kind: "pdf" | "docx";
   pageCount: number;
@@ -71,6 +73,7 @@ export const DocCache = {
       const c: CachedDoc = {
         cacheVersion: CACHE_SCHEMA_VERSION,
         docId: doc.docId,
+        sourceFingerprint: doc.sourceFingerprint,
         fileName: doc.fileName,
         kind: doc.kind,
         pageCount: doc.pageCount,
@@ -130,6 +133,7 @@ export const DocCache = {
       kind: c.kind,
       ocrPages: c.ocrPages,
       docId: c.docId,
+      sourceFingerprint: c.sourceFingerprint,
       ocrLang: c.ocrLang,
       pendingOcr: c.pendingOcr ?? [],
       needsPaidOcr: c.needsPaidOcr,
@@ -150,6 +154,17 @@ export const DocCache = {
    * already recovered — and the pending list shrinks accordingly.
    */
   mergeCachedOcr(fresh: ParsedPdf, cached: CachedDoc): ParsedPdf {
+    // Never carry OCR/native pages into a different edition. Legacy ids used
+    // only filename + page count, which allowed a revised file to inherit stale
+    // text from an older book with the same superficial metadata.
+    if (cached.docId !== fresh.docId) return fresh;
+    if (
+      cached.sourceFingerprint &&
+      fresh.sourceFingerprint &&
+      cached.sourceFingerprint !== fresh.sourceFingerprint
+    ) {
+      return fresh;
+    }
     if (!this.isForLanguage(cached, fresh.ocrLang)) return fresh;
     const map = new Map<number, PdfPage>(fresh.pages.map((p) => [p.page, { ...p }] as const));
     for (const cp of cached.pages) {

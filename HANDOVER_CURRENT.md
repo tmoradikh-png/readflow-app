@@ -14,7 +14,7 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source and side-by-side QA candidate: `1.0.30` / version code `36`.
+- Current source and side-by-side QA candidate: `1.0.42` / version code `48`.
   It contains the reader stability, reviewer-access, page-continuity, title,
   reference-marker, and speech-articulation repairs described below. It is not
   public until a new AAB passes phone QA and is promoted in Play Console.
@@ -168,12 +168,366 @@ blank lines, sends a stronger speech-only boundary for the repeated-subject
 conjunction, and adds a light articulation pause before `become`. Generated rF
 audio cache version `ss0.22` prevents older WAV files from masking the change.
 
+## 1.0.31 rF AI Articulation Candidate
+
+The tracked source is now `1.0.31 (37)`. Ordinary rF AI synthesis chunks stop
+at a sentence boundary before exceeding 300 characters, down from 420. The
+smaller request is intended to reduce flattened stress and swallowed quiet
+words while preserving the existing prefetch/player handoff. A grammatical
+sentence that continues across a PDF page still uses its separate 760-character
+safety cap so the page turn does not split the sentence. Generated local audio
+uses cache version `ss0.23`, and the automated reader gate verifies that an
+over-limit second sentence remains queued instead of being lost. Audible phone
+QA is still required before production promotion.
+
+On 2026-07-21 the standalone QA APK was built from this source and installed
+over `com.urmiaworks.readflow.qa` on the connected Samsung SM-S918B. Android
+reported `1.0.31 (37)`, the retained 133-page book reopened on page 42, rF AI
+entered media state `PLAYING`, and the active-line highlight advanced without
+AndroidRuntime or ReactNativeJS fatal errors. Playback was stopped with the
+app's Stop control after the smoke check. The preserved QA artifact is
+`artifacts/readflow-qa-1.0.31-37.apk` (SHA-256
+`A3BA29DAA01B987A7CD37BC73CF18DFEBAD64265BBC8573ADEF59FC6B8A5905A`).
+This verifies installation and playback mechanics, not subjective articulation;
+the owner still needs to listen for small-word retention and acceptable gaps.
+
+## 1.0.32 rF AI Handoff Candidate
+
+The 300-character experiment in `1.0.31 (37)` made chunk transitions frequent
+enough for an audible handoff glitch to become objectionable. Source
+`1.0.32 (38)` therefore combines complete sentences up to 500 characters while
+retaining sentence-boundary splitting, the existing six-chunk prefetch, and the
+separate 760-character page-continuation cap. It deliberately does not use an
+overlapping sliding speech window: the current batch engine cannot reuse hidden
+context or trim regenerated overlap at exact phoneme boundaries without repeat,
+skip, and tone-discontinuity risk. Generated local audio uses cache version
+`ss0.24`. Automated fixtures cover both sides of the limit so a following
+sentence is combined only when it fits and is never discarded when it does not.
+
 Automated release, TypeScript, exact manuscript regression, and backend build
 checks pass. Human QA is still required on the unlocked Samsung: verify page 43
 renders `Loyalty that refuses` as a separate heading and says `Title` before it;
 verify `emperors, and people inside` retains `and`; and verify page 42 says the
 complete phrase `must not become innocence`. Do not promote this candidate
 until those three audible checks pass.
+
+On 2026-07-21 the standalone QA APK was built from `1.0.32 (38)` and installed
+over `com.urmiaworks.readflow.qa` on the connected Samsung SM-S918B while
+preserving app data. Android reported the expected version, and the retained
+133-page book reopened on page 44. rF AI entered media state `PLAYING`, its
+active-line highlight advanced through the page, and focused AndroidRuntime and
+ReactNativeJS logs contained no fatal errors. Playback was stopped with the
+app's Stop control. The preserved APK is
+`artifacts/readflow-qa-1.0.32-38.apk` (215,196,776 bytes; SHA-256
+`5C634E82B9E545441D9E85F14F69DFDA2C334E2C918A4D877D048F9AA04DC04E`).
+This confirms installation and playback mechanics; the three subjective audible
+checks above still require the owner to listen.
+
+## 1.0.33 Paragraph Audio Candidate
+
+Owner listening to `1.0.32 (38)` found that the flattened adjacent citations
+`1`, `10`, and `13` were spoken as the number `11013`, and reported many skipped
+small words plus an apparent decline after several minutes. The citation parser
+previously accepted only one-to-three digits after punctuation, so the five-digit
+flattened run escaped speech cleanup. It now recognizes a bounded complete digit
+run after punctuation; source-offset mapping keeps it visible as a superscript
+but removes it before every voice engine. The automated regression uses the exact
+page-44 phrase ending in `widened.11013`.
+
+Source `1.0.33 (39)` retains native PDF paragraph identity and sends one complete
+source paragraph to rF AI as one WAV. This removes Expo Audio/player replacement
+between sentences inside a paragraph. It does not concatenate unrelated
+paragraphs or cut a grammatical sentence at the old 500-character limit. Sherpa
+still performs its own bounded sentence-group generation inside the single WAV,
+and an unfinished sentence at a PDF page boundary keeps the existing 760-character
+safety rule. Generated local audio uses cache version `ss0.25`.
+
+There is no elapsed-listening text buffer or rolling context in the local provider:
+each paragraph request is normalized and synthesized independently, future WAVs
+are generated through one serialized prefetch queue, and completed files are
+cached by model, render version, speed, and exact text. Therefore a genuine
+progressive decline is not explained by an overflowing reading buffer. It can be
+content-dependent Supertonic 2 alignment error, phone thermal slowdown producing
+larger pauses, or cumulative perception of independent errors. Refreshing the
+engine during reading was deliberately not added without evidence because it
+would introduce cold-start gaps and native resource churn.
+
+The manuscript itself contains the exact phrase `the later leaders who honored
+refusal` in chapter 4, so hearing `the later leaders` on page 45 is not an inserted
+word. Human QA is still required for paragraph transitions and small-word
+retention before this candidate is promoted.
+
+On 2026-07-21 the standalone QA APK was built and installed over
+`com.urmiaworks.readflow.qa` on Samsung SM-S918B with its data preserved.
+Android reported `1.0.33 (39)`, and the retained 133-page book reopened on page
+44 with `11013` displayed as a superscript marker. rF AI entered media state
+`PLAYING`; the first paragraph was exposed to Android as one approximately
+59.4-second clip, then playback advanced to the next paragraph as one
+approximately 89.5-second clip. The active-line highlight continued to advance,
+focused AndroidRuntime/ReactNativeJS logs contained no fatal errors, and the
+app's Stop control removed the media session. The preserved APK is
+`artifacts/readflow-qa-1.0.33-39.apk` (215,196,832 bytes; SHA-256
+`422F117D55B8E1B583D5732B39CA0FFB40A62054B4AAC84F3AC92AAAD3CD156E`).
+The exact speech-text regression proves `11013` is omitted before synthesis;
+subjective audio quality and small-word retention still require owner listening.
+
+## 1.0.34 Clean rF AI Reader Candidate
+
+Source `1.0.34 (40)` replaces the accumulating phrase-specific repairs with a
+clean reader pipeline. Android rF AI now uses Supertonic 3 model
+`sherpa-onnx-supertonic-3-tts-int8-2026-05-11` and sherpa-onnx Android runtime
+`1.13.2-1`; iOS deliberately remains on the tested Supertonic 2 model until a
+matching iOS runtime is available and tested. The three old prose-specific
+comma/semicolon substitutions were removed. Speech normalization now performs
+only generic Unicode, typography, symbol, acronym, and title normalization.
+
+Native PDF text is rendered as source paragraphs instead of a separate visual
+row for every sentence. A normal paragraph becomes one audio clip. An
+exceptionally long paragraph is divided around a 1,000-character soft limit,
+but only after a complete sentence; a single over-limit sentence remains whole.
+Continuation offsets remain anchored inside the same visible paragraph, and an
+unfinished sentence crossing a PDF page is still synthesized continuously.
+Generated local audio uses cache version `ss0.26`, so no Supertonic 2 WAV can
+mask the new behavior.
+
+The backend positioned-text renderer now emits a blank line only when the PDF's
+vertical geometry indicates a real paragraph gap. `TextReflow` preserves those
+paragraphs, and includes a conservative short-line fallback for already cached
+native extracts made before the backend fix. The production book was checked
+directly with both rendered pages and extracted text: page 44 contains `the
+United States Army`, and page 45 contains `the later leaders`. Those phrases
+must not be rewritten because they are the author's source text.
+
+Automated checks reassemble a roughly 1,000-word paragraph from every generated
+block and require exact word preservation, verify normal paragraph grouping,
+long-single-sentence safety, page-boundary continuation, silent flattened
+citations, clean prose normalization, the Supertonic 3 model id, and the native
+runtime patch. Connected-phone installation and audible QA are recorded below
+after the APK is built. The final QA APK is
+`artifacts/readflow-qa-1.0.34-40.apk` (211,235,008 bytes; SHA-256
+`4E63CF9C8CFE48D56BA14A2D7DE3D8010DDC272C3C698D89D46CD642B33A83C6`). It
+installed successfully on the connected Samsung SM-S918B as `1.0.34 (40)` on
+2026-07-21 while preserving the prior QA app data. Automated reader, TypeScript,
+release-configuration, backend-build, and APK-install checks passed. Audible
+Supertonic 3 and visual page-44/45 QA still require the owner to bring rF AI to
+the foreground; the phone was in an active IMO video call at the smoke-test
+point and the call was intentionally not interrupted.
+
+## 1.0.35 Source-Identity Integrity Candidate
+
+The follow-up audit found that legacy document ids used only `filename + page
+count`. A revised PDF could therefore collide with an older edition having the
+same name and page count, reuse its parsed-text/OCR cache, and retain the first
+edition's private stored copy. This is a real source-integrity defect even when
+the extractor itself returns the correct words.
+
+New imports now calculate the selected file's MD5 in the native filesystem
+without loading the whole book into JavaScript. The fingerprint is placed at
+the front of an `rf2:` document id and propagates through the library, parsed
+text cache, OCR pages, bookmarks, and stored source filename. Cached OCR is
+merged only when the complete content-aware document id matches. Re-import the
+latest PDF once after installing `1.0.35 (41)`; a revised same-name/same-length
+file will then be stored and parsed as its own exact edition instead of opening
+the legacy cache.
+
+The final QA artifact is `artifacts/readflow-qa-1.0.35-41.apk` (211,236,272
+bytes; SHA-256
+`54A94BAEDF58F1444E0FF844324F6C056CF35C2E8777F16270B75C1B21BD0A11`). It
+installed successfully over the connected QA package on Samsung SM-S918B as
+`1.0.35 (41)` while retaining app data. The exact production PDF was copied to
+`Downloads/Almost-the-Same-Human-verified-2026-07-21.pdf` for a fresh
+content-aware import. That last import requires the owner to unlock the secure
+lock screen; ADB cannot and must not bypass it.
+
+After unlock, the production PDF already present as `Download/book.pdf` was
+verified byte-for-byte against the PC source (MD5
+`868C2CB8AE010313B910A44DDB53B068`) and imported again. The shelf created a
+second `book` identity with reset progress rather than reusing the legacy
+filename/page-count record. On-device inspection of the fresh entry at pages
+44-45 showed the exact source paragraphs, including `The long return to My Lai`,
+`the United States Army`, `The medal can be evidence of learning`, `treat that
+praise as evidence`, `the later leaders`, and `who belonged to him`. The legacy
+entry was deliberately retained so its reading history was not destroyed; the
+top `Continue` entry is the verified import.
+
+## 1.0.36 Missing Voice-Pack UX Candidate
+
+The reader previously reused `UpgradeSheet` for two unrelated conditions:
+commercial feature access and a missing on-device rF AI model. After the move
+to Supertonic 3, an existing installation legitimately needed the new one-time
+model download, but tapping Listen displayed the plans/registration page. This
+looked like an account failure even though the model download itself requires
+neither registration nor a subscription.
+
+Every `localVoiceReady === false` and `local_unavailable` path now opens a
+plain `ThemedNotice` explaining how to return to the shelf's Voice panel and
+download rF AI. The plans sheet remains reserved for actual plan limits. The
+Android Supertonic 3 pack was downloaded successfully on the connected Samsung
+SM-S918B and the Voice panel reported `rF AI is ready` before this build.
+
+The final QA artifact is `artifacts/readflow-qa-1.0.36-42.apk` (211,236,892
+bytes; SHA-256
+`4DC5834FF7321FACC27A8CECB732A37FF93CEDE774FD939EA1A10F9DD28C8B3A`). It
+installed successfully over the connected QA package as `1.0.36 (42)` while
+retaining the downloaded voice model and verified content-aware book import.
+Automated regression, TypeScript, release-configuration, backend, manifest,
+and final on-device playback results are recorded after the remaining checks.
+
+## 1.0.38 Reader Source/Viewport Integrity Candidate
+
+Nine annotated phone screenshots exposed shared pipeline defects rather than
+phrase-specific rF AI problems. The source PDF proves that page 50 contains
+normal 11-point `2024.` followed by a separate raised 5-point citation `11`;
+the old extractor discarded size/baseline geometry and produced `2024.11`, so
+mobile deliberately mistook it for a decimal and Supertonic spoke it. The same
+geometry correctly identifies the raised `1` after `office.` on page 46.
+
+Native extraction now converts only small, raised, horizontally adjacent digit
+items into Unicode superscripts. Automated fixtures require `2024.¹¹`,
+`office.¹`, and an unchanged real `2024.11` decimal. Existing cached extracts
+also recognize the unambiguous legacy form `2024.11 This...`, so the installed
+book is repaired immediately without re-importing while future imports retain
+the PDF's actual geometry. The repair occurs at the canonical reflow boundary,
+not only in the renderer: display, copy, speech/highlight mapping, and AI
+context all receive `2024.¹¹`.
+
+Follow mode now records each wrapped line's native Y/height and tracks that line
+inside its paragraph. It re-anchors before the line reaches the bottom of the
+live FlatList viewport, including when the settings panel changes height. This
+keeps source paragraphs visually whole while preventing highlighted/read text
+from moving below the controls. The floating AI/AI Pro overlay was removed and
+is now an in-flow button in the fixed Prev/Next navigation strip.
+
+Speech input no longer adds an invisible localized `Title` word; headings use
+only their displayed source text, with a slightly slower delivery and a short
+structural pause. Supertonic sentence silence increases from `0.2` to `0.35`,
+and render-cache version `ss0.27` prevents older timing from masking the change.
+Citation removal retains its exact source-offset map, so displayed text remains
+authoritative for both speech and highlighting.
+
+The QA artifact is `artifacts/readflow-qa-1.0.38-44.apk` (211,238,412 bytes;
+SHA-256
+`BFB8292603333327D611C20068AA3E33372979FA0E94C453B2308091EAB6E634`). It
+installed over `com.urmiaworks.readflow.qa` on Samsung SM-S918B as `1.0.38
+(44)` while retaining app data. Automated reader, TypeScript, backend,
+release-config, APK manifest, exact-PDF rendering, and geometry extraction
+checks passed. Live phone QA also passed the structural checks: playback starts
+without a registration sheet, AI Pro no longer overlays prose, Follow keeps the
+active wrapped line above the collapsed controls across paragraph and page
+transitions, and the already-cached page-50 text now displays/accessibly exposes
+`2024.¹¹` rather than `2024.11`. Media playback remained active with no fatal
+Android or React Native errors on the immediately preceding 1.0.37 build; the
+1.0.38-only canonical-data change passed automated coverage, and its installed
+package/version were verified before the phone auto-locked. Final perceptual
+judgment of voice stress and pause naturalness remains a human listening check;
+no automated test can prove that subjective result.
+
+## 1.0.40 Deterministic rF AI Timing And Play-Crash Fix
+
+The reported spoken `dot` and inconsistent pauses were addressed at the shared
+speech boundary, not with phrase-specific substitutions. A paragraph is now
+split only at real terminal punctuation (`.`, `!`, `?`, `;`, and `:`), that
+punctuation is never sent to Supertonic, generated edge silence is trimmed, and
+fixed PCM silence is inserted between the resulting segments. Decimal points
+remain in numbers, while abbreviations such as `U.S.` become spoken initials.
+This preserves the displayed source text and its highlight mapping; only the
+speech projection omits terminal marks and citation superscripts.
+
+The first 1.0.39 candidate set Supertonic's engine-level silence scale to zero.
+On the connected Samsung this caused a repeatable native `SIGSEGV` in
+`OfflineTts_getSampleRate` as soon as Play initialized the engine. The 1.0.40
+fix initializes the engine with the native-safe positive value `0.2`, while
+individual punctuation-free generation calls still request zero model silence.
+Regression checks pin both values so the unsafe engine configuration cannot be
+reintroduced accidentally. Render cache `stitched0.2` invalidates audio made by
+the earlier timing paths.
+
+Multipart import errors now retain their quota code, HTTP status, and feature,
+so the library opens the plan sheet when the monthly document allowance is
+exhausted instead of showing a dead error and silently losing the selection.
+The deleted QA book was restored locally from the unchanged phone Download copy
+without clearing app data. A side-loaded QA package can display plan options but
+cannot complete a real Play purchase unless its signing/install track and
+RevenueCat entitlement are configured for Google Play billing.
+
+The QA artifact is `artifacts/readflow-qa-1.0.40-46.apk` (211,241,820 bytes;
+SHA-256
+`A6F6ACE967380568D9F81B61B81DB508DABDDA621817B9AF8C2F317EF92D5D19`). It
+installed over `com.urmiaworks.readflow.qa` as `1.0.40 (46)` while preserving
+the restored book. Reader regression, TypeScript, and release-configuration
+checks and the backend build passed. Live QA on Samsung SM-S918B opened the
+retained `book.pdf` at page 46, started rF AI, changed the control from Play to
+Pause, kept the app process alive, and left Android's native crash buffer empty.
+Playback was stopped after the smoke test. Perceptual pause quality and absence
+of a spoken `dot` remain human listening checks.
+
+## 1.0.41 Authoritative Highlight Text And Heading Repair
+
+Owner screenshots from page 47 showed that `Whoever owns the window` remained
+body text and that `uncertainty` could disappear while its paragraph was active,
+then return after playback advanced. The missing word was a renderer defect, not
+a document or speech-buffer defect: the active row replaced the complete source
+paragraph with separate line strings returned by Android `onTextLayout`, and a
+native line report can omit text inside nested tappable/reference spans.
+
+The reader now always renders the single complete canonical paragraph. Native
+line results supply source ranges and Y/height metadata only; the corresponding
+tokens receive the highlight in place. A gap-closing safeguard assigns every
+source character to a measured range, so an incomplete native measurement can
+neither hide prose nor leave it permanently unhighlighted. No second visual copy
+of the paragraph is constructed during playback.
+
+Heading recovery now looks through separator blank lines when examining the
+previous and next prose. The exact page-47 structure requires `Whoever owns the
+window` to be a heading while both adjacent paragraphs remain body text. The
+citation audit also removed colon from the legacy flattened-reference fallback:
+semantic digits in `John 3:16`, `12:30`, `4:2`, and `16:9` remain displayed and
+spoken, while period/semicolon citation fixtures remain silent.
+
+The QA artifact is `artifacts/readflow-qa-1.0.41-47.apk` (211,241,472 bytes;
+SHA-256
+`F5D20441D785C05C2132598F5CA4A56CA01E04BFECDB102777F86BD5557E5EF6`). It
+installed over `com.urmiaworks.readflow.qa` as `1.0.41 (47)` without clearing
+the retained book. Reader regression, TypeScript, release configuration,
+backend build, APK manifest, and whitespace checks passed. The phone returned
+to its secure PIN screen before the page-47 during-playback visual comparison;
+that last connected-phone check requires the owner to unlock it.
+
+## 1.0.42 Structural PDF Headings And Numeric rF AI Speech
+
+The heading repair is no longer tied to a reported English phrase. Native PDF
+extraction now infers the page's body typography and marks only short lines
+that combine three independent layout signals: larger type, a dedicated
+full-line font, and vertical separation from surrounding prose. The private
+marker is removed at the mobile reflow boundary, so it can affect only the
+row's structural `heading` kind and can never enter display, copy, AI context,
+or speech. A complete audit of the owner's 133-page PDF found 131 legitimate
+headings, including `Whoever owns the window` and `Measurement, ranking, and
+the crowd`; ordinary italic and continuation lines no longer became headings.
+The generic sentence-structure fallback remains for already cached extracts.
+
+rF AI now receives generic English word forms for numeric glyphs before local
+synthesis. Integers, grouped numbers, decimals, dates, ranges, ordinals,
+percentages, scaled values, and dollar/pound/euro amounts are covered. The
+reported real-book examples become `seven hundred forty three`, `seven point
+four million`, `twenty three thousand four hundred twenty one`, and `one point
+one two billion dollars`. This transformation is speech-only; the exact source
+digits remain displayed and available to copy and AI.
+
+The QA artifact is `artifacts/readflow-qa-1.0.42-48.apk` (211,248,384 bytes;
+SHA-256
+`267EEE7608EECC8ABC20670C64F2AFE0C24F6C46FD7671925AC94F706CA65A67`). APK
+inspection verified `com.urmiaworks.readflow.qa`, `1.0.42 (48)`, the required
+foreground audio permissions, and no recording permission. It installed with
+`adb install -r`; Android retained the original first-install timestamp and the
+existing 133-page book. On Samsung SM-S918B the book opened at its saved page,
+page 48 displayed `Measurement, ranking, and the crowd` as a bold wrapping
+heading, rF AI entered active playback without a native or JavaScript crash,
+and playback was then paused. Reader regression, mobile/QA TypeScript, release
+configuration, backend build, the real-PDF heading audit, and APK inspection
+all passed. New imports receive the font-geometry marker after the matching
+backend source is deployed; the installed build's fallback repairs the retained
+pre-marker cache immediately.
 
 ## Accounts And Services
 

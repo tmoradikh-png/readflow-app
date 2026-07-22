@@ -30,7 +30,11 @@ export function resolveReadingPosition(
     if (preview) {
       const previewMatch = onPage.find((sentence) => {
         const candidate = normalizePreview(sentence.text);
-        return candidate.startsWith(preview) || preview.startsWith(candidate.slice(0, 32));
+        return (
+          candidate.startsWith(preview) ||
+          candidate.includes(preview) ||
+          preview.startsWith(candidate.slice(0, 32))
+        );
       });
       if (previewMatch) return previewMatch.id;
     }
