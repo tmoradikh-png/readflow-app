@@ -9,6 +9,7 @@ import {
   Linking,
   Modal,
   TextInput,
+  Platform,
 } from "react-native";
 import Constants from "expo-constants";
 import * as Speech from "expo-speech";
@@ -51,6 +52,7 @@ import {
 } from "../services/ReadingLanguages";
 import { theme } from "../theme";
 import { activateReviewerAccess } from "../services/ReviewerAccess";
+import { loadAppUserId } from "../services/AppIdentity";
 
 const RF_AI_FREE_OFFER_KEY = "readflow.rfAiFreeOffer.v1";
 
@@ -1386,8 +1388,29 @@ function HelpAboutSheet({
   const [reviewBusy, setReviewBusy] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
 
-  function contact() {
-    Linking.openURL(`mailto:${supportEmail}?subject=readFlow support`).catch(() => {});
+  async function contact() {
+    const appUserId = await loadAppUserId();
+    const subject = `readFlow support - ${version}${code ? ` (${code})` : ""}`;
+    const body = [
+      `Plan: ${planName}`,
+      `App: ${version}${code ? ` (${code})` : ""}`,
+      `Platform: ${Platform.OS} ${Platform.Version}`,
+      `Support ID: ${appUserId}`,
+      "",
+      "What happened?",
+      "",
+      "What did you expect?",
+      "",
+      "Steps to reproduce:",
+      "1. ",
+      "",
+      "Document type, language, page count, and file size:",
+      "",
+      "Please do not attach a private document unless support asks for it.",
+    ].join("\n");
+    Linking.openURL(
+      `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    ).catch(() => {});
   }
 
   function openWebsite() {
@@ -1475,7 +1498,7 @@ function HelpAboutSheet({
             </View>
             <View style={styles.aboutActions}>
               <Pressable style={styles.aboutBtn} onPress={contact}>
-                <Text style={styles.aboutBtnText}>Contact support</Text>
+                <Text style={styles.aboutBtnText}>Report a problem</Text>
               </Pressable>
               <Pressable style={styles.aboutBtnGhost} onPress={openWebsite}>
                 <Text style={styles.aboutBtnGhostText}>Website</Text>

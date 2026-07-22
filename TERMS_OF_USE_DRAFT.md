@@ -1,6 +1,6 @@
 # readFlow Terms of Use Draft
 
-Draft updated: 2026-06-29
+Draft updated: 2026-07-22
 
 Publication URL planned: `https://urmiaworks.com/readflow/terms`
 
@@ -36,6 +36,15 @@ the store account settings for the platform where you purchased them.
 Refunds are handled by the relevant app store policies and applicable law.
 readFlow does not control app store payment processing.
 
+Free trials, promotional codes, introductory prices, and manually granted
+promotional access may have eligibility rules, redemption limits, expiry dates,
+territory restrictions, or separate offer terms shown by the app store or in
+the offer. A store subscription trial may convert to a paid auto-renewing
+subscription at the displayed price unless cancelled before the trial ends.
+Promotional access granted directly by readFlow does not convert to a paid
+subscription unless the offer explicitly says so. Promotions have no cash value
+and may not be transferred or combined unless applicable terms require it.
+
 Monthly allowances, such as OCR pages, AI actions, and Cloud AI voice
 characters, reset according to the plan rules shown in the app. Unused allowance
 does not roll over unless the app explicitly says otherwise.
@@ -59,6 +68,11 @@ or process unlawful content.
 readFlow does not guarantee that every PDF, Word file, scan, image, language, or
 layout will import correctly. Some files may require OCR, a better source file,
 or manual checking.
+
+Large files and documents may be rejected, truncated to the plan's page limit,
+processed progressively, or paused when storage, memory, network, service, or
+monthly allowances are unavailable. The app should show the applicable limit;
+completed local or OCR work may remain available where technically possible.
 
 ## AI, OCR, and Voice Limitations
 

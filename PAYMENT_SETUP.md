@@ -134,7 +134,7 @@ The backend currently defines these product ids:
 | Tier | Monthly product id | Yearly product id | Current code price |
 | --- | --- | --- | --- |
 | Reader Plus | `readflow_reader_plus_monthly` | `readflow_reader_plus_yearly` | $4.99/mo, $39.99/yr |
-| AI Pro | `readflow_ai_pro_monthly` | `readflow_ai_pro_yearly` | $12.99/mo, $119.99/yr |
+| AI Pro | `readflow_ai_pro_monthly` | `readflow_ai_pro_yearly` | $10.99/mo, $119.99/yr |
 | Power | `readflow_power_monthly` | `readflow_power_yearly` | $19.99/mo, $179.99/yr |
 
 RevenueCat entitlement ids:
@@ -146,10 +146,10 @@ RevenueCat entitlement ids:
 | Power | `power` |
 
 Important pricing note: source now uses the cost-safe launch prices above.
-`backend/src/config/plans.ts` contains a 20% direct AI vendor COGS guardrail.
-If prices, annual discounts, Cloud AI voice, or AI action allowances change, run
-backend build/checks and confirm the guardrail still passes before creating or
-updating Play products.
+`backend/src/config/plans.ts` contains monthly contribution floors of $8 for AI
+Pro and $12 for Power at full direct AI allowance, plus a 30% annual direct-AI
+cost ceiling. If prices, discounts, Cloud AI voice, or AI action allowances
+change, run backend build/checks before updating store products.
 
 For App Store products, prefer mirroring the same product ids so RevenueCat
 offerings and backend product mapping stay symmetric across stores. If App
@@ -170,7 +170,7 @@ are live:
 Do not make Cloud AI voice unlimited. At heavy listening levels it can cost
 hundreds of dollars per user per month if uncapped.
 
-Top-up pricing should also obey the 20% direct AI vendor COGS rule. With
+Top-up pricing should preserve the same contribution discipline. With
 `tts-1-hd`, 25k Cloud AI voice characters cost about $0.75 in OpenAI spend, so
 a $4.99 store-billing top-up nets about $4.19 after an assumed 15% store fee
 plus 1% RevenueCat and keeps direct AI vendor cost around 18%. A 100k character
@@ -211,7 +211,7 @@ $17.99+ to keep the same margin.
 | --- | --- | --- | --- | --- |
 | `readflow_reader_plus_monthly` | Reader Plus Monthly | `uw-baseplan01` | Monthly | $4.99 |
 | `readflow_reader_plus_yearly` | Reader Plus Yearly | `uw-baseplan02` | Yearly | $39.99 |
-| `readflow_ai_pro_monthly` | AI Pro Monthly | `uw-baseplan03` | Monthly | $12.99 |
+| `readflow_ai_pro_monthly` | AI Pro Monthly | `uw-baseplan03` | Monthly | $10.99 |
 | `readflow_ai_pro_yearly` | AI Pro Yearly | `uw-baseplan04` | Yearly | $119.99 |
 | `readflow_power_monthly` | Power Monthly | `uw-baseplan05` | Monthly | $19.99 |
 | `readflow_power_yearly` | Power Yearly | `uw-baseplan06` | Yearly | $179.99 |

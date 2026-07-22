@@ -215,9 +215,9 @@ Current backend note:
 
 Changes after the latest finished build and included in source `1.0.18`:
 - Cloud AI voice is gated by `features.cloudVoice`, not generic AI.
-- AI Pro includes 20k cloud voice characters/month; Power includes 50k.
-- Direct AI vendor spend is capped by source guardrail at 20% of conservative
-  net subscription revenue, calculated against the lower annual-plan revenue.
+- AI Pro includes 20k cloud voice characters/month; Power includes 100k.
+- Source guardrails preserve at least $8 AI Pro and $12 Power monthly
+  contribution at full direct AI allowance, before shared Render overhead.
 - Backend `/api/tts` checks monthly `cloudVoiceChars` before generating fresh
   OpenAI audio.
 - Voice selection uses the public labels `Device voice`, `rF AI`, and
@@ -790,14 +790,14 @@ Natural voice currently calls backend `/api/tts`, which calls OpenAI TTS using
 server-only `OPENAI_API_KEY`. The mobile app never receives the OpenAI key.
 Cloud AI voice is capped by plan:
 - AI Pro: 20,000 characters/month.
-- Power: 50,000 characters/month.
+- Power: 100,000 characters/month.
 See `COST_MODEL.md` before changing cloud voice allowances; unlimited cloud
 voice is not economically safe at the current paid prices.
 
 AI text actions:
 - `POST /api/ai` handles Summary, Explain, Simplify, Key points, and Ask.
 - Each non-cached AI action can spend OpenAI text-model tokens.
-- AI Pro includes 150 AI actions/month; Power includes 250/month.
+- AI Pro includes 150 AI actions/month; Power includes 400/month.
 - Free and Reader Plus must not call the AI route.
 
 ## Audio and Highlighting Notes

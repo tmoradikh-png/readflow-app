@@ -8,8 +8,10 @@
  *
  * Business rules:
  * - Free and Reader Plus must have no per-use AI/OCR/cloud-voice vendor cost.
- * - Direct AI vendor COGS for AI Pro/Power must stay under 20% of conservative
- *   net subscription revenue, calculated against the cheaper annual plan.
+ * - Monthly AI Pro and Power plans must preserve at least the contribution
+ *   floors below after store/RevenueCat fees and maximum direct AI usage.
+ * - Discounted annual plans may have lower monthly contribution, but direct AI
+ *   vendor COGS must remain below 30% of conservative annual net revenue.
  * - Scanned/image PDFs require AI Pro or Power because OCR consumes backend CPU
  *   and must be capped even though it has no OpenAI per-page charge.
  */
@@ -93,8 +95,13 @@ export const TIER_RANK: Record<TierKey, number> = {
 export const AI_ECONOMICS = {
   /** Conservative net after roughly 15% Google Play + 1% RevenueCat. */
   netRevenueRatio: 0.84,
-  /** Direct AI vendor spend should not exceed 20% of the money we receive. */
-  maxAiVendorCogsRatio: 0.2,
+  /** Minimum monthly contribution before shared Render overhead. */
+  minMonthlyContributionUsd: {
+    ai_pro: 8,
+    power: 12,
+  } as Partial<Record<TierKey, number>>,
+  /** Discounted annual plans retain a stricter-than-break-even cost ceiling. */
+  maxAnnualAiVendorCogsRatio: 0.3,
   /** Current production-safe assumption: OpenAI TTS-1 HD is $30 / 1M chars. */
   cloudVoiceUsdPerChar: 30 / 1_000_000,
   /**
@@ -199,7 +206,7 @@ export const TIERS: Tier[] = [
     entitlementId: "ai_pro",
     recommended: true,
     products: {
-      monthly: { productId: "readflow_ai_pro_monthly", priceUsd: 12.99 },
+      monthly: { productId: "readflow_ai_pro_monthly", priceUsd: 10.99 },
       yearly: { productId: "readflow_ai_pro_yearly", priceUsd: 119.99 },
     },
     limits: {
@@ -208,7 +215,7 @@ export const TIERS: Tier[] = [
       cloudVoiceCharsPerMonth: 20000,
       pdfsPerMonth: 300,
       maxFileSizeMb: 100,
-      maxPages: 1500,
+      maxPages: 2500,
       perDocPageCap: 0,
       localVoiceSecondsPerDay: 0,
     },
@@ -233,9 +240,9 @@ export const TIERS: Tier[] = [
       yearly: { productId: "readflow_power_yearly", priceUsd: 179.99 },
     },
     limits: {
-      ocrPagesPerMonth: 1500,
-      aiActionsPerMonth: 250,
-      cloudVoiceCharsPerMonth: 50000,
+      ocrPagesPerMonth: 2500,
+      aiActionsPerMonth: 400,
+      cloudVoiceCharsPerMonth: 100000,
       pdfsPerMonth: 1000,
       maxFileSizeMb: 200,
       maxPages: 5000,
@@ -257,6 +264,16 @@ export const TIERS: Tier[] = [
 
 export const FREE_TIER = TIERS[0];
 
+function netMonthlyRevenue(tier: Tier, billing: BillingPeriod): number {
+  const listed =
+    billing === "monthly"
+      ? tier.products.monthly?.priceUsd
+      : tier.products.yearly
+        ? tier.products.yearly.priceUsd / 12
+        : undefined;
+  return listed === undefined ? 0 : listed * AI_ECONOMICS.netRevenueRatio;
+}
+
 function conservativeMonthlyNetRevenue(tier: Tier): number {
   const monthly = tier.products.monthly?.priceUsd;
   const yearly = tier.products.yearly ? tier.products.yearly.priceUsd / 12 : undefined;
@@ -275,19 +292,35 @@ export function estimatedMonthlyAiVendorCostUsd(tier: Tier): number {
 }
 
 export function aiVendorBudgetUsd(tier: Tier): number {
-  return conservativeMonthlyNetRevenue(tier) * AI_ECONOMICS.maxAiVendorCogsRatio;
+  return conservativeMonthlyNetRevenue(tier) * AI_ECONOMICS.maxAnnualAiVendorCogsRatio;
+}
+
+export function estimatedMonthlyContributionUsd(
+  tier: Tier,
+  billing: BillingPeriod
+): number {
+  return netMonthlyRevenue(tier, billing) - estimatedMonthlyAiVendorCostUsd(tier);
 }
 
 function assertAiPlanEconomics() {
   for (const tier of TIERS) {
     if (!tier.features.ai && !tier.features.cloudVoice) continue;
     const estimated = estimatedMonthlyAiVendorCostUsd(tier);
-    const budget = aiVendorBudgetUsd(tier);
-    if (estimated > budget + 0.005) {
+    const annualBudget = aiVendorBudgetUsd(tier);
+    const monthlyContribution = estimatedMonthlyContributionUsd(tier, "monthly");
+    const contributionFloor = AI_ECONOMICS.minMonthlyContributionUsd[tier.key] ?? 0;
+    if (monthlyContribution + 0.005 < contributionFloor) {
       throw new Error(
-        `Plan ${tier.key} exceeds AI vendor budget: estimated $${estimated.toFixed(
+        `Plan ${tier.key} misses monthly contribution floor: $${monthlyContribution.toFixed(
           2
-        )} > budget $${budget.toFixed(2)}`
+        )} < $${contributionFloor.toFixed(2)}`
+      );
+    }
+    if (estimated > annualBudget + 0.005) {
+      throw new Error(
+        `Plan ${tier.key} exceeds annual AI vendor budget: estimated $${estimated.toFixed(
+          2
+        )} > budget $${annualBudget.toFixed(2)}`
       );
     }
   }

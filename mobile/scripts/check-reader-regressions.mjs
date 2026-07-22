@@ -66,7 +66,7 @@ const {
 const { renderPdfTextItems } = pdfExtractionModule;
 const { CompactMultilingualModel } = compactTextModelModule;
 const { HybridTextIntelligence } = hybridTextModule;
-const { TIERS } = planModule;
+const { AI_ECONOMICS, TIERS, estimatedMonthlyContributionUsd } = planModule;
 
 const planByKey = Object.fromEntries(TIERS.map((tier) => [tier.key, tier]));
 assert.equal(planByKey.free.limits.localVoiceSecondsPerDay, 5 * 60);
@@ -78,11 +78,23 @@ assert.equal(planByKey.reader_plus.features.ocr, false);
 assert.equal(planByKey.reader_plus.features.ai, false);
 assert.equal(planByKey.reader_plus.features.cloudVoice, false);
 assert.equal(planByKey.ai_pro.limits.cloudVoiceCharsPerMonth, 20_000);
-assert.equal(planByKey.power.limits.ocrPagesPerMonth, 1_500);
-assert.equal(planByKey.power.limits.aiActionsPerMonth, 250);
-assert.equal(planByKey.power.limits.cloudVoiceCharsPerMonth, 50_000);
+assert.equal(planByKey.ai_pro.limits.maxPages, 2_500);
+assert.equal(planByKey.ai_pro.products.monthly.priceUsd, 10.99);
+assert.equal(planByKey.power.limits.ocrPagesPerMonth, 2_500);
+assert.equal(planByKey.power.limits.aiActionsPerMonth, 400);
+assert.equal(planByKey.power.limits.cloudVoiceCharsPerMonth, 100_000);
 assert.equal(planByKey.power.products.monthly.priceUsd, 19.99);
 assert.equal(planByKey.power.products.yearly.priceUsd, 179.99);
+assert.ok(
+  estimatedMonthlyContributionUsd(planByKey.ai_pro, "monthly") >=
+    AI_ECONOMICS.minMonthlyContributionUsd.ai_pro
+);
+assert.ok(
+  estimatedMonthlyContributionUsd(planByKey.power, "monthly") >=
+    AI_ECONOMICS.minMonthlyContributionUsd.power
+);
+assert.ok(planByKey.ai_pro.limits.maxPages >= planByKey.reader_plus.limits.maxPages);
+assert.ok(planByKey.power.limits.maxPages >= planByKey.ai_pro.limits.maxPages);
 
 // Speech preparation is independent from rendering. It uses context and
 // structure, preserves lexical content, and maps every spoken character back

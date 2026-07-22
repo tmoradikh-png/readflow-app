@@ -1,6 +1,6 @@
 # readFlow App Store Release Packet
 
-Updated: 2026-06-29
+Updated: 2026-07-22
 
 This packet gathers iOS App Store listing text, App Review notes, subscription
 disclosures, and App Privacy worksheet notes. Keep it in sync with
@@ -23,14 +23,16 @@ Policy sources checked on 2026-06-29:
 
 Current source status:
 
-- Source iOS candidate is `1.0.23 / buildNumber 23`.
+- Shared source candidate is `1.0.50 / buildNumber 50`; iOS commerce and
+  TestFlight still require separate completion before submission.
 - EAS iOS build history returned `[]` on 2026-06-29, so no iOS build is recorded
   yet for the Expo project.
 - Bundle id is `com.urmiaworks.readflow`.
 - Release checker validates iOS bundle id, build number, export compliance,
   foreground-only audio, no microphone usage string, and EAS iOS archive config.
-- Free tier is a limited manual preview with no read-aloud, OCR, AI, rF AI, or
-  Cloud AI.
+- Free tier includes one supported native-text import up to 300 pages and a
+  5-minute daily rF AI preview where the local English model is supported. It
+  has no OCR, AI reading help, or Cloud AI.
 
 Not ready for paid public launch:
 
@@ -151,13 +153,13 @@ Subscriptions renew automatically unless cancelled before the end of the current
 Plan text:
 
 ```text
-Free: Limited manual reading preview. No read-aloud, OCR, AI, rF AI, or Cloud AI.
+Free: One supported native-text import up to 300 pages, plus a 5-minute daily rF AI preview where supported. No OCR, AI reading help, or Cloud AI.
 
 Reader Plus: Full native-text reading for supported PDFs and text-based Word .docx files, bookmarks, saved progress, and Phone voice. OCR and AI are not included.
 
 AI Pro: Reader Plus features, 750 OCR pages/month, 150 AI reading-help actions/month, unlimited rF AI where supported, and 20,000 Cloud AI voice characters/month for approved languages.
 
-Power: Higher limits for heavy readers and scanned-book workflows: 1,500 OCR pages/month, 250 AI actions/month, and 50,000 Cloud AI voice characters/month for approved languages.
+Power: Higher limits for heavy readers and scanned-book workflows: 2,500 OCR pages/month, 400 AI actions/month, and 100,000 Cloud AI voice characters/month for approved languages.
 ```
 
 ## App Review Notes

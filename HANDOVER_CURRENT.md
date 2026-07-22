@@ -14,7 +14,7 @@ keys, or recovery codes.
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
 - Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source and side-by-side QA candidate: `1.0.49` / version code `55`.
+- Current source release candidate: `1.0.50` / version code `56`.
   It contains the reader stability, reviewer-access, page-continuity, title,
   reference-marker, bounded local-synthesis, and independent speech
   text-intelligence and progressive-rF-playback repairs described below. It is
@@ -30,8 +30,8 @@ keys, or recovery codes.
   Play Store distribution. Bundletool verified package
   `com.urmiaworks.readflow`, version `1.0.29 (35)`, required foreground audio
   permissions, and no `RECORD_AUDIO` permission.
-- The next production AAB source is prepared as `1.0.49 (55)`. Recheck EAS and
-  Play before building; if code `55` has been consumed there, increment it rather
+- The next production AAB source is prepared as `1.0.50 (56)`. Recheck EAS and
+  Play before building; if code `56` has been consumed there, increment it rather
   than reusing it.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
@@ -136,9 +136,14 @@ has unlimited supported native-text reading and 30 downloaded rF AI minutes/day,
 with no OCR, text AI, or Cloud AI allowance. AI Pro and Power have unlimited
 downloaded rF AI. The 2026-07-22 commercial rebalance reduces AI Pro Cloud AI
 voice to 20,000 characters/month and changes Power to $19.99/month or
-$179.99/year with 1,500 OCR pages, 250 AI actions, and 50,000 Cloud AI voice
-characters/month. The matching Google Play base-plan prices were saved on
-2026-07-22; Google recalculated the regional prices for new subscribers.
+  $179.99/year with 2,500 OCR pages, 400 AI actions, and 100,000 Cloud AI voice
+  characters/month. AI Pro is $10.99/month or $119.99/year. The matching
+  Google Play base-plan prices must be verified for the 1.0.50 release; Power
+  pricing was saved on
+  2026-07-22; Google recalculated the regional prices for new subscribers.
+
+The operational quality, language, document-limit, monitoring, subscription,
+and promotion source of truth is `QUALITY_SUPPORT_AND_RISK_REGISTER.md`.
 
 The permanent bug ledger and release matrix is
 `READER_REGRESSION_CHECKLIST.md`. `npm run check:release` now executes its pure
@@ -900,6 +905,8 @@ Rules:
 - `RELEASE_GUIDE.md`: Android build and Play release procedure.
 - `IOS_RELEASE_GUIDE.md`: iOS/TestFlight plan.
 - `COST_MODEL.md`: pricing, limits, and cost guardrails.
+- `QUALITY_SUPPORT_AND_RISK_REGISTER.md`: language/document behavior, known
+  limitations, monitoring, support triage, subscription tracing, and promotions.
 - `MARKETING_PLAY_STORE.md`: Play/website marketing copy and claims limits.
 - `PRIVACY_POLICY_DRAFT.md`, `TERMS_OF_USE_DRAFT.md`,
   `PLAY_DATA_SAFETY_DRAFT.md`: legal/app-content drafts.
@@ -907,7 +914,7 @@ Rules:
 ## Current Follow-Ups
 
 Owner's numbered priorities, independent text-intelligence layer, and
-progressive rF AI playback are in the current `1.0.49 (55)` source. The
+progressive rF AI playback are in the current `1.0.50 (56)` source. The
 standalone reviewer build passed startup and progressive runtime playback.
 These items remain for human audible/lifecycle verification before production:
 
@@ -922,7 +929,7 @@ These items remain for human audible/lifecycle verification before production:
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
-- Build the production AAB from the tagged `1.0.49 (55)` source after completing
+- Build the production AAB from the tagged `1.0.50 (56)` source after completing
   the remaining audible reader gates. The older
   `artifacts/readflow-1.0.29-35.aab` does not contain the final repairs.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.

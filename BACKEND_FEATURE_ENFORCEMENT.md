@@ -27,9 +27,9 @@ AI, OCR, or cloud TTS features**.
 | **Local PDF reading** | 300 pages/doc | Full native text PDFs | Unlimited | Full | Full |
 | **On-device rF AI** | 5 min/day | 30 min/day | Unlimited | Unlimited | Unlimited |
 | **Server PDF extraction** | 1 PDF/mo | 100/mo | Review-only high cap | 300/mo | 1000/mo |
-| **AI summary/explain/ask** | 402 Blocked | 402 Blocked | 402 Blocked | 150/mo | 250/mo |
-| **OCR (scanned PDFs)** | 402 Blocked | 402 Blocked | 402 Blocked | 750/mo | 1500/mo |
-| **Cloud TTS (AI voice)** | 402 Blocked | 402 Blocked | 402 Blocked | 20k chars/mo | 50k chars/mo |
+| **AI summary/explain/ask** | 402 Blocked | 402 Blocked | 402 Blocked | 150/mo | 400/mo |
+| **OCR (scanned PDFs)** | 402 Blocked | 402 Blocked | 402 Blocked | 750/mo | 2500/mo |
+| **Cloud TTS (AI voice)** | 402 Blocked | 402 Blocked | 402 Blocked | 20k chars/mo | 100k chars/mo |
 | **Export** | 402 Blocked | 402 Blocked | Allowed | 402 Blocked | Allowed |
 
 *TTS is cached in-memory; actual OpenAI usage varies by unique text/voice/speed
@@ -404,7 +404,7 @@ Check this header to verify the backend correctly identified the user's tier.
 
 ✅ **AI Pro / Power Cloud AI voice is capped:**
 - AI Pro: 20k generated characters/month
-- Power: 50k generated characters/month
+- Power: 100k generated characters/month
 - Extra voice must be sold through a paid top-up or fall back to device voice
 
 No UI trick or client-side hack can bypass this. The backend is the source of truth.

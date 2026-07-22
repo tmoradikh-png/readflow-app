@@ -118,7 +118,11 @@ plays the returned MP3. The reader keeps natural audio chunks intact while the
 UI highlights the active rendered line. Cloud voice is not unlimited:
 
 - AI Pro: 20k generated characters/month.
-- Power: 50k generated characters/month.
+- Power: 100k generated characters/month.
+
+Operational quality, language behavior, large-document handling, bug triage,
+subscription tracing, and promotion procedures are maintained in
+[`QUALITY_SUPPORT_AND_RISK_REGISTER.md`](QUALITY_SUPPORT_AND_RISK_REGISTER.md).
 
 rF AI voice is implemented through `react-native-sherpa-onnx` with the
 on-demand Supertonic Reader model

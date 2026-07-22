@@ -58,7 +58,7 @@ const PLANS: Plan[] = [
     name: "AI Pro",
     tagline: "Summaries, explanations and Q&A on any PDF.",
     recommended: true,
-    monthly: 12.99,
+    monthly: 10.99,
     annualPerMonth: 10,
     annualTotal: 119.99,
     perks: [
@@ -79,8 +79,8 @@ const PLANS: Plan[] = [
     perks: [
       "Everything in AI Pro",
       "Export notes & summaries",
-      "Cloud AI voice - 50k characters / month",
-      "Highest limits - 1,500 OCR / 250 AI a month",
+      "Cloud AI voice - 100k characters / month",
+      "Highest limits - 2,500 OCR / 400 AI a month",
     ],
   },
 ];

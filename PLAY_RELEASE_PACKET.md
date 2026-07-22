@@ -1,6 +1,6 @@
 # readFlow Play Release Packet
 
-Updated: 2026-07-15
+Updated: 2026-07-22
 
 This packet gathers the launch text and review checklist for Google Play. Keep
 it in sync with `PAYMENT_SETUP.md`, `PRIVACY_POLICY_DRAFT.md`,
@@ -17,7 +17,7 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.30 / versionCode 36`.
+- Source release candidate is `1.0.50 / versionCode 56`.
 - Release checker passes for the current source configuration.
 - Android permissions include the minimum required for subscriptions plus
   generated-audio playback/model download services: `INTERNET`,
@@ -202,13 +202,13 @@ Subscriptions renew automatically unless cancelled in Google Play before the end
 Plan text:
 
 ```text
-Free: Limited manual reading preview. No read-aloud, OCR, AI, rF AI, or Cloud AI.
+Free: One supported native-text import up to 300 pages, plus a 5-minute daily rF AI preview where supported. No OCR, AI reading help, or Cloud AI.
 
 Reader Plus: Full native-text reading for supported PDFs and text-based Word .docx files, bookmarks, saved progress, and Phone voice. OCR and AI are not included.
 
 AI Pro: Reader Plus features, 750 OCR pages/month, 150 AI reading-help actions/month, unlimited rF AI where supported, and 20,000 Cloud AI voice characters/month for approved languages.
 
-Power: Higher limits for heavy readers and scanned-book workflows: 1,500 OCR pages/month, 250 AI actions/month, and 50,000 Cloud AI voice characters/month for approved languages.
+Power: Higher limits for heavy readers and scanned-book workflows: 2,500 OCR pages/month, 400 AI actions/month, and 100,000 Cloud AI voice characters/month for approved languages.
 ```
 
 ## App Review Notes

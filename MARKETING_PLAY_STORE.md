@@ -245,9 +245,9 @@ Message:
 
 Includes:
 
-- 250 AI actions/month.
-- 1,500 OCR pages/month.
-- 50,000 Cloud AI voice characters/month for approved languages.
+- 400 AI actions/month.
+- 2,500 OCR pages/month.
+- 100,000 Cloud AI voice characters/month for approved languages.
 - Higher file/page limits.
 
 ## Play Store Draft
