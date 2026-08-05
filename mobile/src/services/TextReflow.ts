@@ -594,6 +594,13 @@ function stripNonReadingLines(
     .split("\n");
   const kept: string[] = [];
   let inFootnoteBlock = false;
+  const contentIndexes = lines
+    .map((line, index) => (line.trim() ? index : -1))
+    .filter((index) => index >= 0);
+  const edgeIndexes = new Set([
+    ...contentIndexes.slice(0, 3),
+    ...contentIndexes.slice(-3),
+  ]);
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -612,7 +619,7 @@ function stripNonReadingLines(
       continue;
     }
 
-    if (shouldSkipReaderLine(line, pageNumber, skipLines)) continue;
+    if (shouldSkipReaderLine(line, pageNumber, skipLines, edgeIndexes.has(i))) continue;
     kept.push(line);
   }
 
@@ -622,15 +629,19 @@ function stripNonReadingLines(
 function shouldSkipReaderLine(
   line: string,
   pageNumber?: number,
-  skipLines?: Set<string>
+  skipLines?: Set<string>,
+  isPageEdge = false
 ): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
   if (isStandaloneFootnoteMarkerLine(trimmed)) return true;
   const normalized = normalizeReaderLine(trimmed);
   if (!normalized) return false;
-  if (skipLines?.has(normalized)) return true;
-  if (isPageNumberLine(normalized, pageNumber)) return true;
+  if (
+    isPageEdge &&
+    (skipLines?.has(normalized) || skipLines?.has(`#pattern:${boilerplatePattern(normalized)}`))
+  ) return true;
+  if (isPageEdge && isPageNumberLine(normalized, pageNumber)) return true;
   if (isUrlOrWatermarkLine(normalized)) return true;
   if (/^[._=\-*~•·\s]{4,}$/.test(trimmed)) return true;
   return false;
@@ -669,15 +680,23 @@ function buildRepeatedSkipLines(pages: PdfPage[]): Set<string> {
   const counts = new Map<string, number>();
   for (const page of pages) {
     const seen = new Set<string>();
-    for (const line of (page.text || "").split(/\r?\n/)) {
+    const lines = (page.text || "").split(/\r?\n/).filter((line) => line.trim());
+    const edgeLines = [...lines.slice(0, 3), ...lines.slice(-3)];
+    for (const line of edgeLines) {
       const normalized = normalizeReaderLine(line);
       if (!isRepeatableBoilerplate(normalized)) continue;
       seen.add(normalized);
+      const pattern = boilerplatePattern(normalized);
+      if (pattern !== normalized) seen.add(`#pattern:${pattern}`);
     }
     for (const line of seen) counts.set(line, (counts.get(line) || 0) + 1);
   }
 
-  const threshold = Math.max(3, Math.ceil(pages.length * 0.18));
+  // Running furniture often belongs to one preface/chapter rather than the
+  // complete book. Requiring a large percentage of every page leaves those
+  // section headers in long books, while three edge-only repeats are already
+  // strong evidence that a line is not body prose.
+  const threshold = 3;
   const skip = new Set<string>();
   for (const [line, count] of counts) {
     if (count >= threshold) skip.add(line);
@@ -689,14 +708,28 @@ function isRepeatableBoilerplate(normalized: string): boolean {
   if (normalized.length < 4 || normalized.length > 90) return false;
   if (isUrlOrWatermarkLine(normalized)) return true;
   if (/^\d+$/.test(normalized)) return true;
+  if (/[.!?]$/.test(normalized)) return false;
   return true;
 }
 
+function boilerplatePattern(normalized: string): string {
+  return normalized
+    .replace(/^\b[ivxlcdm]{1,8}\b/i, "#roman")
+    .replace(/\b[ivxlcdm]{1,8}\b$/i, "#roman")
+    .replace(/\d+/g, "#")
+    // Old scans frequently damage a running Roman page label into another
+    // short token (for example `viii Preface` -> `ate Preface`). Group those
+    // edge-only variants by their stable section title.
+    .replace(/^(?:#roman|[a-z]{1,4})\s+/i, "#edge ")
+    .replace(/\s+(?:#roman|[a-z]{1,4})$/i, " #edge");
+}
+
 function isPageNumberLine(normalized: string, pageNumber?: number): boolean {
+  if (/^(?:\d+|[ivxlcdm]{1,8})$/i.test(normalized)) return true;
+  if (/^(?:page|صفحه)\s+(?:\d+|[ivxlcdm]{1,8})$/i.test(normalized)) return true;
   if (!pageNumber || pageNumber < 1) return false;
   const page = String(pageNumber);
-  if (normalized === page) return true;
-  return normalized === `page ${page}` || normalized === `صفحه ${page}`;
+  return normalized === page || normalized === `page ${page}` || normalized === `صفحه ${page}`;
 }
 
 function isUrlOrWatermarkLine(normalized: string): boolean {

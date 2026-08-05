@@ -9,13 +9,14 @@ import {
 } from "react-native";
 import { PDFParser, ParsedPdf } from "../services/PDFParser";
 import { ImportProgress, ImportPhase } from "../components/ImportProgress";
-import { theme } from "../theme";
+import { AppTheme, useThemedStyles } from "../theme";
 
 interface Props {
   onParsed: (doc: ParsedPdf) => void;
 }
 
 export function HomeScreen({ onParsed }: Props) {
+  const styles = useThemedStyles(createStyles);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imp, setImp] = useState<{
@@ -97,6 +98,7 @@ export function HomeScreen({ onParsed }: Props) {
 }
 
 function Feature({ icon, text }: { icon: string; text: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.feature}>
       <Text style={styles.featureIcon}>{icon}</Text>
@@ -105,7 +107,7 @@ function Feature({ icon, text }: { icon: string; text: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   container: { flex: 1, padding: theme.spacing(3), justifyContent: "center", gap: theme.spacing(2) },
   logo: { color: theme.colors.text, fontSize: 40, fontWeight: "900", letterSpacing: 0 },

@@ -80,6 +80,14 @@ Supertonic 3 runtime/model configuration.
 | RF-R49 | Ambiguous text silently triggers paid AI or an online rewrite drops words | Offline preparation remains the default; online fallback is explicit, entitled, capped, and fidelity-checked | Reader pins `allowOnlineFallback:false`; mobile and backend reject output that changes lexical token order/content |
 | RF-R50 | A multilingual preparation feature is mistaken for multilingual OCR or rF voices | Handle structure across Unicode scripts without claiming unsupported extraction or pronunciation | Script/language metadata is universal; OCR packs and TTS voice-language support remain separate product capabilities |
 | RF-R51 | Tapping text takes many seconds to speak, or rF AI stalls mid-paragraph | Begin playback after the first safe sentence is synthesized and render the remaining sentences during playback | Progressive `segments0.6` pipeline; safe long-comma clauses shorten synthesis starvation, one bounded standby player removes player creation from handoff, and source checks pin text fidelity/progress; measure cold and warm tap latency on every phone candidate |
+| RF-R52 | rF AI silently stops while Listen still appears active, or skips the next block after an audio failure | Detect missing playback progress and stop at the retained source offset with an explicit retry notice | Local playback watchdog plus Reader source checks prohibit local-error auto-advance; connected-phone QA must leave the highlight and resume point at the interrupted words |
+| RF-R53 | A paid subscriber repeatedly sees purchase prompts or temporarily appears Free | Apply an active RevenueCat tier immediately and never let a stale backend response downgrade it | Client tier snapshots mirror backend limits, current/lower plan purchases are disabled, and backend refresh continues for vendor-cost enforcement |
+| RF-R54 | OCR/native imports mix running headers, footers, and page labels into body prose | Remove repeated furniture only from the first/last three nonblank page lines, including changing digit/Roman patterns | Four-page regression fixture removes `Rousseau - Reveries 7` and `Preface vii` patterns while retaining body numbers and `BOOK VII` |
+| RF-R55 | Tables and figures disappear in reflow view | Keep the stored source PDF available as an Original/Reflow reader mode; original visuals are never sent to speech | Source check pins the native PDF viewer and disables listening controls in Original mode; test a figure and table on the connected phone |
+| RF-R56 | App remains light on a dark phone or offers no appearance override | Default to system appearance and persist explicit System/Light/Dark selection | Theme context updates all main UI surfaces and status bars; test live system switching plus both overrides |
+| RF-R57 | rF AI finishes one clip after phone lock and then stops because JavaScript is suspended | Keep the generated-audio scheduler alive with an Android media-playback foreground service for eligible playback only | Source checks pin the service type and Reader lifecycle; lock the connected phone and verify at least five clip handoffs before unlocking |
+| RF-R58 | Reopening a saved location jumps several pages backward | Restore the saved page and sentence before allowing backward window expansion | Earlier-page prep starts only after a deliberate user scroll; connected-phone force-stop/reopen retained page 8 and the same sentence |
+| RF-R59 | Next/Previous in Original mode opens an OCR upgrade gate on scanned pages | Original-mode navigation must move directly through source PDF pages without text extraction or OCR | Connected-phone test navigated scanned `Confessions` pages 1-5 and rendered page 5 without a paywall |
 
 ## Connected-Phone Candidate Gate
 
@@ -137,14 +145,17 @@ Supertonic 3 runtime/model configuration.
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.
 
-Latest record: `1.0.49 (55)`, Samsung SM-S918B, QA Reviewer. The signed QA APK
-was installed in place with the retained library/model. Progressive rF AI
-speech text preserves the reported page-58 names plus page-39 `would have`
-exactly before synthesis. The preceding `1.0.46` phone trace found ordinary
-track gaps of about 0.7-0.95 seconds and occasional 2.5-5.3 second stalls;
-`1.0.48` removed the multi-second stalls in an eight-track trace but retained
-0.48-0.67 second player-creation gaps. `1.0.49` pre-creates one next player and
-routes the explicit language hint through native Supertonic generation.
-`1.0.49` cold/warm timing, subjective pronunciation, five-sentence continuity,
-and the older transient blank Follow reposition must still pass the connected-
-phone listening gate before public promotion.
+Latest record: `1.0.51 (58)`, Samsung SM-G975F, QA Reviewer. The side-by-side
+QA APK retained four imported books. rF AI continued across at least seven
+clip handoffs while the phone was locked for 61 seconds, then completed a
+second 118-second run with 27 clip starts, synchronized highlighting, and no
+watchdog, crash, or silent stop. A force-stop/reopen retained page 8 and the
+same sentence after the backward-window fix. Original mode rendered scanned
+`Confessions` pages 1-5 without invoking OCR or a purchase gate. System,
+Light, and Dark appearance persistence passed. A sandbox purchase in the old
+production `1.0.28 (34)` reproduced its temporary repeated-buy prompt and then
+resolved to AI Pro after relaunch; the `1.0.51` immediate-entitlement fix still
+needs an internal Play build because the `.qa` package cannot use production
+Google Billing. Objective audio activity and timing were measured, but audible
+pronunciation/timbre remains an owner listening check because this environment
+did not expose microphone capture.

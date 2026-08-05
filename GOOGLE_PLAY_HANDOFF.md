@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-07-22
+Updated: 2026-08-05
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -8,13 +8,17 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 
 ## Current Play Status
 
-- Google Play production release `1.0.28 (34)` is the currently live release.
-  Play Console reported 7 active-device installs while preparing the next
-  release.
+- Local QA candidate `1.0.51 (58)` uses side-by-side package
+  `com.urmiaworks.readflow.qa` and has not been uploaded to EAS or Play.
+  Production remains `1.0.50 (57)`, and production code `58` is not consumed.
+- Google Play production release `1.0.50 (57)` is currently live. On
+  2026-07-27 Play Console showed the production track as active, latest release
+  `1.0.50 (57)`, status `Available on Google Play`, released on Jul 22 at
+  8:51 PM, with 177 countries/regions and 0 installs shown in the track
+  summary.
 - Production release `1.0.50 (57)` was built from commit `9870a69`, uploaded
-  manually, and submitted for a 100% rollout on 2026-07-22. Play reported
-  `Changes in review` while automated quick checks run. Managed publishing is
-  off, so approval publishes automatically.
+  manually, and submitted for a 100% rollout on 2026-07-22. Managed publishing
+  is off.
 - EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`.
 - Artifact:
   `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`.

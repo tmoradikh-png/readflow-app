@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { theme } from "../theme";
+import { AppTheme, useThemedStyles } from "../theme";
 
 export interface ThemedNoticeAction {
   label: string;
@@ -25,6 +25,7 @@ export function ThemedNotice({
   secondary,
   onClose,
 }: Props) {
+  const styles = useThemedStyles(createStyles);
   const main = primary ?? { label: "OK" };
 
   function press(action?: ThemedNoticeAction) {
@@ -76,7 +77,7 @@ export function ThemedNotice({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(20,17,11,0.54)",

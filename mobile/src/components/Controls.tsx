@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Slider from "@react-native-community/slider";
-import { theme } from "../theme";
+import { AppTheme, useAppTheme, useThemedStyles } from "../theme";
 import { VoiceEngine } from "../services/Preferences";
 
 export interface ReadingSettings {
@@ -51,6 +51,8 @@ export function Controls({
   onVoiceEngineChange,
   bottomInset = 0,
 }: Props) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={[styles.wrap, { paddingBottom: theme.spacing(1) + bottomInset }]}>
       {/* Pull handle — tap to show/hide the reading settings. Always available so
@@ -161,6 +163,7 @@ function Stepper({
   onDec: () => void;
   fmt: (v: number) => string;
 }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.stepper}>
       <Pressable style={styles.stepBtn} onPress={onDec}>
@@ -174,7 +177,7 @@ function Stepper({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   wrap: {
     backgroundColor: theme.colors.surface,
     borderTopWidth: 1,

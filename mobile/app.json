@@ -2,9 +2,9 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.50",
+    "version": "1.0.51",
     "orientation": "default",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "scheme": "readflow",
     "primaryColor": "#D95D39",
     "backgroundColor": "#F4ECD6",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 57,
+      "versionCode": 58,
       "permissions": [
         "INTERNET",
         "android.permission.FOREGROUND_SERVICE",

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Bookmark, Bookmarks } from "../services/Bookmarks";
 import { ThemedNotice } from "./ThemedNotice";
-import { theme } from "../theme";
+import { AppTheme, useAppTheme, useThemedStyles } from "../theme";
 
 interface CurrentPos {
   page: number;
@@ -39,6 +39,8 @@ export function BookmarkPanel({
   onGoToPage,
   onClose,
 }: Props) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [items, setItems] = useState<Bookmark[]>([]);
   const [tag, setTag] = useState("");
   const [pageInput, setPageInput] = useState("");
@@ -173,7 +175,7 @@ export function BookmarkPanel({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(20,17,11,0.3)",

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Linking,
   Modal,
@@ -8,7 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
-import { theme } from "../theme";
+import { AppTheme, useThemedStyles } from "../theme";
 
 /**
  * In-app upgrade notice / paywall shown to free users when they tap a locked
@@ -104,6 +104,7 @@ interface Props {
   purchaseError?: string | null;
   onPurchase?: (planKey: UpgradePlanKey, billing: UpgradeBilling) => void;
   onRestore?: () => void;
+  activeTier?: string;
 }
 
 export function UpgradeSheet({
@@ -117,16 +118,26 @@ export function UpgradeSheet({
   purchaseError,
   onPurchase,
   onRestore,
+  activeTier = "free",
 }: Props) {
+  const styles = useThemedStyles(createStyles);
   const [billing, setBilling] = useState<UpgradeBilling>("annual");
   const [selected, setSelected] = useState<UpgradePlanKey>("ai_pro");
 
   const plan = PLANS.find((p) => p.key === selected) ?? PLANS[1];
+  const tierRank: Record<string, number> = { free: 0, reader_plus: 1, ai_pro: 2, power: 3 };
+  const selectedIsUpgrade = tierRank[plan.key] > (tierRank[activeTier] || 0);
+
+  useEffect(() => {
+    if (!visible) return;
+    const next = PLANS.find((candidate) => tierRank[candidate.key] > (tierRank[activeTier] || 0));
+    if (next) setSelected(next.key);
+  }, [activeTier, visible]);
 
   const onPrimary = () => {
     // When purchases are live this opens the native subscription flow for the
     // selected plan + billing period. Until then we never show a fake button.
-    if (!purchasingAvailable) return;
+    if (!purchasingAvailable || !selectedIsUpgrade) return;
     onPurchase?.(plan.key, billing);
   };
 
@@ -189,16 +200,21 @@ export function UpgradeSheet({
           <ScrollView style={styles.cards} contentContainerStyle={styles.cardsContent}>
             {PLANS.map((p) => {
               const isSel = p.key === selected;
+              const isCurrent = p.key === activeTier;
+              const isUnavailable = tierRank[p.key] <= (tierRank[activeTier] || 0);
               const perMonth = billing === "annual" ? p.annualPerMonth : p.monthly;
               return (
                 <Pressable
                   key={p.key}
                   style={[styles.card, isSel && styles.cardSel, p.recommended && styles.cardRec]}
-                  onPress={() => setSelected(p.key)}
+                  onPress={() => !isUnavailable && setSelected(p.key)}
+                  disabled={isUnavailable}
                 >
                   <View style={styles.cardTop}>
                     <Text style={styles.cardName}>{p.name}</Text>
-                    {p.recommended ? (
+                    {isCurrent ? (
+                      <Text style={styles.recBadge}>CURRENT</Text>
+                    ) : p.recommended ? (
                       <Text style={styles.recBadge}>RECOMMENDED</Text>
                     ) : null}
                   </View>
@@ -229,15 +245,20 @@ export function UpgradeSheet({
 
           {/* primary CTA */}
           <Pressable
-            style={[styles.cta, (!purchasingAvailable || purchasing) && styles.ctaDisabled]}
+            style={[
+              styles.cta,
+              (!purchasingAvailable || purchasing || !selectedIsUpgrade) && styles.ctaDisabled,
+            ]}
             onPress={onPrimary}
-            disabled={!purchasingAvailable || purchasing}
+            disabled={!purchasingAvailable || purchasing || !selectedIsUpgrade}
           >
             <Text style={styles.ctaText}>
               {purchaseSetupLoading
                 ? "Checking Google Play..."
                 : purchasing
                   ? "Opening Google Play..."
+                  : !selectedIsUpgrade
+                    ? "Current plan active"
                   : purchasingAvailable
                     ? `Upgrade to ${plan.name}`
                     : "Setting up purchases"}
@@ -282,7 +303,7 @@ export function UpgradeSheet({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(20,17,11,0.55)",

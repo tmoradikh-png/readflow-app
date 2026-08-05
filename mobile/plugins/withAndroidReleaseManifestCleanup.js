@@ -10,6 +10,7 @@ const REMOVE_PERMISSIONS = new Set([
 const LIBRARY_MANIFESTS = [
   "node_modules/expo-audio/android/src/main/AndroidManifest.xml",
   "node_modules/@kesha-antonov/react-native-background-downloader/android/src/main/AndroidManifest.xml",
+  "node_modules/react-native-background-actions/android/src/main/AndroidManifest.xml",
 ];
 
 const REMOVE_SERVICE_NAMES = [
@@ -21,6 +22,8 @@ const FOREGROUND_SERVICE_TYPES = new Map([
   ["expo.modules.audio.service.AudioControlsService", "mediaPlayback"],
   [".ResumableDownloadService", "dataSync"],
   ["com.eko.ResumableDownloadService", "dataSync"],
+  [".RNBackgroundActionsTask", "mediaPlayback"],
+  ["com.asterinet.react.bgactions.RNBackgroundActionsTask", "mediaPlayback"],
 ]);
 
 function cleanManifestText(text) {

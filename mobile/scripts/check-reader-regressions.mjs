@@ -541,6 +541,45 @@ const canonicalLegacyYear = TextReflow.buildSentences([
     text: "Income in 2024.11 This continues. A real version 2024.11 remains unchanged.",
   },
 ]);
+
+const edgeBoilerplateRows = TextReflow.buildSentences(
+  [7, 8, 9, 10].map((page) => ({
+    page,
+    source: "native",
+    text: `Rousseau - Reveries ${page}\nPreface ${["vii", "viii", "ix", "x"][page - 7]}\nThis is body prose on page ${page}.\n${page === 7 ? "BOOK VII\n" : ""}The body continues without its running furniture.\nAnother ordinary body sentence remains.\n${page}`,
+  }))
+);
+const edgeBoilerplateText = edgeBoilerplateRows.map((row) => row.text).join(" ");
+assert.doesNotMatch(edgeBoilerplateText, /Rousseau - Reveries|Preface (?:vii|viii|ix|x)/i);
+assert.match(edgeBoilerplateText, /BOOK VII/);
+assert.match(edgeBoilerplateText, /body prose on page 7/i);
+const longBookFurnitureRows = TextReflow.buildSentences(
+  Array.from({ length: 283 }, (_, index) => {
+    const page = index + 1;
+    const prefacePage = page >= 6 && page <= 15;
+    const roman = ["vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv", "xvi"];
+    const romanPage = roman[page - 6];
+    const damagedHeader =
+      page === 7
+        ? "ate Preface"
+        : page === 13
+          ? "iy Preface"
+          : page % 2
+            ? `${romanPage} Preface`
+            : `Preface ${romanPage}`;
+    return {
+      page,
+      source: "native",
+      text: prefacePage
+        ? `${damagedHeader}\nPreface body sentence ${page} remains.\n${romanPage}`
+        : `Ordinary body sentence ${page} remains.\n${page}`,
+    };
+  })
+);
+const longBookFurnitureText = longBookFurnitureRows.map((row) => row.text).join(" ");
+assert.doesNotMatch(longBookFurnitureText, /\b(?:vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi) Preface\b|\bPreface (?:vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi)\b/i);
+assert.doesNotMatch(longBookFurnitureText, /\b(?:ate|iy) Preface\b/i);
+assert.match(longBookFurnitureText, /Preface body sentence 6 remains/);
 assert.equal(
   canonicalLegacyYear[0]?.text,
   "Income in 2024.¹¹ This continues. A real version 2024.11 remains unchanged.",
@@ -711,7 +750,7 @@ assert.equal(
   normalizeEnglishNumbersForSpeech(
     "The study used 743 stations and 23,421 voters, with 7.4 million segments in 2017. The campaign reported $1.12 billion and $1.4 mil."
   ),
-  "The study used seven hundred forty three stations and twenty three thousand four hundred twenty one voters, with seven point four million segments in two thousand seventeen. The campaign reported one point one two billion dollars and one point four million dollars.",
+  "The study used seven hundred forty three stations and twenty three thousand four hundred twenty one voters, with seven point four million segments in twenty seventeen. The campaign reported one point one two billion dollars and one point four million dollars.",
   "rF AI must receive generic word forms for long numbers, grouped numbers, decimals, years, and scaled currency"
 );
 assert.equal(
@@ -752,6 +791,19 @@ assert.deepEqual(
     { text: "The U S Army continues", pauseAfterMs: 300 },
   ],
   "decimal values retain their meaning as words while initialism and sentence dots stay unspoken"
+);
+assert.equal(
+  normalizeLocalSpeechText("In April 1963, by 11:30 p.m., 404 BCE was discussed; the work returned in 1998 and early 2003."),
+  "In April nineteen sixty three, by eleven thirty p m, four hundred four B C E was discussed; the work returned in nineteen ninety eight and early two thousand three.",
+  "years, times, and historical eras must be explicit word sequences for rF AI"
+);
+assert.equal(
+  normalizeEnglishNumbersForSpeech("the 1920s, 1970s, and 2020s"),
+  "the nineteen twenties, nineteen seventies, and twenty twenties"
+);
+assert.equal(
+  normalizeEnglishNumbersForSpeech("Republic 536c-d, 359d-360b, and 188b"),
+  "Republic five hundred thirty six C to D, three hundred fifty nine D to three hundred sixty B, and one hundred eighty eight B"
 );
 assert.deepEqual(
   buildLocalSpeechSegments("First contents entry\u2014Second contents entry\u2014Third entry"),
@@ -911,6 +963,34 @@ assert.match(readerSource, /sourceOffsetForSpeech\(speech\.intelligence, spokenO
 assert.match(readerSource, /allowOnlineFallback: false/);
 assert.doesNotMatch(readerSource, /TITLE_CUES|titleCueFor/);
 assert.match(readerSource, /renderTokenText\(tokens, 0, highlightedRange\)/);
+assert.match(readerSource, /voiceMode !== "local"[\s\S]*advance\(\)[\s\S]*rF AI paused/);
+assert.match(readerSource, /sessionSpeedRef\.current = settingsRef\.current\.speed/);
+assert.match(readerSource, /<Pdf[\s\S]*source=\{\{ uri: doc\.sourceUri, cache: true \}\}/);
+assert.match(readerSource, /controlsShown && !showOriginal/);
+assert.match(
+  readerSource,
+  /function navigatePage[\s\S]*if \(showOriginal\)[\s\S]*setCurrentPage\(target\)/,
+  "Original PDF navigation must show scanned and image pages without invoking OCR gates"
+);
+assert.match(readerSource, /onPress=\{\(\) => navigatePage\(currentPage [+-] 1\)\}/g);
+const viewabilitySection = readerSource.slice(
+  readerSource.indexOf("const onViewableItemsChanged"),
+  readerSource.indexOf("function onScrollToIndexFailed")
+);
+assert.doesNotMatch(
+  viewabilitySection,
+  /pendingBackwardSeedRef/,
+  "restoring a saved page must not automatically prepend earlier rows and shift the viewport"
+);
+const scrollBeginSection = readerSource.slice(
+  readerSource.indexOf("function onReaderScrollBeginDrag"),
+  readerSource.indexOf("async function speakAt")
+);
+assert.match(
+  scrollBeginSection,
+  /pendingBackwardSeedRef\.current[\s\S]*setWindowStart/,
+  "earlier rows must remain available when the reader deliberately starts scrolling"
+);
 assert.doesNotMatch(
   readerSource,
   /function renderMeasuredLines/,
@@ -940,6 +1020,8 @@ assert.match(
 assert.match(localProviderSource, /generateSpeechSegment/);
 assert.match(localProviderSource, /await playSegment\(0\)/);
 assert.match(localProviderSource, /textRatio:/);
+assert.match(localProviderSource, /armPlaybackWatchdog/);
+assert.match(localProviderSource, /rF AI audio stopped responding/);
 assert.match(
   localProviderSource,
   /prepareStandby\(index \+ 1\)/,
@@ -977,6 +1059,19 @@ assert.match(
   "multipart import errors must retain quota code/status/feature"
 );
 const librarySource = fs.readFileSync(path.join(root, "src/screens/LibraryScreen.tsx"), "utf8");
+const themeSource = fs.readFileSync(path.join(root, "src/theme.ts"), "utf8");
+const appSource = fs.readFileSync(path.join(root, "App.tsx"), "utf8");
+const backgroundPlaybackSource = fs.readFileSync(
+  path.join(root, "src/services/BackgroundPlaybackService.ts"),
+  "utf8"
+);
+assert.match(themeSource, /type ThemeMode = "system" \| "light" \| "dark"/);
+assert.match(themeSource, /AsyncStorage\.setItem\(STORAGE_KEY, next\)/);
+assert.match(librarySource, /\["system", "light", "dark"\]/);
+assert.match(appSource, /entitlementForRevenueCatTier\(purchasedTier\)/);
+assert.match(readerSource, /setBackgroundPlaybackActive\(isPlaying && backgroundPlaybackAllowed\)/);
+assert.match(backgroundPlaybackSource, /foregroundServiceType: \["mediaPlayback"\]/);
+assert.match(backgroundPlaybackSource, /while \(BackgroundService\.isRunning\(\)\)/);
 assert.match(
   librarySource,
   /if \(isQuotaError\(e\)\) \{[\s\S]*Monthly document limit reached[\s\S]*setUpgrade/,

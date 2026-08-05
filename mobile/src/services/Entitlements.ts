@@ -63,6 +63,92 @@ export const FREE_ENTITLEMENT: EntitlementSnapshot = {
   source: "free",
 };
 
+type RevenueCatTier = "reader_plus" | "ai_pro" | "power";
+
+const REVENUECAT_ENTITLEMENTS: Record<RevenueCatTier, EntitlementSnapshot> = {
+  reader_plus: {
+    tier: "reader_plus",
+    name: "Reader Plus",
+    features: {
+      ads: false,
+      ai: false,
+      ocr: false,
+      serverExtract: true,
+      export: false,
+      cloudVoice: false,
+      unlimitedLibrary: true,
+      localVoice: true,
+    },
+    limits: {
+      ocrPagesPerMonth: 0,
+      aiActionsPerMonth: 0,
+      cloudVoiceCharsPerMonth: 0,
+      pdfsPerMonth: 100,
+      maxFileSizeMb: 100,
+      maxPages: 2000,
+      perDocPageCap: 0,
+      localVoiceSecondsPerDay: 30 * 60,
+    },
+    source: "revenuecat",
+  },
+  ai_pro: {
+    tier: "ai_pro",
+    name: "AI Pro",
+    features: {
+      ads: false,
+      ai: true,
+      ocr: true,
+      serverExtract: true,
+      export: false,
+      cloudVoice: true,
+      unlimitedLibrary: true,
+      localVoice: true,
+    },
+    limits: {
+      ocrPagesPerMonth: 750,
+      aiActionsPerMonth: 150,
+      cloudVoiceCharsPerMonth: 20_000,
+      pdfsPerMonth: 300,
+      maxFileSizeMb: 100,
+      maxPages: 2500,
+      perDocPageCap: 0,
+      localVoiceSecondsPerDay: 0,
+    },
+    source: "revenuecat",
+  },
+  power: {
+    tier: "power",
+    name: "Power",
+    features: {
+      ads: false,
+      ai: true,
+      ocr: true,
+      serverExtract: true,
+      export: true,
+      cloudVoice: true,
+      unlimitedLibrary: true,
+      localVoice: true,
+    },
+    limits: {
+      ocrPagesPerMonth: 2500,
+      aiActionsPerMonth: 400,
+      cloudVoiceCharsPerMonth: 100_000,
+      pdfsPerMonth: 1000,
+      maxFileSizeMb: 200,
+      maxPages: 5000,
+      perDocPageCap: 0,
+      localVoiceSecondsPerDay: 0,
+    },
+    source: "revenuecat",
+  },
+};
+
+export function entitlementForRevenueCatTier(
+  tier: RevenueCatTier
+): EntitlementSnapshot {
+  return REVENUECAT_ENTITLEMENTS[tier];
+}
+
 const QA_REVIEWER_ENTITLEMENT: EntitlementSnapshot = {
   tier: "reviewer",
   name: "QA Reviewer",

@@ -1,6 +1,6 @@
 # readFlow Payment Setup
 
-Updated: 2026-07-22
+Updated: 2026-08-05
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer
@@ -76,9 +76,20 @@ Already present:
   build opens the RevenueCat paywall and Google Play checkout for `AI Pro
   Yearly`.
 - Production release `1.0.50 (57)` was submitted for a 100% Play rollout on
-  2026-07-22. Its source and production backend use the plan prices and limits
-  in this document. End-to-end sandbox purchase/restore/cancel/expiry QA remains
-  required after Play makes the build available.
+  2026-07-22 and verified on 2026-07-27 as available on Google Play. Its source
+  and production backend use the plan prices and limits in this document.
+  End-to-end sandbox purchase/restore/cancel/expiry QA remains required.
+- On 2026-08-05 the connected phone's installed Play package was still
+  `1.0.28 (34)`. Google Play opened `AI Pro Yearly` with `Test card, always
+  approves` and explicitly said no charge. The sandbox subscription completed.
+  The old app initially kept its upgrade sheet open, reproducing the reported
+  repeated-purchase prompt, then showed AI Pro after force-stop/relaunch.
+- Local candidate `1.0.51 (58)` applies the active RevenueCat SDK tier
+  immediately, listens for CustomerInfo changes, and prevents a stale backend
+  response from downgrading it. Automated checks pass. Live Google Billing
+  cannot be exercised in `com.urmiaworks.readflow.qa` because that side-by-side
+  package is not the Play-listed application; repeat purchase/restore QA on the
+  next Play internal build before release.
 
 Remaining before paid QA is complete:
 

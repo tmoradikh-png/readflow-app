@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated, Easing } from "react-native";
-import { theme } from "../theme";
+import { AppTheme, useAppTheme, useThemedStyles } from "../theme";
 
 export type ImportPhase = "uploading" | "processing" | "done";
 
@@ -19,6 +19,8 @@ interface Props {
  * real percentage and MB transferred, with a phase label.
  */
 export function ImportProgress({ percent, phase, loadedBytes, totalBytes, fileName }: Props) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const fill = useRef(new Animated.Value(0)).current; // 0..1 of page height
   const shimmer = useRef(new Animated.Value(0)).current;
   const num = useRef(new Animated.Value(0)).current; // animated % for the counter
@@ -129,7 +131,7 @@ function fmtMB(bytes: number): string {
   return `${bytes} B`;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: theme.colors.bg,

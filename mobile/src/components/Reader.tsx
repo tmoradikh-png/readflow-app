@@ -17,6 +17,7 @@ import Constants from "expo-constants";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
+import Pdf from "react-native-pdf";
 import { ParsedPdf, PdfPage } from "../services/PDFParser";
 import { OcrLoader, OcrProgress } from "../services/OcrLoader";
 import { Sentence, TextReflow } from "../services/TextReflow";
@@ -55,7 +56,8 @@ import {
   loadLocalNeuralVoiceStatus,
   LocalNeuralVoiceStatus,
 } from "../services/LocalNeuralVoice";
-import { theme } from "../theme";
+import { AppTheme, useAppTheme, useThemedStyles } from "../theme";
+import { setBackgroundPlaybackActive } from "../services/BackgroundPlaybackService";
 
 interface Props {
   doc: ParsedPdf;
@@ -204,6 +206,8 @@ export function Reader({
   onRestorePurchases,
   onBack,
 }: Props) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   // One continuous, globally-indexed sentence list (id === array index).
   // Pages are mutable so on-demand OCR can fill in scanned pages as you read.
   const [pages, setPages] = useState<PdfPage[]>(doc.pages);
@@ -248,6 +252,7 @@ export function Reader({
   const [immersive, setImmersive] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [readerNotice, setReaderNotice] = useState<{
     title: string;
@@ -356,7 +361,6 @@ export function Reader({
   const windowEndRef = useRef(windowEnd);
   const suppressBackwardExpansionRef = useRef(initialSentenceIndex > 0);
   const pendingBackwardSeedRef = useRef(initialSentenceIndex > 0);
-  const backwardSeedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lineRangesRef = useRef<Map<number, LineRange[]>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
   const backgroundPlaybackAllowedRef = useRef(false);
@@ -389,6 +393,7 @@ export function Reader({
   const layoutRestorePendingRef = useRef(false);
   const isUserScrollingRef = useRef(false);
   const settingsRef = useRef(settings);
+  const sessionSpeedRef = useRef(settings.speed);
   // Stable tap handler so memoized rows never re-render on scroll/highlight.
   const onTapWordRef = useRef<(id: number, offset: number) => void>(() => {});
   const tapHandler = useRef((id: number, offset: number) => onTapWordRef.current(id, offset))
@@ -412,10 +417,6 @@ export function Reader({
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [loadingPageMsg, setLoadingPageMsg] = useState<string | null>(null);
   useEffect(() => {
-    if (backwardSeedTimerRef.current) {
-      clearTimeout(backwardSeedTimerRef.current);
-      backwardSeedTimerRef.current = null;
-    }
     ocrOfflineRef.current = false;
     pendingJumpRef.current = null;
     anchorRef.current = null;
@@ -487,6 +488,13 @@ export function Reader({
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
     };
   }, [isPlaying]);
+
+  useEffect(() => {
+    void setBackgroundPlaybackActive(isPlaying && backgroundPlaybackAllowed);
+    return () => {
+      void setBackgroundPlaybackActive(false);
+    };
+  }, [backgroundPlaybackAllowed, isPlaying]);
 
   useEffect(() => {
     if (voiceMode === desiredVoiceMode) return;
@@ -751,7 +759,6 @@ export function Reader({
       if (layoutSettleTimerRef.current) clearTimeout(layoutSettleTimerRef.current);
       if (scrollInteractionTimerRef.current) clearTimeout(scrollInteractionTimerRef.current);
       if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
-      if (backwardSeedTimerRef.current) clearTimeout(backwardSeedTimerRef.current);
       flushLocalVoiceUsage();
       saveLastReadRef.current();
       deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => {});
@@ -1246,23 +1253,6 @@ export function Reader({
       const currentWindowStart = windowStartRef.current;
       const currentWindowEnd = windowEndRef.current;
       if (
-        pendingBackwardSeedRef.current &&
-        sentence.id === currentWindowStart &&
-        currentWindowStart > 0
-      ) {
-        pendingBackwardSeedRef.current = false;
-        if (backwardSeedTimerRef.current) clearTimeout(backwardSeedTimerRef.current);
-        backwardSeedTimerRef.current = setTimeout(() => {
-          backwardSeedTimerRef.current = null;
-          setWindowStart((start) => {
-            const next = Math.max(0, start - READER_WINDOW_BACKWARD_EXPAND);
-            windowStartRef.current = next;
-            return next;
-          });
-          suppressBackwardExpansionRef.current = false;
-        }, 0);
-      }
-      if (
         suppressBackwardExpansionRef.current &&
         sentence.id > currentWindowStart + 8
       ) {
@@ -1322,6 +1312,15 @@ export function Reader({
 
   function onReaderScrollBeginDrag() {
     markUserScrollActive();
+    if (pendingBackwardSeedRef.current && windowStartRef.current > 0) {
+      pendingBackwardSeedRef.current = false;
+      suppressBackwardExpansionRef.current = false;
+      setWindowStart((start) => {
+        const next = Math.max(0, start - READER_WINDOW_BACKWARD_EXPAND);
+        windowStartRef.current = next;
+        return next;
+      });
+    }
     if (!followRef.current) return;
     followRef.current = false;
     setAutoFollow(false);
@@ -1360,7 +1359,8 @@ export function Reader({
       return;
     }
     const speechInput = textInputForSpeechChunk(chunk, f);
-    const speech = await speechForChunk(chunk, speechInput, settingsRef.current.speed);
+    const sessionSpeed = sessionSpeedRef.current;
+    const speech = await speechForChunk(chunk, speechInput, sessionSpeed);
     if (!playingRef.current || myEpoch !== epochRef.current) return;
     const firstPosition = locateChunkPosition(
       chunk,
@@ -1381,7 +1381,7 @@ export function Reader({
       const nextChunk = buildSpeechChunk(nextIndex, f, voiceMode, nextOffset);
       if (!nextChunk) break;
       const nextInput = textInputForSpeechChunk(nextChunk, f);
-      void speechForChunk(nextChunk, nextInput, settingsRef.current.speed)
+      void speechForChunk(nextChunk, nextInput, sessionSpeed)
         .then((nextSpeech) =>
           ttsRef.current.prefetch?.(nextSpeech.text, {
             language,
@@ -1444,23 +1444,8 @@ export function Reader({
               "AI voice allowance used",
             "Your Cloud AI allowance is used for this month. Phone voice can keep reading on Reader Plus and higher without cloud AI cost. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
           );
-      } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
+        } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
           localVoiceWarnedRef.current = true;
-          epochRef.current++;
-          playingRef.current = false;
-          setIsPlaying(false);
-          setLocalVoiceStatus((current) =>
-            current
-              ? { ...current, modelDownloaded: false, engineInstalled: false }
-              : getLocalNeuralVoiceStatus()
-          );
-          ttsRef.current.stop();
-          ttsRef.current = createTTSProvider("device");
-          setVoiceMode("device");
-          openLocalVoiceSetupNotice(
-            info.message ||
-              "Return to the shelf, open Voice, and download the one-time rF AI voice pack."
-          );
         } else if (info.reason === "language_unsupported" && !cloudVoiceLanguageWarnedRef.current) {
           cloudVoiceLanguageWarnedRef.current = true;
           openFeatureLock(
@@ -1507,7 +1492,26 @@ export function Reader({
         setActiveLineByChar(position.sentence.id, position.charOffset);
       },
       onDone: advance,
-      onError: advance,
+      onError: (error) => {
+        if (myEpoch !== epochRef.current) return;
+        if (voiceMode !== "local") {
+          advance();
+          return;
+        }
+        rememberSpeechResumePoint();
+        epochRef.current++;
+        playingRef.current = false;
+        setIsPlaying(false);
+        void ttsRef.current.stop();
+        setReaderNotice({
+          title: "rF AI paused",
+          body:
+            error instanceof Error && error.message
+              ? `${error.message} Your place was kept. Tap Listen to retry.`
+              : "Playback was interrupted. Your place was kept. Tap Listen to retry.",
+          primary: { label: "OK", onPress: () => setReaderNotice(null) },
+        });
+      },
     });
   }
 
@@ -1522,6 +1526,7 @@ export function Reader({
   function play() {
     if (readAloudBlocked()) return;
     if (voiceAccessBlocked()) return;
+    sessionSpeedRef.current = settingsRef.current.speed;
     playingRef.current = true;
     setIsPlaying(true);
     void speakAt(indexRef.current);
@@ -1557,6 +1562,17 @@ export function Reader({
     isPlaying ? pause() : play();
   }
 
+  function toggleOriginalView() {
+    if (showOriginal) {
+      setShowOriginal(false);
+      return;
+    }
+    stop();
+    setShowAI(false);
+    setShowBookmarks(false);
+    setShowOriginal(true);
+  }
+
   // ----- tap-to-read -----
   function onTapWord(globalId: number, charOffset: number) {
     if (isUserScrollingRef.current) return;
@@ -1572,6 +1588,7 @@ export function Reader({
     ttsRef.current.stop();
     indexRef.current = globalId;
     pendingOffsetRef.current = charOffset;
+    sessionSpeedRef.current = settingsRef.current.speed;
     playingRef.current = true;
     setIsPlaying(true);
     void speakAt(globalId);
@@ -1599,6 +1616,16 @@ export function Reader({
   }
 
   // ----- navigation -----
+  function navigatePage(page: number) {
+    const target = Math.max(1, Math.min(totalPages, page));
+    if (showOriginal) {
+      setCurrentPage(target);
+      currentPageRef.current = target;
+      return;
+    }
+    goToPage(target);
+  }
+
   function goToPage(page: number) {
     const p = Math.max(1, Math.min(totalPages, page));
     if (isBeyondReturnedPageCap(p)) {
@@ -1668,6 +1695,7 @@ export function Reader({
     }
     if (autoplay) {
       if (readAloudBlocked()) return;
+      sessionSpeedRef.current = settingsRef.current.speed;
       playingRef.current = true;
       setIsPlaying(true);
       setTimeout(() => void speakAt(globalId), 150);
@@ -1770,7 +1798,7 @@ export function Reader({
 
   return (
     <View style={styles.container}>
-      <ExpoStatusBar style="dark" hidden={immersive} />
+      <ExpoStatusBar style={theme.colors.bg === "#171A18" ? "light" : "dark"} hidden={immersive} />
 
       {/* In fullscreen we hide the top bar entirely (the Exit button used to sit
           under the camera cutout). Use the Android back button to leave fullscreen. */}
@@ -1817,7 +1845,7 @@ export function Reader({
 
           {/* page nav strip */}
           <View style={styles.pageNav}>
-            <Pressable onPress={() => goToPage(currentPage - 1)} hitSlop={8} disabled={currentPage <= 1}>
+            <Pressable onPress={() => navigatePage(currentPage - 1)} hitSlop={8} disabled={currentPage <= 1}>
               <Text style={[styles.pageNavBtn, currentPage <= 1 && styles.disabled]}>Prev</Text>
             </Pressable>
             <Pressable
@@ -1836,8 +1864,13 @@ export function Reader({
             >
               <Text style={styles.pageNavAiText}>{canUseAI ? "AI" : "AI Pro"}</Text>
             </Pressable>
+            {doc.kind === "pdf" && doc.sourceUri ? (
+              <Pressable hitSlop={8} style={styles.pageNavAi} onPress={toggleOriginalView}>
+                <Text style={styles.pageNavAiText}>{showOriginal ? "Reflow" : "Original"}</Text>
+              </Pressable>
+            ) : null}
             <Pressable
-              onPress={() => goToPage(currentPage + 1)}
+              onPress={() => navigatePage(currentPage + 1)}
               hitSlop={8}
               disabled={currentPage >= totalPages}
             >
@@ -1912,8 +1945,26 @@ export function Reader({
         </>
       )}
 
-      {/* reading surface — virtualized for smooth, uninterrupted scrolling */}
-        <FlatList
+      {showOriginal && doc.kind === "pdf" && doc.sourceUri ? (
+        <Pdf
+          source={{ uri: doc.sourceUri, cache: true }}
+          page={Math.max(1, currentPage)}
+          style={styles.originalPdf}
+          enablePaging={false}
+          horizontal={false}
+          trustAllCerts={false}
+          onPageChanged={(page) => setCurrentPage(page)}
+          onError={(error) =>
+            setReaderNotice({
+              title: "Original page unavailable",
+              body: error instanceof Error ? error.message : "The stored PDF could not be displayed.",
+              primary: { label: "Use reflow", onPress: () => setShowOriginal(false) },
+            })
+          }
+        />
+      ) : (
+      /* reading surface - virtualized for smooth, uninterrupted scrolling */
+      <FlatList
         key={`${doc.docId}:${listGeneration}`}
         ref={listRef}
         data={renderedFlat}
@@ -1973,9 +2024,10 @@ export function Reader({
         onEndReachedThreshold={0.45}
         removeClippedSubviews={false}
       />
+      )}
 
       {/* controls — pinned while listening; otherwise reveal/hide with the chrome */}
-      {controlsShown && (
+      {controlsShown && !showOriginal && (
         <Controls
           settings={settings}
           onChange={setSettings}
@@ -2029,6 +2081,7 @@ export function Reader({
 
       {/* upgrade notice / paywall */}
       <UpgradeSheet
+        activeTier={entitlement.tier}
         visible={showPaywall}
         reasonTitle={paywallTitle}
         reasonBody={paywallBody}
@@ -2075,6 +2128,7 @@ const SentenceRow = React.memo(function SentenceRow({
   onLineRanges,
   showPageDivider,
 }: SentenceRowProps) {
+  const styles = useThemedStyles(createStyles);
   const tokens = useMemo(() => TextReflow.tokenizeWords(sentence.text), [sentence.text]);
   const referenceMarkers = useMemo(
     () => TextReflow.referenceMarkers(sentence.text, sentence.kind),
@@ -2266,7 +2320,7 @@ function formatReferenceMarker(value: string): string {
   return bracketed ? `⁽${superscript}⁾` : superscript;
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 24 },
   dim: { color: theme.colors.textDim, textAlign: "center" },
@@ -2453,6 +2507,7 @@ const styles = StyleSheet.create({
   },
   reader: { flex: 1 },
   readerContent: { padding: theme.spacing(3) },
+  originalPdf: { flex: 1, backgroundColor: theme.colors.bg },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
   headingRow: {
     color: theme.colors.text,

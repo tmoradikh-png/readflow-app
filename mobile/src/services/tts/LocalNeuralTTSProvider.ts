@@ -67,6 +67,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     player: AudioPlayer;
   } | null = null;
   private finishTimer: ReturnType<typeof setTimeout> | null = null;
+  private playbackWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetchTimers: ReturnType<typeof setTimeout>[] = [];
 
   private keyFor(text: string, speed: number, pauseAfterMs: number) {
@@ -211,6 +212,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
     await ensureAudioMode(Boolean(opts.allowBackgroundPlayback));
     this.clearFinishTimer();
+    this.clearPlaybackWatchdog();
     this.removeListener?.();
     this.removeListener = null;
     this.releaseStandbyPlayer();
@@ -318,10 +320,13 @@ export class LocalNeuralTTSProvider implements TTSProvider {
         let started = false;
         let finished = false;
         let segmentDuration = 0;
+        let lastProgressAt = Date.now();
+        let lastCurrentTime = -1;
         const segmentWeight = Math.max(1, segments[index].text.length);
         const finish = () => {
           if (mySeq !== this.seq || !started || finished) return;
           finished = true;
+          this.clearPlaybackWatchdog();
           this.removeListener?.();
           this.removeListener = null;
           completedSeconds += segmentDuration;
@@ -339,11 +344,38 @@ export class LocalNeuralTTSProvider implements TTSProvider {
           }, tailGuardMs(speed));
         };
 
+        const armPlaybackWatchdog = () => {
+          this.clearPlaybackWatchdog();
+          this.playbackWatchdogTimer = setTimeout(() => {
+            this.playbackWatchdogTimer = null;
+            if (mySeq !== this.seq || finished) return;
+            const nativeCurrent = Number(player.currentTime || 0);
+            const nativeDuration = Number(player.duration || segmentDuration || 0);
+            if (nativeCurrent > lastCurrentTime + 0.01) {
+              lastCurrentTime = nativeCurrent;
+              lastProgressAt = Date.now();
+            }
+            if (nativeDuration > 0 && nativeCurrent >= nativeDuration - 0.05) {
+              finish();
+              return;
+            }
+            if (Date.now() - lastProgressAt >= 6500) {
+              fail(new Error("rF AI audio stopped responding."));
+              return;
+            }
+            armPlaybackWatchdog();
+          }, 7000);
+        };
+
         const sub = player.addListener("playbackStatusUpdate", (status) => {
           if (mySeq !== this.seq) return;
           if (status.playing) started = true;
           const duration = Number(status.duration || 0);
           const currentTime = Number(status.currentTime || 0);
+          if (currentTime > lastCurrentTime + 0.01) {
+            lastCurrentTime = currentTime;
+            lastProgressAt = Date.now();
+          }
           if (duration > 0 && currentTime >= 0) {
             segmentDuration = duration;
             const segmentRatio = Math.max(0, Math.min(1, currentTime / duration));
@@ -389,6 +421,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
         player.play();
         started = true;
+        armPlaybackWatchdog();
         if (outgoingPlayer && outgoingPlayer !== player && !outgoingReleased) {
           this.releasePlayer(outgoingPlayer);
         }
@@ -410,6 +443,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.generationEpoch++;
     this.clearPrefetchTimers();
     this.clearFinishTimer();
+    this.clearPlaybackWatchdog();
     this.removeListener?.();
     this.removeListener = null;
     this.releaseStandbyPlayer();
@@ -424,6 +458,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.generationEpoch++;
     this.clearPrefetchTimers();
     this.clearFinishTimer();
+    this.clearPlaybackWatchdog();
     this.removeListener?.();
     this.removeListener = null;
     this.releaseStandbyPlayer();
@@ -487,6 +522,12 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       player?.remove();
     } catch {}
     if (player === this.player) this.player = null;
+  }
+
+  private clearPlaybackWatchdog() {
+    if (!this.playbackWatchdogTimer) return;
+    clearTimeout(this.playbackWatchdogTimer);
+    this.playbackWatchdogTimer = null;
   }
 
   private takeStandbyPlayer(index: number, uri: string, seq: number): AudioPlayer | null {

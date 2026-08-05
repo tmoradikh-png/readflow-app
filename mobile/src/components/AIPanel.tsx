@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { AIProvider, AITask, AIResult } from "../services/AIProvider";
 import { isNetworkError } from "../services/PDFParser";
-import { theme } from "../theme";
+import { AppTheme, useAppTheme, useThemedStyles } from "../theme";
 
 interface Props {
   /** Text of the current 10-page section the AI should reason about. */
@@ -27,6 +27,8 @@ const ACTIONS: { task: AITask; label: string }[] = [
 ];
 
 export function AIPanel({ contextText, language = "en", onClose }: Props) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AIResult | null>(null);
@@ -129,6 +131,7 @@ export function AIPanel({ contextText, language = "en", onClose }: Props) {
 }
 
 function Section({ label, body }: { label: string; body: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View>
       <Text style={styles.sectionLabel}>{label}</Text>
@@ -137,7 +140,7 @@ function Section({ label, body }: { label: string; body: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   backdrop: {
     position: "absolute",
     left: 0,

@@ -15,6 +15,7 @@ export function normalizeLocalSpeechText(value: string): string {
     .replace(/\bAI\b/g, "A I")
     .replace(/\bOCR\b/g, "O C R")
     .replace(/\bPDF\b/g, "P D F")
+    .replace(/\b(BCE|CE|BC|AD)\b/g, (match) => match.split("").join(" "))
     .replace(/\bDr\./g, "Doctor")
     .replace(/\bMr\./g, "Mister")
     .replace(/\bMrs\./g, "Missus")
@@ -190,6 +191,38 @@ export function normalizeEnglishNumbersForSpeech(value: string): string {
     (_match, amount: string) => integerToOrdinalWords(amount)
   );
 
+  text = text.replace(
+    /\b((?:1\d{3}|20\d{2}))s\b/gi,
+    (_match, year: string) => decadeToWords(year)
+  );
+
+  // Classical and legal references append subdivision letters to section
+  // numbers. Separate them before the general number pass so Supertonic never
+  // receives an unstable mixed token such as 536c-d.
+  text = text.replace(
+    /\b(\d{1,4})([a-z])-\s*(\d{1,4})([a-z])\b/gi,
+    (_match, first: string, firstLetter: string, last: string, lastLetter: string) =>
+      `${integerNumberToWords(first)} ${firstLetter.toUpperCase()} to ${integerNumberToWords(last)} ${lastLetter.toUpperCase()}`
+  );
+  text = text.replace(
+    /\b(\d{1,4})([a-z])-([a-z])\b/gi,
+    (_match, number: string, firstLetter: string, lastLetter: string) =>
+      `${integerNumberToWords(number)} ${firstLetter.toUpperCase()} to ${lastLetter.toUpperCase()}`
+  );
+  text = text.replace(
+    /\b(\d{1,4})([a-z])\b/gi,
+    (_match, number: string, letter: string) =>
+      `${integerNumberToWords(number)} ${letter.toUpperCase()}`
+  );
+
+  // Four-digit calendar years are much more natural as paired numbers. Keep
+  // dotted versions and identifiers protected by the same boundaries used by
+  // the generic number pass below.
+  text = text.replace(
+    /(^|[^A-Za-z0-9.])((?:1\d{3}|20\d{2}))(?![A-Za-z0-9]|\.\d)/g,
+    (_match, prefix: string, year: string) => `${prefix}${yearToWords(year)}`
+  );
+
   // Do not touch letters-and-digits identifiers (CO2, MP3) or dotted versions
   // such as 1.0.41. The captured prefix avoids a lookbehind requirement on
   // older Hermes runtimes.
@@ -198,6 +231,36 @@ export function normalizeEnglishNumbersForSpeech(value: string): string {
     (_match, prefix: string, amount: string) => `${prefix}${decimalNumberToWords(amount)}`
   );
   return text;
+}
+
+function yearToWords(rawYear: string): string {
+  const year = Number(rawYear);
+  if (year === 2000) return "two thousand";
+  if (year > 2000 && year < 2010) return `two thousand ${integerNumberToWords(String(year - 2000))}`;
+  const first = Math.floor(year / 100);
+  const last = year % 100;
+  if (last === 0) return `${integerNumberToWords(String(first))} hundred`;
+  return `${integerNumberToWords(String(first))} ${integerNumberToWords(String(last))}`;
+}
+
+function decadeToWords(rawYear: string): string {
+  const words = yearToWords(rawYear).split(" ");
+  const last = words.pop() || "";
+  const plurals: Record<string, string> = {
+    ten: "tens",
+    twenty: "twenties",
+    thirty: "thirties",
+    forty: "forties",
+    fifty: "fifties",
+    sixty: "sixties",
+    seventy: "seventies",
+    eighty: "eighties",
+    ninety: "nineties",
+    hundred: "hundreds",
+    thousand: "thousands",
+  };
+  words.push(plurals[last] || `${last}s`);
+  return words.join(" ");
 }
 
 function currencyToWords(symbol: string, rawAmount: string, rawScale?: string): string {

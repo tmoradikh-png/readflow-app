@@ -1,6 +1,6 @@
 # readFlow Current Handover
 
-Updated: 2026-07-22
+Updated: 2026-08-05
 
 Start here when taking over readFlow. This file is a short operational map. It
 does not contain passwords, API keys, service-account JSON contents, signing
@@ -13,12 +13,11 @@ keys, or recovery codes.
 - App name on Play listing: `readFlow PDF Reader with AI`
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
-- Last submitted production hotfix: `1.0.28` / version code `34`.
-- Current source release candidate: `1.0.50` / version code `57`.
+- Current production release: `1.0.50` / version code `57`.
   It contains the reader stability, reviewer-access, page-continuity, title,
   reference-marker, bounded local-synthesis, and independent speech
   text-intelligence and progressive-rF-playback repairs described below. It is
-  not public until Google approves the submitted production rollout.
+  available on Google Play.
 - Latest EAS Android build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`.
 - Latest EAS Android artifact:
   `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`
@@ -32,14 +31,71 @@ keys, or recovery codes.
   24. The release check verified required foreground-audio permissions and no
   `RECORD_AUDIO` permission in source configuration.
 - `1.0.50 (57)` was uploaded to the Google Play production track on
-  2026-07-22 and submitted for a 100% rollout. Play reported `Changes in
-  review` while automated quick checks run. Managed publishing is off, so an
-  approved release publishes automatically.
+  2026-07-22 and submitted for a 100% rollout. On 2026-07-27 Play Console
+  verified the production track is active, latest release is `1.0.50 (57)`,
+  status is `Available on Google Play`, released on Jul 22 at 8:51 PM, with
+  177 countries/regions and 0 installs shown in that track summary. Managed
+  publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
+- Current local QA source is `1.0.51` / Android code `58`. It is installed only
+  as side-by-side package `com.urmiaworks.readflow.qa`; it has not been sent to
+  EAS, Google Play, or any public release track. This QA package does not
+  consume production Play version code `58`.
+- Local QA APK: `artifacts/readflow-qa-1.0.51-58.apk` (231,506,319 bytes;
+  220.78 MiB). SHA-256:
+  `2EE73CDD36B38308B8A135B53FE117F840876ABFF2F72D82C7D1DDDF896DE6B4`.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.51 Local QA Candidate - 2026-08-05
+
+This candidate addresses the collected owner/reviewer feedback without a
+public release:
+
+- RevenueCat purchase state is applied immediately and a stale backend refresh
+  cannot temporarily downgrade an active SDK entitlement.
+- rF AI keeps one session speed, stops at the retained source position on local
+  playback failure, and uses a watchdog instead of silently skipping forward.
+- Eligible generated rF AI playback uses an Android media foreground service
+  so clip scheduling continues while the phone is locked.
+- Speech-only number handling covers years, eras, decades, currency, and
+  academic references without rewriting the displayed source.
+- Reflow removes repeated edge headers, footers, Roman/digit page labels, and
+  OCR-damaged short furniture more conservatively.
+- PDF readers have an Original/Reflow switch. Original preserves tables,
+  figures, covers, and scanned pages and can navigate them without invoking OCR
+  or a subscription gate.
+- Appearance defaults to the phone setting and persists explicit System, Light,
+  or Dark selection.
+- Saved-page restoration no longer prepends earlier variable-height rows during
+  initial layout, which shifted a stored page 8 back to page 4 on the Samsung
+  test phone. Shelf title/action layouts were also corrected for the same phone.
+
+Connected Samsung SM-G975F evidence:
+
+- A 61-second locked/dozing run continued through at least seven newly-created
+  rF AI clips. The background and media services remained foreground.
+- A second 118-second foreground run on Rousseau page 58 produced 27 clip
+  starts with no crash, watchdog notice, or stalled Play state.
+- A fresh page-8 Last read save reopened at page 8 and the same sentence after
+  a clean exit. Original mode rendered Rousseau page 10 and Confessions pages
+  1-5; scanned-page Next no longer opened the OCR paywall.
+- Light persisted across force-stop/relaunch; System returned to the phone's
+  dark appearance. OCR gating correctly kept Reviewer out of paid OCR.
+- A Google Play sandbox AI Pro Yearly purchase on the installed production
+  `1.0.28 (34)` package reproduced the transient post-purchase paywall, then
+  showed AI Pro after force-stop/relaunch. Google explicitly showed a test card
+  and no charge. The `1.0.51` immediate-entitlement repair is covered by source
+  checks, but live Billing cannot run in the side-by-side `.qa` package.
+- Confessions has a corrupted legacy native text layer. Original mode is usable;
+  an AI Pro/Power OCR rebuild is still required for clean reflow. Local OCR
+  comparisons showed strong improvement on pages 5, 8, and 13, while the
+  decorative cover remained unreliable.
+- This environment had no microphone-capture tool. Android audio state, clip
+  timing, continuity, source text, and highlight progression were measured;
+  audible pronunciation and timbre were not claimed as verified.
 
 Hotfix reason: the live Play build could crash when starting Cloud AI/rF AI
 audio because Android denied `expo.modules.audio.service.AudioControlsService`
@@ -933,8 +989,9 @@ These items remain for human audible/lifecycle verification before production:
 
 - Configure `REVIEWER_ACCESS_CODE` and `REVIEWER_TOKEN_SECRET` in Render, then
   add the code and navigation path to Play Console App access instructions.
-- Production AAB `1.0.50 (57)` has been built and submitted. Monitor Play quick
-  checks/review and the first production devices; the older
+- Production AAB `1.0.50 (57)` is available on Google Play. Monitor first
+  production devices, Play Android Vitals, RevenueCat events, and tester
+  purchase/restore results; the older
   `artifacts/readflow-1.0.29-35.aab` does not contain the final repairs.
 - Finish license-tester purchase, restore, cancel, expiry, and entitlement tests.
 - Improve over-limit UX so quota/file-too-long states open an upgrade prompt.

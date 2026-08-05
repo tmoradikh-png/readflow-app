@@ -33,8 +33,8 @@ const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
 const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.50";
-const EXPECTED_ANDROID_VERSION_CODE = 57;
+const EXPECTED_VERSION = "1.0.51";
+const EXPECTED_ANDROID_VERSION_CODE = 58;
 const EXPECTED_IOS_BUILD_NUMBER = "50";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 

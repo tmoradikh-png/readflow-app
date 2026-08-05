@@ -50,7 +50,12 @@ import {
   voiceRegionKey,
   voiceRegionLabel,
 } from "../services/ReadingLanguages";
-import { theme } from "../theme";
+import {
+  AppTheme,
+  useAppTheme,
+  useThemeController,
+  useThemedStyles,
+} from "../theme";
 import { activateReviewerAccess } from "../services/ReviewerAccess";
 import { loadAppUserId } from "../services/AppIdentity";
 
@@ -107,6 +112,8 @@ export function LibraryScreen({
   onPurchasePlan,
   onRestorePurchases,
 }: Props) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -229,6 +236,7 @@ export function LibraryScreen({
       const doc = await PDFParser.pickAndParse({ ocrLang: readingLanguage.ocrLang });
       if (!doc) return; // cancelled
       const item = await Library.saveOpened(doc, doc.sourceUri, doc.mimeType);
+      doc.sourceUri = item.storedUri || doc.sourceUri;
       // Save the parsed text so this book can be reopened offline later.
       await DocCache.save(doc);
       await refresh();
@@ -711,6 +719,7 @@ export function LibraryScreen({
         onClose={() => setNotice(null)}
       />
       <UpgradeSheet
+        activeTier={entitlement.tier}
         visible={Boolean(upgrade)}
         reasonTitle={upgrade?.title}
         reasonBody={upgrade?.body}
@@ -886,6 +895,8 @@ function LanguageSettingsSheet({
   onClose: () => void;
   onChange: (next: ReadingPreferences) => void;
 }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const current = getReadingLanguage(preferences.bookLanguage);
 
   function selectLanguage(language: ReadingLanguage) {
@@ -980,6 +991,8 @@ function VoiceSettingsSheet({
   onNotice: (notice: NoticeState) => void;
   onUpgrade: (upgrade: UpgradeState) => void;
 }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const cloudLimit = entitlement.limits.cloudVoiceCharsPerMonth || 0;
   const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
   const planHasCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
@@ -1351,6 +1364,7 @@ function VoiceChoice({
   stateLabel?: string;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <Pressable style={[styles.voiceChoice, active && styles.voiceChoiceOn]} onPress={onPress}>
       <View style={styles.voiceChoiceTop}>
@@ -1379,6 +1393,9 @@ function HelpAboutSheet({
   onReviewerActivated?: () => Promise<void>;
   onClose: () => void;
 }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  const { mode: themeMode, setMode: setThemeMode } = useThemeController();
   const expo = Constants.expoConfig as any;
   const version = expo?.version || "dev";
   const code = expo?.android?.versionCode || expo?.ios?.buildNumber || "";
@@ -1448,6 +1465,30 @@ function HelpAboutSheet({
               {code ? ` (${code})` : ""}
             </Text>
             <Text style={styles.aboutPlan}>Plan: {planName}</Text>
+            <View style={styles.appearanceBlock}>
+              <Text style={styles.appearanceLabel}>Appearance</Text>
+              <View style={styles.appearanceRow}>
+                {(["system", "light", "dark"] as const).map((choice) => (
+                  <Pressable
+                    key={choice}
+                    style={[
+                      styles.appearanceChoice,
+                      themeMode === choice && styles.appearanceChoiceOn,
+                    ]}
+                    onPress={() => setThemeMode(choice)}
+                  >
+                    <Text
+                      style={[
+                        styles.appearanceChoiceText,
+                        themeMode === choice && styles.appearanceChoiceTextOn,
+                      ]}
+                    >
+                      {choice[0].toUpperCase() + choice.slice(1)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
             <Text style={styles.aboutBody}>
               readFlow turns PDF and Word documents into phone-sized reading text, then reads with Phone voice, capped Cloud AI, or downloaded rF AI. Free includes a short daily rF AI preview.
             </Text>
@@ -1512,6 +1553,7 @@ function HelpAboutSheet({
 }
 
 function HelpRow({ label, text }: { label: string; text: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.helpRow}>
       <Text style={styles.helpLabel}>{label}</Text>
@@ -1529,6 +1571,8 @@ function Empty({
   loading: boolean;
   isPaid: boolean;
 }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.empty}>
       <View style={styles.emptyCover}>
@@ -1577,6 +1621,8 @@ function ContinueCard({
   onRebuildOcr: () => void;
   onStopOcr: () => void;
 }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const pct = Math.round((item.progress || 0) * 100);
   return (
     <Pressable style={styles.continueCard} onPress={onPress} disabled={busy}>
@@ -1660,6 +1706,8 @@ function DocCard({
   onRebuildOcr: () => void;
   onStopOcr: () => void;
 }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <Pressable
       style={styles.docCard}
@@ -1741,6 +1789,7 @@ function OcrJobControls({
   onAction: () => void;
   onStop: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
   const canPauseResume = progress.pausedReason === "user" || !progress.pausedReason;
   return (
     <View style={[styles.ocrControlRow, compact && styles.ocrControlRowCompact]}>
@@ -1779,6 +1828,8 @@ function OcrJobControls({
 
 /** Full 3:4 book cover for the grid. */
 function Cover({ item }: { item: LibraryItem }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const v = coverVariant(item.id);
   const palettes = [
     { bg: theme.colors.card, line: "#DCD5C7", strong: "#BEB39E", border: theme.colors.borderStrong },
@@ -1800,6 +1851,8 @@ function Cover({ item }: { item: LibraryItem }) {
 
 /** Small spine-style cover for the Continue card. */
 function MiniCover({ item, large }: { item: LibraryItem; large?: boolean }) {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={[styles.miniCover, large && styles.miniCoverLarge]}>
       <View style={styles.miniSpine} />
@@ -1811,16 +1864,15 @@ function MiniCover({ item, large }: { item: LibraryItem; large?: boolean }) {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   safe: { flex: 1, backgroundColor: theme.colors.bg },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    alignItems: "stretch",
+    gap: theme.spacing(1.5),
     paddingHorizontal: theme.spacing(3),
     paddingBottom: theme.spacing(2),
   },
-  brandBlock: { flex: 1, minWidth: 0 },
+  brandBlock: { minWidth: 0 },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   brandMark: {
     width: 30,
@@ -1857,7 +1909,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginTop: 2,
   },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 7 },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 7,
+  },
   planPill: {
     height: 32,
     paddingHorizontal: 10,
@@ -1959,8 +2016,15 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginTop: 5,
     lineHeight: 23,
+    paddingRight: 72,
   },
-  continueMeta: { fontFamily: theme.fonts.sans, fontSize: 12, color: theme.colors.textDim, marginTop: 3 },
+  continueMeta: {
+    fontFamily: theme.fonts.sans,
+    fontSize: 12,
+    color: theme.colors.textDim,
+    marginTop: 3,
+    paddingRight: 72,
+  },
   progressTrack: {
     height: 5,
     backgroundColor: "#EBDFC6",
@@ -2446,6 +2510,19 @@ const styles = StyleSheet.create({
     fontFamily: theme.fonts.sansSemiBold,
     fontSize: 13,
   },
+  appearanceBlock: { gap: 8, marginTop: theme.spacing(1) },
+  appearanceLabel: { color: theme.colors.text, fontFamily: theme.fonts.sansSemiBold },
+  appearanceRow: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius,
+    overflow: "hidden",
+  },
+  appearanceChoice: { flex: 1, alignItems: "center", paddingVertical: 9 },
+  appearanceChoiceOn: { backgroundColor: theme.colors.teal },
+  appearanceChoiceText: { color: theme.colors.textMute, fontFamily: theme.fonts.sansSemiBold },
+  appearanceChoiceTextOn: { color: theme.colors.onAccent },
   aboutBody: {
     color: theme.colors.textMute,
     fontFamily: theme.fonts.sans,

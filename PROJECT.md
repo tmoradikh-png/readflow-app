@@ -1,6 +1,6 @@
 # readFlow Developer Handoff
 
-Updated: 2026-07-22
+Updated: 2026-08-05
 
 Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
 file for the fuller map of accounts, services, release status, and operational
@@ -36,8 +36,8 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.50`
-- Current source Android `versionCode`: `57`
+- Current source version: `1.0.51`
+- Current source Android `versionCode`: `58`
 - Current source iOS `buildNumber`: `50`
 - Latest finished Android EAS build: `1.0.50` / code `57`
 - Latest finished Android EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`
@@ -45,15 +45,23 @@ Current shape:
   `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`
 - Latest finished Android AAB local copy:
   `artifacts/readflow-1.0.50-57-production.aab`.
-- Android production status: Google Play release `1.0.28 (34)` is live.
-  Release `1.0.50 (57)` was submitted for a 100% production rollout on
-  2026-07-22; last observed state was `Changes in review` while automated
-  quick checks run. Managed publishing is off. Public listing:
+- Latest local-only Android QA APK: `1.0.51 (58)`, side-by-side package
+  `com.urmiaworks.readflow.qa`, at
+  `artifacts/readflow-qa-1.0.51-58.apk`. SHA-256:
+  `2EE73CDD36B38308B8A135B53FE117F840876ABFF2F72D82C7D1DDDF896DE6B4`.
+  It was installed and tested locally on 2026-08-05 but was not submitted to
+  EAS or Play and therefore does not consume production version code `58`.
+- Android production status: Google Play release `1.0.50 (57)` is live.
+  On 2026-07-27 Play Console showed the production track as active, latest
+  release `1.0.50 (57)`, status `Available on Google Play`, released on Jul 22
+  at 8:51 PM, across 177 countries/regions. Managed publishing is off. Public
+  listing:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- Next Android build after this release must use code `58` or higher unless another EAS
-  build has already consumed it. Run the EAS `build:list` command in
+- The next production Android build may use code `58` or higher because code
+  `58` has only been built for the different `.qa` package. Confirm no EAS/Play
+  build consumed it by running the EAS `build:list` command in
   `RELEASE_GUIDE.md` immediately before spending build quota.
 - The prepared iOS source uses buildNumber `50`. No iOS EAS build has been
   recorded; verify with the `build:list --platform ios` command in
@@ -90,7 +98,7 @@ Important: build `178c888f` / `1.0.18` was canceled because a stale generated
 and `RECORD_AUDIO`. The folder was moved to
 `tmp/android-local-backup-20260629-1`, and the release checker now blocks this.
 
-Current Play release prep in source `1.0.28`:
+Current Play release prep in source `1.0.50`:
 - `mobile/app.json` now points at the public backend host
   `https://readflow-backend-internal.onrender.com`. This is the converted
   production Render service: the service name is `readflow-backend`, but Render
@@ -142,10 +150,9 @@ Current Play release prep in source `1.0.28`:
   `Published`, all six packages are in the `default` offering, EAS has the
   Android public SDK key, and production Render has `RC_SECRET_KEY` set. A
   random non-buyer entitlement probe returned `source: revenuecat`,
-  `tier: free`. Build 33 is the live Play production build and was uploaded as
-  a production-track draft and sent to Google for review on 2026-07-01; build
-  34 is the current hotfix candidate. Build 25 was created after the EAS key
-  existed and was published to Play internal testing on
+  `tier: free`. Build 57 is the live Play production build; build 34 was the
+  foreground-service hotfix and has been superseded. Build 25 was created after
+  the EAS key existed and was published to Play internal testing on
   2026-07-01; Play shows `Available to internal testers`. Build 24 is
   billing-capable but was started before the EAS key existed, so purchase
   buttons stay disabled as "Setting up purchases" in that build.
@@ -186,9 +193,9 @@ Current Play release prep in source `1.0.28`:
   was saved, sent from Publishing overview, and Play showed `Changes in review`
   while quick checks continued.
 
-Current iOS release prep in source `1.0.28`:
+Current iOS release prep in source `1.0.50`:
 - `mobile/app.json` uses iOS bundle id `com.urmiaworks.readflow`, buildNumber
-  `28`, and `ITSAppUsesNonExemptEncryption=false`.
+  `50`, and `ITSAppUsesNonExemptEncryption=false`.
 - `mobile/eas.json` now has explicit iOS settings for development/preview
   device builds and App Store/TestFlight archive builds.
 - `npm run check:release` now checks iOS bundle id, build number, no generated
@@ -197,8 +204,8 @@ Current iOS release prep in source `1.0.28`:
 - `IOS_RELEASE_GUIDE.md` records the iOS EAS build routine and TestFlight QA
   checklist. `APP_STORE_RELEASE_PACKET.md` records App Store listing text,
   review notes, subscription disclosure, and App Privacy worksheet notes.
-- EAS had no iOS build history on 2026-06-29, so buildNumber `27` is currently
-  free unless a later iOS build consumes it.
+- EAS had no iOS build history on 2026-06-29. No iOS EAS build is recorded in
+  this handoff; verify before using buildNumber `50`.
 - Paid iOS subscriptions are not ready to sell until Apple in-app purchase /
   RevenueCat dashboard setup is complete and production Render has
   `RC_SECRET_KEY` set. The shared mobile paywall wiring is present, but no iOS

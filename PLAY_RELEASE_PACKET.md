@@ -1,6 +1,6 @@
 # readFlow Play Release Packet
 
-Updated: 2026-07-22
+Updated: 2026-08-05
 
 This packet gathers the launch text and review checklist for Google Play. Keep
 it in sync with `PAYMENT_SETUP.md`, `PRIVACY_POLICY_DRAFT.md`,
@@ -17,7 +17,10 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Source release candidate is `1.0.50 / versionCode 57`.
+- Current production release is `1.0.50 / versionCode 57`.
+- Local QA candidate `1.0.51 / versionCode 58` uses package
+  `com.urmiaworks.readflow.qa`; it has not been uploaded or released and does
+  not consume production version code `58`.
 - Release checker passes for the current source configuration.
 - Android permissions include the minimum required for subscriptions plus
   generated-audio playback/model download services: `INTERNET`,
@@ -30,16 +33,17 @@ Current source status:
   downloaded rF AI. It has no OCR, text AI, or Cloud AI allowance.
 - RevenueCat mobile SDK wiring is present. The Android public key is set in EAS,
   Google Play products are published in RevenueCat, and the `default` offering
-  has all six paid packages. Build `1.0.28` / code `34` is the current hotfix
-  Play production candidate.
+  has all six paid packages. Build `1.0.50` / code `57` is the current Play
+  production release.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, Advertising ID (`No`), foreground services, government apps, financial
   features, health, content rating, target audience, Data Safety, and app
   category are saved or in review.
 - Production AAB `1.0.50 (57)` was built on 2026-07-22 from commit `9870a69`,
-  uploaded to the production track, and submitted for a 100% rollout. Play
-  reported `Changes in review` while automated quick checks run. Managed
-  publishing is off, so approval publishes automatically.
+  uploaded to the production track, submitted for a 100% rollout, and approved.
+  On 2026-07-27 Play Console showed it as `Available on Google Play`, released
+  on Jul 22 at 8:51 PM, across 177 countries/regions. Managed publishing is
+  off.
 - EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`.
 - EAS artifact:
   `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`.

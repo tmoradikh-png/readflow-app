@@ -23,6 +23,7 @@ import { Library, LibraryItem } from "./src/services/Library";
 import {
   EntitlementSnapshot,
   FREE_ENTITLEMENT,
+  entitlementForRevenueCatTier,
   fetchEntitlement,
   fetchUsage,
   UsageSnapshot,
@@ -46,7 +47,7 @@ import {
   savePreferences,
 } from "./src/services/Preferences";
 import { getReadingLanguage } from "./src/services/ReadingLanguages";
-import { theme } from "./src/theme";
+import { AppTheme, ThemeProvider, useAppTheme, useThemedStyles } from "./src/theme";
 import { ReadingPosition } from "./src/services/ReadingPosition";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -64,6 +65,16 @@ const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <ReadFlowApp />
+    </ThemeProvider>
+  );
+}
+
+function ReadFlowApp() {
+  const theme = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [doc, setDoc] = useState<ParsedPdf | null>(null);
   const [item, setItem] = useState<LibraryItem | null>(null);
   const [entitlement, setEntitlement] = useState<EntitlementSnapshot>(FREE_ENTITLEMENT);
@@ -77,6 +88,7 @@ export default function App() {
   const entitlementRefreshIdRef = useRef(0);
   const entitlementSyncRef = useRef<Promise<EntitlementSnapshot | null> | null>(null);
   const entitlementSyncTargetRankRef = useRef(0);
+  const revenueCatTierRef = useRef<PurchaseTierKey | null>(null);
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
 
   const [fontsLoaded] = useFonts({
@@ -101,8 +113,15 @@ export default function App() {
       : await fetchEntitlement();
     const nextUsage = await fetchUsage();
     if (refreshId === entitlementRefreshIdRef.current) {
-      setEntitlement(nextEntitlement);
+      const revenueCatTier = revenueCatTierRef.current;
+      const effectiveEntitlement =
+        revenueCatTier &&
+        (ENTITLEMENT_RANK[nextEntitlement.tier] || 0) < ENTITLEMENT_RANK[revenueCatTier]
+          ? entitlementForRevenueCatTier(revenueCatTier)
+          : nextEntitlement;
+      setEntitlement(effectiveEntitlement);
       setUsage(nextUsage);
+      return effectiveEntitlement;
     }
     return nextEntitlement;
   }, []);
@@ -111,6 +130,12 @@ export default function App() {
     (customerInfo: Parameters<typeof activeRevenueCatTier>[0]) => {
       const purchasedTier = activeRevenueCatTier(customerInfo);
       if (!purchasedTier) return Promise.resolve(null);
+      revenueCatTierRef.current = purchasedTier;
+      setEntitlement((current) =>
+        (ENTITLEMENT_RANK[current.tier] || 0) >= (ENTITLEMENT_RANK[purchasedTier] || 0)
+          ? current
+          : entitlementForRevenueCatTier(purchasedTier)
+      );
       entitlementSyncTargetRankRef.current = Math.max(
         entitlementSyncTargetRankRef.current,
         ENTITLEMENT_RANK[purchasedTier] || 0
@@ -270,7 +295,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <View style={styles.root}>
-        <StatusBar style="dark" />
+        <StatusBar style={theme.colors.bg === "#171A18" ? "light" : "dark"} />
         {doc ? (
           <Reader
             doc={doc}
@@ -319,6 +344,6 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme: AppTheme) => ({
   root: { flex: 1, backgroundColor: theme.colors.bg },
 });
