@@ -10,6 +10,8 @@ export interface PdfPage {
   source?: "native" | "ocr";
   /** OCR confidence 0–100 (OCR pages only). */
   confidence?: number;
+  /** Source PDF page contains raster artwork or a scanned background. */
+  hasRasterImage?: boolean;
 }
 
 export interface ParsedPdf {

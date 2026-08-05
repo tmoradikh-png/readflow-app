@@ -60,6 +60,7 @@ export function buildSpeechChunk(
   list: Sentence[],
   options: BuildSpeechChunkOptions
 ): SpeechChunk | null {
+  while (list[startIndex]?.suppressSpeech) startIndex++;
   const first = list[startIndex];
   if (!first) return null;
   if (first.page > options.pageCap) return null;
@@ -113,6 +114,7 @@ export function buildSpeechChunk(
   while (spans.length && index < list.length) {
     const previous = spans[spans.length - 1].sentence;
     const continuation = list[index];
+    if (continuation.suppressSpeech) break;
     if (!TextReflow.continuesAcrossPage(previous, continuation)) break;
     if (continuation.page > options.pageCap) break;
 

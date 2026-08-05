@@ -11,6 +11,8 @@ export interface ExtractedPage {
   source: TextSource;
   /** OCR confidence 0–100 (only present for OCR pages). */
   confidence?: number;
+  /** True when the source page paints one or more raster images. */
+  hasRasterImage?: boolean;
 }
 
 export interface ExtractedDocument {
@@ -66,11 +68,83 @@ export async function extractPdf(buffer: Buffer): Promise<ExtractedDocument> {
   }
 
   await pdfParse(buffer, { pagerender: renderPage });
+  const candidatePages = pages
+    .map((text, index) => ({ page: index + 1, chars: text.replace(/\s/g, "").length }))
+    .filter((candidate) => candidate.chars > 0 && candidate.chars <= 1600)
+    .slice(0, 160)
+    .map((candidate) => candidate.page);
+  const rasterPages = await detectRasterImagePages(buffer, candidatePages);
 
   return {
     pageCount: pages.length,
-    pages: pages.map((text, i) => ({ page: i + 1, text: text.trim(), source: "native" as const })),
+    pages: pages.map((text, i) => ({
+      page: i + 1,
+      text: text.trim(),
+      source: "native" as const,
+      // Empty PDF text almost always represents a scanned/visual page. Keeping
+      // the original is useful even for a genuinely blank separator page.
+      hasRasterImage: !text.trim() || rasterPages.has(i + 1),
+    })),
   };
+}
+
+// PDF.js operator ids 83-90 are the stable raster paint family (mask,
+// XObject, inline, repeats, and solid-color image masks).
+const RASTER_PAINT_OPERATORS = new Set([83, 84, 85, 86, 87, 88, 89, 90]);
+
+export function containsRasterImageOperators(
+  fnArray: unknown,
+  rasterOperators: Set<number> = RASTER_PAINT_OPERATORS
+): boolean {
+  return Array.isArray(fnArray) && fnArray.some((operator) => rasterOperators.has(Number(operator)));
+}
+
+const importPdfJs: (moduleName: string) => Promise<any> = new Function(
+  "moduleName",
+  "return import(moduleName)"
+) as any;
+
+async function detectRasterImagePages(buffer: Buffer, pageNumbers: number[]): Promise<Set<number>> {
+  const found = new Set<number>();
+  if (!pageNumbers.length) return found;
+
+  let pdf: any = null;
+  try {
+    const canvas = require("@napi-rs/canvas");
+    const globals = globalThis as any;
+    if (!globals.DOMMatrix && canvas.DOMMatrix) globals.DOMMatrix = canvas.DOMMatrix;
+    if (!globals.Path2D && canvas.Path2D) globals.Path2D = canvas.Path2D;
+    if (!globals.ImageData && canvas.ImageData) globals.ImageData = canvas.ImageData;
+    const pdfjs = await importPdfJs("pdfjs-dist/legacy/build/pdf.mjs");
+    const operators = new Set<number>(
+      [
+        pdfjs.OPS?.paintImageMaskXObject,
+        pdfjs.OPS?.paintImageMaskXObjectGroup,
+        pdfjs.OPS?.paintImageXObject,
+        pdfjs.OPS?.paintInlineImageXObject,
+        pdfjs.OPS?.paintInlineImageXObjectGroup,
+        pdfjs.OPS?.paintImageXObjectRepeat,
+        pdfjs.OPS?.paintImageMaskXObjectRepeat,
+        pdfjs.OPS?.paintSolidColorImageMask,
+      ].filter((value): value is number => Number.isFinite(value))
+    );
+    pdf = await pdfjs.getDocument({ data: new Uint8Array(buffer), useSystemFonts: true }).promise;
+    for (const pageNumber of pageNumbers) {
+      const page = await pdf.getPage(pageNumber);
+      const list = await page.getOperatorList();
+      if (containsRasterImageOperators(list?.fnArray, operators)) found.add(pageNumber);
+      page.cleanup();
+    }
+  } catch (error: any) {
+    console.warn("[pdf] visual page detection unavailable:", error?.message);
+  } finally {
+    try {
+      await pdf?.destroy?.();
+    } catch {
+      // Best-effort cleanup; text extraction remains authoritative.
+    }
+  }
+  return found;
 }
 
 /**

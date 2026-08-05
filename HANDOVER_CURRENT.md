@@ -38,16 +38,46 @@ keys, or recovery codes.
   publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
-- Current local QA source is `1.0.52` / Android code `59`. It is installed only
+- Current local QA source is `1.0.53` / Android code `60`. It is installed only
   as side-by-side package `com.urmiaworks.readflow.qa`; it has not been sent to
   EAS, Google Play, or any public release track. This QA package does not
   consume production Play version code `58` or `59`.
-- Local QA APK: `artifacts/readflow-qa-1.0.52-59.apk` (231,507,035 bytes;
-  220.78 MiB). SHA-256:
-  `818057DDCB9D1D057E3FDB8FD019312D8C6B42ACF86AF59E780F3E41EAE1EAD0`.
+- Local QA APK: `artifacts/readflow-qa-1.0.53-60.apk` (231,552,291 bytes;
+  220.83 MiB). SHA-256:
+  `8A6EFF0BE924EB4FEB4154046D2C1C2CB0CF6BB6821EEF2B35261C5E7D8A65D7`.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.53 Local Visual-Page and Import-Quality Candidate - 2026-08-05
+
+This local candidate keeps figures, photo captions, sparse covers/title pages,
+compact tables, and diagram-like pages in Reflow by rendering the exact retained
+source PDF page inline. Dense prose continues through normal text reflow. A
+local deterministic classifier handles already-cached books without cloud AI,
+OCR, re-import, or vendor cost; corrupted visual text and photo furniture are
+excluded from speech while short valid prose remains speakable.
+
+The backend now also detects raster paint operators for text-sparse pages and
+returns a backward-compatible `hasRasterImage` hint. Real extraction found the
+exact 22 raster pages in the 288-page `Extreme Ownership` fixture, including
+pages 15, 30, 51, 92, 186, and author portraits on 282. This backend change was
+verified locally only and has not been deployed.
+
+Connected Samsung SM-G975F evidence:
+
+- `1.0.53 (60)` installed over the QA package without clearing data and retained
+  all four imported documents.
+- Extreme Ownership pages 15 and 30 showed the complete source photos and
+  captions inline; page 31 returned to ordinary reflow with no overlap.
+- Rousseau page 1 showed the real cover/title instead of the garbled native text
+  `Jean. -Jacques`, `Rousseau _`, and `| Solitary Walker`.
+- Confessions page 1 showed the complete scanned cover instead of attempting to
+  display its corrupt text layer.
+- Backend build, mobile TypeScript, release checks, and reader regressions pass.
+  No EAS build, Play upload, backend deploy, or public release was performed.
+- Before tag: `readflow-before-visual-pages-import-quality-local-1.0.53-20260805`.
+- After tag: `readflow-after-visual-pages-import-quality-local-1.0.53-20260805`.
 
 ## 1.0.52 Local rF AI Resource Hotfix - 2026-08-05
 

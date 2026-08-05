@@ -18,9 +18,9 @@ Current source status:
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
 - Current production release is `1.0.50 / versionCode 57`.
-- Local QA candidate `1.0.52 / versionCode 59` uses package
+- Local QA candidate `1.0.53 / versionCode 60` uses package
   `com.urmiaworks.readflow.qa`; it has not been uploaded or released and does
-  not consume production version code `58` or `59`.
+  not consume production version code `58`, `59`, or `60`.
 - Release checker passes for the current source configuration.
 - Android permissions include the minimum required for subscriptions plus
   generated-audio playback/model download services: `INTERNET`,

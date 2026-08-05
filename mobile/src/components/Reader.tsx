@@ -214,7 +214,13 @@ export function Reader({
   useEffect(() => {
     setPages(doc.pages);
   }, [doc]);
-  const flat = useMemo<Sentence[]>(() => TextReflow.buildSentences(pages), [pages]);
+  const flat = useMemo<Sentence[]>(
+    () =>
+      TextReflow.buildSentences(pages, {
+        preserveOriginalPages: doc.kind === "pdf" && Boolean(doc.sourceUri),
+      }),
+    [doc.kind, doc.sourceUri, pages]
+  );
   const totalPages = doc.pageCount || (flat.length ? flat[flat.length - 1].page : 1);
   const initialSentenceIndex = useMemo(
     () => resolveReadingPosition(flat, startPosition),
@@ -1573,6 +1579,15 @@ export function Reader({
     setShowOriginal(true);
   }
 
+  function openOriginalPage(page: number) {
+    stop();
+    setShowAI(false);
+    setShowBookmarks(false);
+    setCurrentPage(page);
+    currentPageRef.current = page;
+    setShowOriginal(true);
+  }
+
   // ----- tap-to-read -----
   function onTapWord(globalId: number, charOffset: number) {
     if (isUserScrollingRef.current) return;
@@ -1982,7 +1997,9 @@ export function Reader({
             lineHeight={lineHeight}
             layoutKey={`${Math.round(windowWidth)}:${lineHeight}`}
             rtl={Boolean(readingLanguage.rtl)}
+            sourceUri={doc.sourceUri}
             onTapWord={tapHandler}
+            onOpenOriginal={openOriginalPage}
             onLineRanges={handleLineRanges}
             showPageDivider={index > 0 && renderedFlat[index - 1].page !== item.page}
           />
@@ -2111,7 +2128,9 @@ interface SentenceRowProps {
   lineHeight: number;
   layoutKey: string;
   rtl: boolean;
+  sourceUri?: string;
   onTapWord: (globalId: number, charOffset: number) => void;
+  onOpenOriginal: (page: number) => void;
   onLineRanges: (sentenceId: number, ranges: LineRange[]) => void;
   showPageDivider?: boolean;
 }
@@ -2124,7 +2143,9 @@ const SentenceRow = React.memo(function SentenceRow({
   lineHeight,
   layoutKey,
   rtl,
+  sourceUri,
   onTapWord,
+  onOpenOriginal,
   onLineRanges,
   showPageDivider,
 }: SentenceRowProps) {
@@ -2135,10 +2156,17 @@ const SentenceRow = React.memo(function SentenceRow({
     [sentence.kind, sentence.text]
   );
   const [lines, setLines] = useState<LineSegment[] | null>(null);
+  const [visualAspectRatio, setVisualAspectRatio] = useState(0.74);
+  const [visualFailed, setVisualFailed] = useState(false);
 
   useEffect(() => {
     setLines(null);
   }, [sentence.text, fontSize, lineHeight, layoutKey]);
+
+  useEffect(() => {
+    setVisualAspectRatio(0.74);
+    setVisualFailed(false);
+  }, [sentence.page, sourceUri]);
 
   function handleTextLayout(e: any) {
     if (!measureForHighlight) return;
@@ -2217,6 +2245,41 @@ const SentenceRow = React.memo(function SentenceRow({
   // advanced.
   const highlightedRange =
     active && activeLineIndex != null && lines?.length ? lines[activeLineIndex] : undefined;
+
+  if (sentence.visualPage && sourceUri && !visualFailed) {
+    return (
+      <View style={rtl ? styles.rtlRowWrap : undefined}>
+        {showPageDivider ? (
+          <View style={styles.pageDivider}>
+            <View style={styles.pageDividerLine} />
+            <Text style={styles.pageDividerLabel}>Page {sentence.page}</Text>
+            <View style={styles.pageDividerLine} />
+          </View>
+        ) : null}
+        <View style={[styles.visualPage, { aspectRatio: visualAspectRatio }]}>
+          <Pdf
+            key={`${sourceUri}:${sentence.page}`}
+            source={{ uri: sourceUri, cache: true }}
+            page={sentence.page}
+            style={styles.visualPdf}
+            singlePage
+            scrollEnabled={false}
+            fitPolicy={2}
+            trustAllCerts={false}
+            renderActivityIndicator={() => <ActivityIndicator color={styles.pageNavBtn.color} />}
+            onLoadComplete={(_pages, _path, size) => {
+              const ratio = Number(size?.width) / Number(size?.height);
+              if (Number.isFinite(ratio) && ratio > 0) {
+                setVisualAspectRatio(Math.max(0.45, Math.min(1.25, ratio)));
+              }
+            }}
+            onPageSingleTap={() => onOpenOriginal(sentence.page)}
+            onError={() => setVisualFailed(true)}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={rtl ? styles.rtlRowWrap : undefined}>
@@ -2508,6 +2571,17 @@ const createStyles = (theme: AppTheme) => ({
   reader: { flex: 1 },
   readerContent: { padding: theme.spacing(3) },
   originalPdf: { flex: 1, backgroundColor: theme.colors.bg },
+  visualPage: {
+    width: "100%",
+    minHeight: 280,
+    maxHeight: 720,
+    marginVertical: theme.spacing(1),
+    backgroundColor: theme.colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  visualPdf: { flex: 1, width: "100%", backgroundColor: theme.colors.surface },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
   headingRow: {
     color: theme.colors.text,

@@ -36,8 +36,8 @@ Current shape:
 - GitHub remote: `https://github.com/tmoradikh-png/readflow-app.git`
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
-- Current source version: `1.0.52`
-- Current source Android `versionCode`: `59`
+- Current source version: `1.0.53`
+- Current source Android `versionCode`: `60`
 - Current source iOS `buildNumber`: `50`
 - Latest finished Android EAS build: `1.0.50` / code `57`
 - Latest finished Android EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`
@@ -45,10 +45,10 @@ Current shape:
   `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`
 - Latest finished Android AAB local copy:
   `artifacts/readflow-1.0.50-57-production.aab`.
-- Latest local-only Android QA APK: `1.0.52 (59)`, side-by-side package
+- Latest local-only Android QA APK: `1.0.53 (60)`, side-by-side package
   `com.urmiaworks.readflow.qa`, at
-  `artifacts/readflow-qa-1.0.52-59.apk`. SHA-256:
-  `818057DDCB9D1D057E3FDB8FD019312D8C6B42ACF86AF59E780F3E41EAE1EAD0`.
+  `artifacts/readflow-qa-1.0.53-60.apk`. SHA-256:
+  `8A6EFF0BE924EB4FEB4154046D2C1C2CB0CF6BB6821EEF2B35261C5E7D8A65D7`.
   It was installed and tested locally on 2026-08-05 but was not submitted to
   EAS or Play and therefore does not consume production version code `58` or
   `59`.

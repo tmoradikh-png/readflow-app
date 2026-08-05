@@ -11,6 +11,21 @@ export interface Sentence {
   key: string;
   text: string;
   kind: "body" | "heading";
+  /** Render the retained source PDF page instead of reconstructed text. */
+  visualPage?: boolean;
+  /** Visual furniture/corrupt text that must not be sent to speech engines. */
+  suppressSpeech?: boolean;
+  visualReason?: "sparse" | "caption" | "table" | "diagram" | "corrupt";
+}
+
+interface BuildSentenceOptions {
+  preserveOriginalPages?: boolean;
+}
+
+export interface VisualPageClassification {
+  preserve: boolean;
+  suppressSpeech: boolean;
+  reason?: Sentence["visualReason"];
 }
 
 interface TextUnit {
@@ -149,11 +164,33 @@ export const TextReflow = {
    * reading window: rendering slices this list by page range while playback
    * sequences by global index.
    */
-  buildSentences(pages: PdfPage[]): Sentence[] {
+  buildSentences(pages: PdfPage[], options?: BuildSentenceOptions): Sentence[] {
     const out: Sentence[] = [];
     const skipLines = buildRepeatedSkipLines(pages);
     let id = 0;
     for (const p of pages) {
+      const visual = options?.preserveOriginalPages
+        ? classifyVisualPage(p)
+        : { preserve: false, suppressSpeech: false };
+      if (visual.preserve) {
+        const units = this.unitsForPage(p, skipLines);
+        const text = units.map((unit) => unit.text).join(" ").trim();
+        out.push({
+          id: id++,
+          page: p.page,
+          pageSentenceIndex: 0,
+          paragraphIndex: 0,
+          key: `${p.page}:visual`,
+          text,
+          kind: units.length > 0 && units.every((unit) => unit.kind === "heading")
+            ? "heading"
+            : "body",
+          visualPage: true,
+          suppressSpeech: visual.suppressSpeech,
+          visualReason: visual.reason,
+        });
+        continue;
+      }
       let pageSentenceIndex = 0;
       for (const unit of this.unitsForPage(p, skipLines)) {
         out.push({
@@ -304,6 +341,86 @@ export const TextReflow = {
     return -1;
   },
 };
+
+/**
+ * Local document-layout classifier. It preserves pages whose meaning depends
+ * on fixed layout (photos, covers, compact tables, charts, and diagrams) while
+ * leaving ordinary prose on the normal reflow path. No cloud model or OCR is
+ * involved; the retained source PDF is the authoritative visual.
+ */
+export function classifyVisualPage(p: PdfPage): VisualPageClassification {
+  const raw = (p.text || "")
+    .replace(new RegExp(`[${STRUCTURAL_HEADING_START}${STRUCTURAL_HEADING_END}]`, "g"), "")
+    .replace(/\(cid:\d+\)/g, "")
+    .replace(/\r/g, "")
+    .trim();
+  if (!raw) return { preserve: true, suppressSpeech: true, reason: "corrupt" };
+
+  const lines = raw.split("\n").map((line) => line.trim()).filter(Boolean);
+  const words = raw.match(/[\p{L}\p{N}][\p{L}\p{N}'\u2019-]*/gu) || [];
+  const visibleChars = raw.replace(/\s/g, "").length;
+  const letterNumberChars = (raw.match(/[\p{L}\p{N}]/gu) || []).length;
+  const shortLineRatio = lines.length
+    ? lines.filter((line) => line.length <= 42).length / lines.length
+    : 0;
+  const numericLineRatio = lines.length
+    ? lines.filter((line) => /\d/.test(line)).length / lines.length
+    : 0;
+  const terminalCount = (raw.match(/[.!?\u3002\uff01\uff1f\u061f]/g) || []).length;
+  const isolatedArtifacts = (raw.match(/(?:^|\s)[_|~^`]+(?=\s|$)/g) || []).length;
+  const replacementArtifacts = (raw.match(/[\ufffd]|\(cid:\d+\)/g) || []).length;
+  const symbolRatio = visibleChars
+    ? Math.max(0, visibleChars - letterNumberChars) / visibleChars
+    : 1;
+  const corrupt =
+    replacementArtifacts > 0 ||
+    (visibleChars <= 900 && isolatedArtifacts > 0) ||
+    (visibleChars <= 900 && symbolRatio >= 0.28) ||
+    (visibleChars <= 500 && words.length > 0 && letterNumberChars / visibleChars < 0.58);
+  if (corrupt) return { preserve: true, suppressSpeech: true, reason: "corrupt" };
+
+  const explicitCaption =
+    /\b(?:photo|image|illustration)\s+(?:courtesy|credit)|\b(?:figure|fig\.|plate)\s*\d/iu.test(raw);
+  if (explicitCaption && visibleChars <= 2200) {
+    return { preserve: true, suppressSpeech: true, reason: "caption" };
+  }
+
+  const tableLike =
+    lines.length >= 6 &&
+    numericLineRatio >= 0.3 &&
+    shortLineRatio >= 0.62 &&
+    visibleChars <= 1800;
+  if (tableLike) return { preserve: true, suppressSpeech: true, reason: "table" };
+
+  const titleLike =
+    visibleChars <= 420 &&
+    words.length <= 45 &&
+    terminalCount <= 2;
+  if (titleLike) return { preserve: true, suppressSpeech: false, reason: "sparse" };
+
+  const diagramLike =
+    lines.length >= 7 &&
+    shortLineRatio >= 0.78 &&
+    terminalCount <= Math.max(2, Math.floor(lines.length * 0.2)) &&
+    visibleChars <= 1400;
+  if (diagramLike) return { preserve: true, suppressSpeech: true, reason: "diagram" };
+
+  if (p.hasRasterImage && visibleChars <= 1600) {
+    return { preserve: true, suppressSpeech: false, reason: "sparse" };
+  }
+
+  const captionLike =
+    lines.length <= 5 &&
+    words.length >= 12 &&
+    words.length <= 75 &&
+    visibleChars <= 650 &&
+    terminalCount <= 3;
+  if (captionLike) return { preserve: true, suppressSpeech: true, reason: "caption" };
+
+  const sparse = visibleChars <= 320 && words.length <= 70;
+  if (sparse) return { preserve: true, suppressSpeech: false, reason: "sparse" };
+  return { preserve: false, suppressSpeech: false };
+}
 
 const SUPERSCRIPT_REFERENCE_RE = /[⁰¹²³⁴⁵⁶⁷⁸⁹]+/g;
 const BRACKETED_REFERENCE_RE = /\[(?:\d{1,3})(?:\s*[,;\-–—]\s*\d{1,3})*\]/g;

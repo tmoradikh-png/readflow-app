@@ -55,7 +55,7 @@ const planModule = loadTypeScript("../backend/src/config/plans.ts");
 const pdfExtractionModule = loadTypeScript("../backend/src/services/pdfExtract.ts", {
   "pdf-parse/lib/pdf-parse.js": async () => ({ numpages: 0 }),
 });
-const { TextReflow } = textModule;
+const { TextReflow, classifyVisualPage } = textModule;
 const { buildSpeechChunk, resumeSpeechOffset } = speechModule;
 const {
   buildLocalSpeechSegments,
@@ -63,9 +63,111 @@ const {
   normalizeEnglishNumbersForSpeech,
   normalizeLocalSpeechText,
 } = normalizationModule;
-const { renderPdfTextItems } = pdfExtractionModule;
+const { renderPdfTextItems, containsRasterImageOperators } = pdfExtractionModule;
 const { CompactMultilingualModel } = compactTextModelModule;
 const { HybridTextIntelligence } = hybridTextModule;
+
+assert.equal(containsRasterImageOperators([1, 10, 85]), true);
+assert.equal(containsRasterImageOperators([1, 10, 42]), false);
+
+const visualCaptionPage = {
+  page: 15,
+  source: "native",
+  text: [
+    "Task Unit Bruiser SEALs unleash lethal machine gun fire and 40mm grenades",
+    "on insurgents during a clearance operation in southeast Ramadi.",
+    "(Photo courtesy of the authors)",
+  ].join("\n"),
+};
+assert.deepEqual(classifyVisualPage(visualCaptionPage), {
+  preserve: true,
+  suppressSpeech: true,
+  reason: "caption",
+});
+
+const corruptCoverPage = {
+  page: 1,
+  source: "native",
+  text: "Jean. -Jacques\nRousseau _\nThe Reveries\n| Solitary Walker",
+};
+assert.deepEqual(classifyVisualPage(corruptCoverPage), {
+  preserve: true,
+  suppressSpeech: true,
+  reason: "corrupt",
+});
+
+const compactTablePage = {
+  page: 30,
+  source: "native",
+  text: [
+    "Quarter  Revenue  Cost",
+    "Q1       120      80",
+    "Q2       135      82",
+    "Q3       142      91",
+    "Q4       160      96",
+    "Total    557      349",
+  ].join("\n"),
+};
+assert.equal(classifyVisualPage(compactTablePage).reason, "table");
+
+const sparseReadablePage = {
+  page: 31,
+  source: "native",
+  text: "A final thought closes the chapter.\nIt remains ordinary readable prose.",
+};
+assert.deepEqual(classifyVisualPage(sparseReadablePage), {
+  preserve: true,
+  suppressSpeech: false,
+  reason: "sparse",
+});
+
+assert.deepEqual(
+  classifyVisualPage({
+    page: 282,
+    source: "native",
+    hasRasterImage: true,
+    text: "ABOUT THE AUTHORS\n" + "The authors' biographies remain readable prose. ".repeat(18),
+  }),
+  { preserve: true, suppressSpeech: false, reason: "sparse" },
+  "a mixed portrait and biography page must preserve its artwork without silencing prose"
+);
+
+const visualRows = TextReflow.buildSentences(
+  [corruptCoverPage, { page: 2, source: "native", text: "The readable chapter begins here." }],
+  { preserveOriginalPages: true }
+);
+assert.equal(visualRows[0].visualPage, true);
+assert.equal(visualRows[0].suppressSpeech, true);
+assert.equal(
+  buildSpeechChunk(0, visualRows, { mode: "local", pageCap: 10 })?.text,
+  "The readable chapter begins here.",
+  "corrupted visual pages must remain visible but be skipped by speech"
+);
+const longSilentVisualRun = Array.from({ length: 2_000 }, (_, index) => ({
+  id: index,
+  page: index + 1,
+  pageSentenceIndex: 0,
+  paragraphIndex: 0,
+  key: `${index + 1}:visual`,
+  text: "",
+  kind: "body",
+  visualPage: true,
+  suppressSpeech: true,
+}));
+longSilentVisualRun.push({
+  id: 2_000,
+  page: 2_001,
+  pageSentenceIndex: 0,
+  paragraphIndex: 0,
+  key: "2001:0",
+  text: "Readable prose resumes.",
+  kind: "body",
+});
+assert.equal(
+  buildSpeechChunk(0, longSilentVisualRun, { mode: "local", pageCap: 3_000 })?.text,
+  "Readable prose resumes.",
+  "large runs of scanned visual pages must be skipped without recursive stack growth"
+);
 const { AI_ECONOMICS, TIERS, estimatedMonthlyContributionUsd } = planModule;
 
 const planByKey = Object.fromEntries(TIERS.map((tier) => [tier.key, tier]));

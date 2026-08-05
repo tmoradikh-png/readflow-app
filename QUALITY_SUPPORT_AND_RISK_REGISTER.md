@@ -111,6 +111,7 @@ the defect. Regression coverage is recorded in
 | Text extraction | Wrong order, missing glyphs, odd characters | Keep original file; offer Fix text/OCR on eligible plans |
 | OCR | Misspelled or joined words, low confidence | Show OCR source/progress; user verifies against original |
 | Reflow | Heading, list, table, caption, or footnote misclassified | Preserve displayed wording; report with page and language |
+| Visual layout | Photo, cover, chart, or table is lost or corrupt text replaces it | Preserve the exact source page inline; keep Original mode as the fallback |
 | Speech preparation | Pause, emphasis, abbreviation, or name sounds wrong | Preserve meaningful words; fall back to source text when confidence is low |
 | rF AI | English-only, model/device incompatibility, CPU/battery use | Explain model requirement; offer Phone voice or eligible Cloud AI |
 | Device voice | Voice quality or language varies by phone | Let reader select an installed voice/accent |
