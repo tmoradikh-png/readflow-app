@@ -1011,6 +1011,7 @@ assert.match(localProviderSource, /silenceScale: LOCAL_TTS_ENGINE_SILENCE_SCALE/
 assert.match(localProviderSource, /silenceScale: LOCAL_TTS_SEGMENT_SILENCE_SCALE/);
 assert.match(localProviderSource, /LOCAL_TTS_RENDER_VERSION = "segments0\.6"/);
 assert.match(localProviderSource, /LOCAL_TTS_HANDOFF_LEAD_SECONDS = 0\.05/);
+assert.match(localProviderSource, /LOCAL_TTS_MAX_PLAYER_COUNT = 2/);
 assert.match(localProviderSource, /extra: \{ lang: "en" \}/);
 assert.match(
   sherpaPatchSource,
@@ -1031,6 +1032,21 @@ assert.match(
   localProviderSource,
   /takeStandbyPlayer\(index, result\.uri, mySeq\)/,
   "rF AI must consume the prepared player instead of recreating it at handoff"
+);
+assert.equal(
+  (localProviderSource.match(/createAudioPlayer\(/g) || []).length,
+  1,
+  "rF AI must allocate players only through its bounded pool"
+);
+assert.match(
+  localProviderSource,
+  /this\.playerPool\.size >= LOCAL_TTS_MAX_PLAYER_COUNT/,
+  "rF AI must refuse to exceed its two native players"
+);
+assert.match(
+  localProviderSource,
+  /this\.recyclePlayer\(outgoingPlayer\)/,
+  "rF AI must recycle the outgoing player instead of allocating one player per clip"
 );
 assert.match(
   readerSource,

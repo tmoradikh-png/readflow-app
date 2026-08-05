@@ -88,6 +88,7 @@ Supertonic 3 runtime/model configuration.
 | RF-R57 | rF AI finishes one clip after phone lock and then stops because JavaScript is suspended | Keep the generated-audio scheduler alive with an Android media-playback foreground service for eligible playback only | Source checks pin the service type and Reader lifecycle; lock the connected phone and verify at least five clip handoffs before unlocking |
 | RF-R58 | Reopening a saved location jumps several pages backward | Restore the saved page and sentence before allowing backward window expansion | Earlier-page prep starts only after a deliberate user scroll; connected-phone force-stop/reopen retained page 8 and the same sentence |
 | RF-R59 | Next/Previous in Original mode opens an OCR upgrade gate on scanned pages | Original-mode navigation must move directly through source PDF pages without text extraction or OCR | Connected-phone test navigated scanned `Confessions` pages 1-5 and rendered page 5 without a paywall |
+| RF-R60 | rF AI stops after several minutes with `AudioTrack` `-12`/`-20` errors | Reuse a bounded pair of native players instead of allocating one ExoPlayer/AudioTrack per short clip | Source checks pin one allocation site, a two-player cap, outgoing-player recycling, and disposal release; connected-phone gate requires 10 minutes without the warning or error signatures |
 
 ## Connected-Phone Candidate Gate
 
@@ -145,17 +146,16 @@ Supertonic 3 runtime/model configuration.
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.
 
-Latest record: `1.0.51 (58)`, Samsung SM-G975F, QA Reviewer. The side-by-side
-QA APK retained four imported books. rF AI continued across at least seven
-clip handoffs while the phone was locked for 61 seconds, then completed a
-second 118-second run with 27 clip starts, synchronized highlighting, and no
-watchdog, crash, or silent stop. A force-stop/reopen retained page 8 and the
-same sentence after the backward-window fix. Original mode rendered scanned
-`Confessions` pages 1-5 without invoking OCR or a purchase gate. System,
-Light, and Dark appearance persistence passed. A sandbox purchase in the old
-production `1.0.28 (34)` reproduced its temporary repeated-buy prompt and then
-resolved to AI Pro after relaunch; the `1.0.51` immediate-entitlement fix still
-needs an internal Play build because the `.qa` package cannot use production
-Google Billing. Objective audio activity and timing were measured, but audible
-pronunciation/timbre remains an owner listening check because this environment
-did not expose microphone capture.
+Latest record: `1.0.52 (59)`, Samsung SM-G975F, QA Reviewer. The side-by-side
+QA APK retained four imported books. A microphone-recorded rF AI run continued
+for 10 minutes, moved from page 4 through page 13, kept both audio services
+foreground, and produced no watchdog notice, crash, or `AudioTrack` `-12`/`-20`
+error. A Stop/Play restart then advanced to page 14 for another 60 seconds with
+zero matching errors. A phone `Slow charging` system dialog covered the reader
+during the latter part of the long run, but page/highlight progression and both
+foreground services continued. The earlier `1.0.51` lock, saved-position,
+Original/Reflow, theme, OCR-gating, and four-book retention checks remain valid.
+The purchase-state fix still needs an internal Play build because the `.qa`
+package cannot use production Google Billing. Automated transcription confirmed
+speech through the old 4:38 failure boundary; final pronunciation/timbre remains
+an owner listening judgment.

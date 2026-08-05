@@ -84,7 +84,7 @@ Already present:
   approves` and explicitly said no charge. The sandbox subscription completed.
   The old app initially kept its upgrade sheet open, reproducing the reported
   repeated-purchase prompt, then showed AI Pro after force-stop/relaunch.
-- Local candidate `1.0.51 (58)` applies the active RevenueCat SDK tier
+- Local candidate `1.0.52 (59)` carries the `1.0.51` repair that applies the active RevenueCat SDK tier
   immediately, listens for CustomerInfo changes, and prevents a stale backend
   response from downgrading it. Automated checks pass. Live Google Billing
   cannot be exercised in `com.urmiaworks.readflow.qa` because that side-by-side

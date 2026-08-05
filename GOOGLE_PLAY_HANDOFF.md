@@ -8,9 +8,10 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 
 ## Current Play Status
 
-- Local QA candidate `1.0.51 (58)` uses side-by-side package
+- Local QA candidate `1.0.52 (59)` uses side-by-side package
   `com.urmiaworks.readflow.qa` and has not been uploaded to EAS or Play.
-  Production remains `1.0.50 (57)`, and production code `58` is not consumed.
+  Production remains `1.0.50 (57)`, and production codes `58`/`59` are not
+  consumed by this local package.
 - Google Play production release `1.0.50 (57)` is currently live. On
   2026-07-27 Play Console showed the production track as active, latest release
   `1.0.50 (57)`, status `Available on Google Play`, released on Jul 22 at

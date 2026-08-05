@@ -38,16 +38,47 @@ keys, or recovery codes.
   publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
-- Current local QA source is `1.0.51` / Android code `58`. It is installed only
+- Current local QA source is `1.0.52` / Android code `59`. It is installed only
   as side-by-side package `com.urmiaworks.readflow.qa`; it has not been sent to
   EAS, Google Play, or any public release track. This QA package does not
-  consume production Play version code `58`.
-- Local QA APK: `artifacts/readflow-qa-1.0.51-58.apk` (231,506,319 bytes;
+  consume production Play version code `58` or `59`.
+- Local QA APK: `artifacts/readflow-qa-1.0.52-59.apk` (231,507,035 bytes;
   220.78 MiB). SHA-256:
-  `2EE73CDD36B38308B8A135B53FE117F840876ABFF2F72D82C7D1DDDF896DE6B4`.
+  `818057DDCB9D1D057E3FDB8FD019312D8C6B42ACF86AF59E780F3E41EAE1EAD0`.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.52 Local rF AI Resource Hotfix - 2026-08-05
+
+The connected Samsung reproduced a release-blocking rF AI failure in `1.0.51`:
+continuous speech stopped after about 4 minutes 38 seconds and showed `rF AI
+paused`. Logcat repeatedly reported `AudioTrack` initialization errors `-12`
+and `-20`. `expo-audio` player removal did not synchronously release each native
+ExoPlayer/AudioTrack, while the local provider created another player for every
+short clip.
+
+`1.0.52` keeps a bounded pool of two native players, alternates/replaces their
+sources at clip handoff, and releases both only when the provider is disposed.
+The source regression suite now prohibits more than one allocation site and
+pins the two-player cap and outgoing-player recycling.
+
+Connected Samsung SM-G975F evidence:
+
+- The side-by-side `1.0.52 (59)` APK retained all four imported documents.
+- A microphone-recorded rF AI run stayed active for 10 minutes, advanced
+  `Extreme Ownership` from page 4 through page 13, and kept both Android audio
+  services foreground. Screenshots at minutes 1, 5, and 10 showed page/highlight
+  progress; there was no rF AI warning, crash, or `AudioTrack` `-12`/`-20` error.
+- Speech was present through the old failure boundary. A phone `Slow charging`
+  system dialog appeared during the latter part of the run, but page/highlight
+  progression and both foreground services continued behind it.
+- Stop changed the control to Play; restart changed it back to Pause and advanced
+  from page 13 to page 14 during another 60-second run with zero matching errors.
+- This is a local QA build only. No EAS build, Play upload, rollout, or public
+  release was performed.
+- Before tag: `readflow-before-audiotrack-resource-fix-local-1.0.52-20260805`.
+  After tag: `readflow-after-audiotrack-resource-fix-local-1.0.52-20260805`.
 
 ## 1.0.51 Local QA Candidate - 2026-08-05
 
@@ -93,9 +124,9 @@ Connected Samsung SM-G975F evidence:
   an AI Pro/Power OCR rebuild is still required for clean reflow. Local OCR
   comparisons showed strong improvement on pages 5, 8, and 13, while the
   decorative cover remained unreliable.
-- This environment had no microphone-capture tool. Android audio state, clip
-  timing, continuity, source text, and highlight progression were measured;
-  audible pronunciation and timbre were not claimed as verified.
+- During the initial `1.0.51` session this environment had no working microphone
+  capture. Later USB microphone capture reproduced the four-minute resource
+  exhaustion above and supplied the `1.0.52` before/after evidence.
 
 Hotfix reason: the live Play build could crash when starting Cloud AI/rF AI
 audio because Android denied `expo.modules.audio.service.AudioControlsService`

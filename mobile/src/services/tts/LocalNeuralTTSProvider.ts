@@ -27,6 +27,7 @@ const LOCAL_TTS_RENDER_VERSION = "segments0.6";
 const LOCAL_TTS_ENGINE_SILENCE_SCALE = 0.2;
 const LOCAL_TTS_SEGMENT_SILENCE_SCALE = 0;
 const LOCAL_TTS_DEFAULT_FINAL_PAUSE_MS = 240;
+const LOCAL_TTS_MAX_PLAYER_COUNT = 2;
 // Every generated non-final segment already ends with at least 85 ms of
 // silence. Start the next ready player inside the final part of that silence
 // instead of waiting for Expo's delayed didJustFinish callback.
@@ -66,6 +67,8 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     seq: number;
     player: AudioPlayer;
   } | null = null;
+  private readonly playerPool = new Set<AudioPlayer>();
+  private availablePlayers: AudioPlayer[] = [];
   private finishTimer: ReturnType<typeof setTimeout> | null = null;
   private playbackWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
   private prefetchTimers: ReturnType<typeof setTimeout>[] = [];
@@ -215,7 +218,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.clearPlaybackWatchdog();
     this.removeListener?.();
     this.removeListener = null;
-    this.releaseStandbyPlayer();
+    this.recycleStandbyPlayer();
 
     // Queue every sentence in this reading unit before future prefetch work can
     // enter the native engine. Playback starts as soon as sentence one is ready;
@@ -267,17 +270,14 @@ export class LocalNeuralTTSProvider implements TTSProvider {
           return;
         }
 
-        this.releaseStandbyPlayer();
-        const player = createAudioPlayer(result.uri, {
-          updateInterval: 40,
-          keepAudioSessionActive: true,
-        });
+        this.recycleStandbyPlayer();
+        const player = this.acquirePlayer(result.uri);
         if (mySeq !== this.seq) {
-          this.releasePlayer(player);
+          this.recyclePlayer(player);
           return;
         }
         this.standbyPlayer = { index, uri: result.uri, seq: mySeq, player };
-      })();
+      })().catch((error) => fail(error));
     };
 
     const playSegment = async (index: number): Promise<void> => {
@@ -301,19 +301,11 @@ export class LocalNeuralTTSProvider implements TTSProvider {
           !standbyPlayer && outgoingPlayer && !outgoingPlayer.playing
             ? outgoingPlayer
             : null;
-        let outgoingReleased = false;
-        if (!standbyPlayer && !reusablePlayer) {
-          this.releasePlayer(outgoingPlayer);
-          outgoingReleased = true;
-        }
 
         const player =
           standbyPlayer ||
           reusablePlayer ||
-          createAudioPlayer(result.uri, {
-            updateInterval: 40,
-            keepAudioSessionActive: true,
-          });
+          this.acquirePlayer(result.uri);
         if (reusablePlayer) reusablePlayer.replace(result.uri);
         this.player = player;
 
@@ -422,9 +414,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
         player.play();
         started = true;
         armPlaybackWatchdog();
-        if (outgoingPlayer && outgoingPlayer !== player && !outgoingReleased) {
-          this.releasePlayer(outgoingPlayer);
-        }
+        if (outgoingPlayer && outgoingPlayer !== player) this.recyclePlayer(outgoingPlayer);
         prepareStandby(index + 1);
         if (!notifiedStart) {
           notifiedStart = true;
@@ -446,11 +436,13 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.clearPlaybackWatchdog();
     this.removeListener?.();
     this.removeListener = null;
-    this.releaseStandbyPlayer();
+    this.recycleStandbyPlayer();
     try {
       this.player?.clearLockScreenControls();
     } catch {}
-    this.releasePlayer();
+    const player = this.player;
+    this.player = null;
+    this.recyclePlayer(player);
   }
 
   async pause(): Promise<void> {
@@ -461,7 +453,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.clearPlaybackWatchdog();
     this.removeListener?.();
     this.removeListener = null;
-    this.releaseStandbyPlayer();
+    this.recycleStandbyPlayer();
     try {
       this.player?.pause();
     } catch {}
@@ -478,6 +470,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
 
     this.disposePromise = (async () => {
       await this.stop();
+      this.releaseAllPlayers();
       const enginePromise = this.enginePromise;
       this.enginePromise = null;
 
@@ -514,14 +507,53 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     this.finishTimer = null;
   }
 
-  private releasePlayer(player = this.player) {
+  private acquirePlayer(uri: string): AudioPlayer {
+    const reusable = this.availablePlayers.pop();
+    if (reusable) {
+      try {
+        reusable.pause();
+      } catch {}
+      reusable.replace(uri);
+      return reusable;
+    }
+
+    if (this.playerPool.size >= LOCAL_TTS_MAX_PLAYER_COUNT) {
+      throw new Error("rF AI audio player pool exhausted.");
+    }
+
+    const player = createAudioPlayer(uri, {
+      updateInterval: 40,
+      keepAudioSessionActive: true,
+    });
+    this.playerPool.add(player);
+    return player;
+  }
+
+  private recyclePlayer(player: AudioPlayer | null) {
+    if (!player || !this.playerPool.has(player) || this.availablePlayers.includes(player)) return;
     try {
-      player?.pause();
+      player.pause();
     } catch {}
-    try {
-      player?.remove();
-    } catch {}
-    if (player === this.player) this.player = null;
+    this.availablePlayers.push(player);
+  }
+
+  private releaseAllPlayers() {
+    const players = [...this.playerPool];
+    this.player = null;
+    this.standbyPlayer = null;
+    this.availablePlayers = [];
+    this.playerPool.clear();
+    for (const player of players) {
+      try {
+        player.clearLockScreenControls();
+      } catch {}
+      try {
+        player.pause();
+      } catch {}
+      try {
+        player.remove();
+      } catch {}
+    }
   }
 
   private clearPlaybackWatchdog() {
@@ -539,10 +571,10 @@ export class LocalNeuralTTSProvider implements TTSProvider {
     return standby.player;
   }
 
-  private releaseStandbyPlayer() {
+  private recycleStandbyPlayer() {
     const standby = this.standbyPlayer;
     this.standbyPlayer = null;
-    if (standby) this.releasePlayer(standby.player);
+    if (standby) this.recyclePlayer(standby.player);
   }
 
   private assertGenerationCurrent(epoch: number) {
