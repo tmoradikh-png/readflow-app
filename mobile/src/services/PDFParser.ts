@@ -12,6 +12,8 @@ export interface PdfPage {
   confidence?: number;
   /** Source PDF page contains raster artwork or a scanned background. */
   hasRasterImage?: boolean;
+  /** Zero-based text line where the backend detected footer notes by layout. */
+  footnoteStartLine?: number;
 }
 
 export interface ParsedPdf {

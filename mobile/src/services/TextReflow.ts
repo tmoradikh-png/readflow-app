@@ -759,6 +759,12 @@ function stripNonReadingLines(
       }
     }
 
+    const sceneContinuation = sceneBreakContinuation(trimmed);
+    if (sceneContinuation != null) {
+      if (sceneContinuation) kept.push(sceneContinuation);
+      continue;
+    }
+
     if (isFootnoteBlockStart(trimmed, i, lines.length)) {
       inFootnoteBlock = true;
       continue;
@@ -805,9 +811,14 @@ function isFootnoteBlockStart(trimmed: string, lineIndex: number, lineCount: num
     if (!rest) return false;
     return position > 0.45 || rest.length > 80;
   }
+  return false;
+}
 
-  if (position <= 0.45 || !/[∗*＊﹡]\s*$/.test(trimmed)) return false;
-  return isMostlyLatin(trimmed);
+/** Keep prose that shares an extracted line with a conventional scene divider. */
+function sceneBreakContinuation(trimmed: string): string | null {
+  const match = trimmed.match(/^(?:[∗*＊﹡]\s*){3,}(.*)$/);
+  if (!match) return null;
+  return match[1].trim();
 }
 
 function isFootnoteBlockStop(trimmed: string): boolean {
@@ -869,7 +880,15 @@ function buildFootnoteCutoffs(pages: PdfPage[]): Map<number, number> {
   for (const page of pages) {
     const lines = (page.text || "").replace(/\r/g, "").split("\n");
     if (insideNotes) {
-      const restart = lines.findIndex((line) => isFootnoteSectionEnd(line.trim()));
+      const openingIndexes = new Set(
+        lines
+          .map((line, index) => (line.trim() ? index : -1))
+          .filter((index) => index >= 0)
+          .slice(0, 3)
+      );
+      const restart = lines.findIndex((line, index) =>
+        isFootnoteSectionEnd(line.trim(), openingIndexes.has(index))
+      );
       if (restart < 0) {
         cutoffs.set(page.page, 0);
         continue;
@@ -877,9 +896,17 @@ function buildFootnoteCutoffs(pages: PdfPage[]): Map<number, number> {
       insideNotes = false;
     }
 
+    if (
+      Number.isInteger(page.footnoteStartLine) &&
+      (page.footnoteStartLine as number) >= 0 &&
+      (page.footnoteStartLine as number) < lines.length
+    ) {
+      cutoffs.set(page.page, page.footnoteStartLine as number);
+    }
+
     const notesStart = lines.findIndex((line) => isNotesHeading(line.trim()));
     if (notesStart >= 0) {
-      cutoffs.set(page.page, notesStart);
+      cutoffs.set(page.page, Math.min(cutoffs.get(page.page) ?? notesStart, notesStart));
       insideNotes = true;
     }
   }
@@ -891,9 +918,10 @@ function isNotesHeading(value: string): boolean {
   return /^(?:translator'?s?\s+)?(?:notes?|footnotes?|endnotes?)(?:\s+to\b.*)?$/i.test(value);
 }
 
-function isFootnoteSectionEnd(value: string): boolean {
+function isFootnoteSectionEnd(value: string, pageOpening = false): boolean {
   if (!value) return false;
-  const text = unwrapStructuralHeading(value).text;
+  const structural = unwrapStructuralHeading(value);
+  const text = structural.text;
   if (
     /^(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+walk\s+\d+$/i.test(
       text
@@ -901,7 +929,22 @@ function isFootnoteSectionEnd(value: string): boolean {
   ) {
     return false;
   }
-  return isChapterMarker(text);
+  if (structural.marked || isChapterMarker(text)) return true;
+  return pageOpening && isStrongSectionHeading(text);
+}
+
+function isStrongSectionHeading(value: string): boolean {
+  const text = value.trim();
+  if (text.length < 4 || text.length > 100) return false;
+  if (/^(?:index|contents|table of contents|bibliography|references|notes?|footnotes?|endnotes?)$/i.test(text)) {
+    return false;
+  }
+  if (/^(?:interpretative|interpretive|critical|supplementary)\s+(?:essay|analysis|commentary)\b/i.test(text)) {
+    return true;
+  }
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 10 || !/[A-Z]/.test(text)) return false;
+  return text === text.toUpperCase() && /^[A-Z0-9 '&(),.:-]+$/.test(text);
 }
 
 function boilerplatePattern(normalized: string): string {

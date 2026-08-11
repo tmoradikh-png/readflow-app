@@ -25,7 +25,7 @@ const DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingm
 /**
  * POST /api/pdf/extract
  * form-data: file=<pdf|docx>, ocrLang?, forceOcr?
- * -> { pageCount, pages: [{ page, text, source, confidence? }], scanned, kind, ocrPages, truncated? }
+ * -> { pageCount, pages: [{ page, text, source, confidence?, footnoteStartLine? }], scanned, kind, ocrPages, truncated? }
  *
  * Tier rules:
  *   - Free: native text only, capped to `perDocPageCap` pages, NO OCR. Ads UI.
@@ -146,6 +146,7 @@ pdfRouter.post("/extract", upload.single("file"), async (req, res) => {
               p.text = r.text;
               p.source = "ocr";
               p.confidence = r.confidence;
+              delete p.footnoteStartLine;
               ocrPages++;
               replaced.add(p.page);
             }

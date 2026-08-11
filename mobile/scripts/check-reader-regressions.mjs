@@ -63,7 +63,11 @@ const {
   normalizeEnglishNumbersForSpeech,
   normalizeLocalSpeechText,
 } = normalizationModule;
-const { renderPdfTextItems, containsRasterImageOperators } = pdfExtractionModule;
+const {
+  renderPdfTextItems,
+  renderPdfTextItemsWithLayout,
+  containsRasterImageOperators,
+} = pdfExtractionModule;
 const { CompactMultilingualModel } = compactTextModelModule;
 const { HybridTextIntelligence } = hybridTextModule;
 
@@ -146,6 +150,84 @@ assert.doesNotMatch(
   /Editorial history|continuation of the editorial note|Another note/,
   "explicit multi-page notes must stay out of reflow until the next Walk"
 );
+const essayAfterNotesRows = TextReflow.buildSentences([
+  {
+    page: 1,
+    source: "native",
+    text: "The main work ends here.\n\nNOTES\n1. Editorial material.",
+  },
+  {
+    page: 2,
+    source: "native",
+    text: "First Walk 9\nThe editorial note continues on this page.",
+  },
+  {
+    page: 3,
+    source: "native",
+    text: "INTERPRETATIVE ESSAY\n\nThe independent essay begins with readable body prose.",
+  },
+]);
+const essayAfterNotesText = essayAfterNotesRows.map((row) => row.text).join(" ");
+assert.match(essayAfterNotesText, /INTERPRETATIVE ESSAY[\s\S]*independent essay begins/);
+assert.doesNotMatch(essayAfterNotesText, /editorial note continues/);
+
+const sceneBreakRows = TextReflow.buildSentences([
+  {
+    page: 1,
+    source: "native",
+    text: [
+      "The first scene ends with ordinary prose.",
+      "* * * The second scene begins on the same extracted line and must remain.",
+      "Its next paragraph also remains readable.",
+    ].join("\n"),
+  },
+]);
+const sceneBreakText = sceneBreakRows.map((row) => row.text).join(" ");
+assert.match(sceneBreakText, /first scene ends/);
+assert.match(sceneBreakText, /second scene begins[\s\S]*next paragraph also remains/);
+assert.doesNotMatch(sceneBreakText, /\* \* \*/);
+
+const trailingReferenceRows = TextReflow.buildSentences([
+  {
+    page: 1,
+    source: "native",
+    text: [
+      "Opening body line one.",
+      "Opening body line two.",
+      "Opening body line three.",
+      "A quoted verse ends here. *",
+      "The body continues after the inline reference marker.",
+      "The final body sentence remains too.",
+      "* This explanatory footer note must be removed.",
+    ].join("\n"),
+  },
+]);
+const trailingReferenceText = trailingReferenceRows.map((row) => row.text).join(" ");
+assert.match(trailingReferenceText, /body continues[\s\S]*final body sentence remains/);
+assert.doesNotMatch(trailingReferenceText, /explanatory footer note/);
+
+const positionedPersianFooter = renderPdfTextItemsWithLayout([
+  { str: "متن اصلی صفحه آغاز می شود.", transform: [12, 0, 0, 12, 72, 300], width: 220, height: 12 },
+  { str: "۴", transform: [8, 0, 0, 8, 320, 280], width: 6, height: 8 },
+  { str: "نقل قول مربوط به متن اصلی است.", transform: [12, 0, 0, 12, 72, 260], width: 240, height: 12 },
+  { str: "متن اصلی همچنان ادامه دارد.", transform: [12, 0, 0, 12, 72, 240], width: 230, height: 12 },
+  { str: "پاراگراف مهم دیگری باقی می ماند.", transform: [12, 0, 0, 12, 72, 220], width: 250, height: 12 },
+  { str: "آخرین جمله متن اصلی باید حفظ شود.", transform: [12, 0, 0, 12, 72, 200], width: 260, height: 12 },
+  { str: "۴", transform: [6.5, 0, 0, 6.5, 320, 98], width: 5, height: 6.5 },
+  { str: "این توضیح پاورقی نباید وارد متن خواندنی شود.", transform: [10, 0, 0, 10, 72, 90], width: 300, height: 10 },
+  { str: "۷۳", transform: [12, 0, 0, 12, 190, 38], width: 14, height: 12 },
+]);
+assert.equal(
+  positionedPersianFooter.text.split("\n")[positionedPersianFooter.footnoteStartLine],
+  "۴",
+  "backend geometry must identify the repeated small footer marker"
+);
+const repeatedPersianFooterRows = TextReflow.buildSentences([
+  { page: 73, source: "native", ...positionedPersianFooter },
+]);
+const repeatedPersianFooterText = repeatedPersianFooterRows.map((row) => row.text).join(" ");
+assert.match(repeatedPersianFooterText, /آخرین جمله متن اصلی باید حفظ شود/);
+assert.doesNotMatch(repeatedPersianFooterText, /توضیح پاورقی/);
 const numberedBodyRows = TextReflow.buildSentences([
   {
     page: 1,

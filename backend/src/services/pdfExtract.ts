@@ -13,11 +13,18 @@ export interface ExtractedPage {
   confidence?: number;
   /** True when the source page paints one or more raster images. */
   hasRasterImage?: boolean;
+  /** Zero-based text line where a geometrically detected footer note begins. */
+  footnoteStartLine?: number;
 }
 
 export interface ExtractedDocument {
   pageCount: number;
   pages: ExtractedPage[];
+}
+
+export interface RenderedPdfText {
+  text: string;
+  footnoteStartLine?: number;
 }
 
 interface PositionedTextItem {
@@ -56,20 +63,23 @@ const STRUCTURAL_HEADING_END = "\uE101";
  * OCR for those pages (see services/ocrExtract.ts).
  */
 export async function extractPdf(buffer: Buffer): Promise<ExtractedDocument> {
-  const pages: string[] = [];
+  const pages: RenderedPdfText[] = [];
 
   function renderPage(pageData: any): Promise<string> {
     const options = { normalizeWhitespace: false, disableCombineTextItems: false };
     return pageData.getTextContent(options).then((content: any) => {
-      const text = renderPdfTextItems(content.items || []);
-      pages.push(text);
-      return text;
+      const rendered = renderPdfTextItemsWithLayout(content.items || []);
+      pages.push(rendered);
+      return rendered.text;
     });
   }
 
   await pdfParse(buffer, { pagerender: renderPage });
   const candidatePages = pages
-    .map((text, index) => ({ page: index + 1, chars: text.replace(/\s/g, "").length }))
+    .map((rendered, index) => ({
+      page: index + 1,
+      chars: rendered.text.replace(/\s/g, "").length,
+    }))
     .filter((candidate) => candidate.chars > 0 && candidate.chars <= 1600)
     .slice(0, 160)
     .map((candidate) => candidate.page);
@@ -77,13 +87,16 @@ export async function extractPdf(buffer: Buffer): Promise<ExtractedDocument> {
 
   return {
     pageCount: pages.length,
-    pages: pages.map((text, i) => ({
+    pages: pages.map((rendered, i) => ({
       page: i + 1,
-      text: text.trim(),
+      text: rendered.text.trim(),
       source: "native" as const,
       // Empty PDF text almost always represents a scanned/visual page. Keeping
       // the original is useful even for a genuinely blank separator page.
-      hasRasterImage: !text.trim() || rasterPages.has(i + 1),
+      hasRasterImage: !rendered.text.trim() || rasterPages.has(i + 1),
+      ...(rendered.footnoteStartLine == null
+        ? {}
+        : { footnoteStartLine: rendered.footnoteStartLine }),
     })),
   };
 }
@@ -156,33 +169,77 @@ async function detectRasterImagePages(buffer: Buffer, pageNumbers: number[]): Pr
  * line and sort by X position; RTL lines are sorted right-to-left.
  */
 export function renderPdfTextItems(rawItems: any[]): string {
+  return renderPdfTextItemsWithLayout(rawItems).text;
+}
+
+export function renderPdfTextItemsWithLayout(rawItems: any[]): RenderedPdfText {
   const items = rawItems.map(toPositionedItem).filter(Boolean) as PositionedTextItem[];
-  if (items.length === 0) return "";
+  if (items.length === 0) return { text: "" };
 
   const lines = groupIntoLines(items);
   const paragraphGap = paragraphGapThreshold(lines);
   const typography = dominantPageTypography(lines);
   const ordinaryGap = ordinaryLineGap(lines, typography.bodyHeight);
-  let out = "";
+  const footerStart = geometricFootnoteStart(lines, typography.bodyHeight);
+  const outputLines: string[] = [];
+  let footnoteStartLine: number | undefined;
   let previous: TextLine | null = null;
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const line = lines[lineIndex];
     const rendered = renderLine(line);
     if (!rendered) continue;
-    if (out) {
+    if (outputLines.length) {
       const gap = previous ? previous.y - line.y : 0;
-      out += gap > paragraphGap ? "\n\n" : "\n";
+      if (gap > paragraphGap) outputLines.push("");
     }
-    out += isGeometricHeading(line, rendered, typography, {
+    if (lineIndex === footerStart) footnoteStartLine = outputLines.length;
+    outputLines.push(isGeometricHeading(line, rendered, typography, {
       before: lineIndex > 0 ? lines[lineIndex - 1].y - line.y : 0,
       after: lineIndex + 1 < lines.length ? line.y - lines[lineIndex + 1].y : 0,
       ordinary: ordinaryGap,
     })
       ? `${STRUCTURAL_HEADING_START}${rendered}${STRUCTURAL_HEADING_END}`
-      : rendered;
+      : rendered);
     previous = line;
   }
-  return out;
+  return {
+    text: outputLines.join("\n"),
+    ...(footnoteStartLine == null ? {} : { footnoteStartLine }),
+  };
+}
+
+/**
+ * Find a numbered footer only when PDF geometry distinguishes it from body
+ * prose. Repeated text alone is unsafe because numbered verse and list markers
+ * can legitimately recur near a page end.
+ */
+function geometricFootnoteStart(lines: TextLine[], bodyHeight: number): number {
+  if (!bodyHeight || lines.length < 6) return -1;
+  const firstMarker = new Map<string, number>();
+  const rendered = lines.map((line) => renderLine(line).trim());
+  for (let index = 0; index < rendered.length; index++) {
+    const marker = standaloneReferenceNumber(rendered[index]);
+    if (marker && !firstMarker.has(marker)) firstMarker.set(marker, index);
+  }
+
+  const lowerPageStart = Math.floor(lines.length * 0.65);
+  for (let index = lowerPageStart; index < lines.length - 1; index++) {
+    const marker = standaloneReferenceNumber(rendered[index]);
+    if (!marker || firstMarker.get(marker) === index) continue;
+    const noteText = rendered[index + 1];
+    if (!/\p{L}/u.test(noteText)) continue;
+    if (dominantLineHeight(lines[index]) > bodyHeight * 0.75) continue;
+    if (dominantLineHeight(lines[index + 1]) > bodyHeight * 0.92) continue;
+    return index;
+  }
+  return -1;
+}
+
+function standaloneReferenceNumber(value: string): string | null {
+  const normalized = value
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+  return /^\d{1,3}$/.test(normalized) ? normalized : null;
 }
 
 /** Preserve the larger baseline gap that visually separates PDF paragraphs. */
@@ -331,6 +388,17 @@ function greatestWeightKey<T>(weights: Map<T, number>): T | undefined {
   return best;
 }
 
+function dominantLineHeight(line: TextLine): number {
+  const visibleItems = line.items.filter((item) => item.height > 0 && item.str.trim());
+  return greatestWeightKey(
+    visibleItems.reduce((weights, item) => {
+      const key = Math.round(item.height * 20) / 20;
+      weights.set(key, (weights.get(key) || 0) + Math.max(1, item.str.replace(/\s/g, "").length));
+      return weights;
+    }, new Map<number, number>())
+  ) || 0;
+}
+
 /**
  * Detect display headings from PDF typography instead of English capitalization
  * or punctuation. All three independent layout signals are required: a larger
@@ -351,13 +419,7 @@ function isGeometricHeading(
 
   const visibleItems = line.items.filter((item) => item.height > 0 && item.str.trim());
   if (!visibleItems.length) return false;
-  const lineHeight = greatestWeightKey(
-    visibleItems.reduce((weights, item) => {
-      const key = Math.round(item.height * 20) / 20;
-      weights.set(key, (weights.get(key) || 0) + Math.max(1, item.str.replace(/\s/g, "").length));
-      return weights;
-    }, new Map<number, number>())
-  ) || 0;
+  const lineHeight = dominantLineHeight(line);
 
   const fontWeights = new Map<string, number>();
   let totalFontWeight = 0;
