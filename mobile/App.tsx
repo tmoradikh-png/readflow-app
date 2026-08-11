@@ -129,7 +129,11 @@ function ReadFlowApp() {
   const syncRevenueCatEntitlement = useCallback(
     (customerInfo: Parameters<typeof activeRevenueCatTier>[0]) => {
       const purchasedTier = activeRevenueCatTier(customerInfo);
-      if (!purchasedTier) return Promise.resolve(null);
+      if (!purchasedTier) {
+        revenueCatTierRef.current = null;
+        entitlementSyncTargetRankRef.current = 0;
+        return refreshEntitlementAndUsage(true);
+      }
       revenueCatTierRef.current = purchasedTier;
       setEntitlement((current) =>
         (ENTITLEMENT_RANK[current.tier] || 0) >= (ENTITLEMENT_RANK[purchasedTier] || 0)
@@ -191,7 +195,7 @@ function ReadFlowApp() {
     let active = true;
     let unsubscribe = () => {};
     const handleCustomerInfo = (customerInfo: Parameters<typeof activeRevenueCatTier>[0]) => {
-      if (!active || !activeRevenueCatTier(customerInfo)) return;
+      if (!active) return;
       syncRevenueCatEntitlement(customerInfo).catch(() => {});
     };
 
@@ -251,10 +255,9 @@ function ReadFlowApp() {
     try {
       const customerInfo = await restoreRevenueCatPurchases();
       const restoredTier = activeRevenueCatTier(customerInfo);
+      await syncRevenueCatEntitlement(customerInfo);
       if (!restoredTier) {
         setPurchaseError("No active Google Play subscription was found for this account.");
-      } else {
-        await syncRevenueCatEntitlement(customerInfo);
       }
       await refreshPurchaseSetup();
     } catch (err) {

@@ -30,10 +30,10 @@ Policy sources checked on 2026-06-29:
 
 ## Current Status
 
-Android payment is wired in production, but the end-to-end sandbox purchase
-test is not complete yet. Do not treat paid launch QA as complete until a Play
-license-tester purchase, restore, cancellation, expiry, and backend entitlement
-refresh have been verified.
+Android payment is wired in production, but the new release candidate still
+needs an end-to-end Play sandbox pass. Do not treat paid launch QA as complete
+until a license-tester purchase, restore, cancellation/expiry, and backend
+entitlement refresh have been verified on the internal-track build.
 
 The 2026-07-20 source repair addresses a confirmed stale-Free failure mode:
 RevenueCat CustomerInfo updates are now observed after purchase, restore, and
@@ -42,6 +42,12 @@ backend RevenueCat lookup with bounded retries. The backend cache bypass applies
 only when the entitlement endpoint receives the explicit refresh header. Deploy
 the backend and create a new Android build before retesting. The existing
 `1.0.29 (35)` AAB predates this repair.
+
+The 2026-08-11 `1.0.66 (73)` candidate also handles the reverse lifecycle:
+RevenueCat updates with no active entitlement clear the mobile paid-tier guard
+and force a backend refresh. Restore synchronizes inactive CustomerInfo too, so
+expiry no longer requires an app restart to leave the paid tier. The release
+checker now guards this behavior.
 
 Already present:
 

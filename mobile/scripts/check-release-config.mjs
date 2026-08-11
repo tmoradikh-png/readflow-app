@@ -13,6 +13,7 @@ const backendRenderYamlPath = path.join(repoRoot, "backend", "render.yaml");
 const internalRenderYamlPath = path.join(repoRoot, "render.internal.yaml");
 const backendInternalRenderYamlPath = path.join(repoRoot, "backend", "render.internal.yaml");
 const backendEntitlementsPath = path.join(repoRoot, "backend", "src", "services", "entitlements.ts");
+const appSourcePath = path.join(mobileDir, "App.tsx");
 
 function fail(message) {
   console.error(`FAIL: ${message}`);
@@ -33,8 +34,8 @@ const android = expo.android || {};
 const ios = expo.ios || {};
 const extra = expo.extra || {};
 const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.65";
-const EXPECTED_ANDROID_VERSION_CODE = 72;
+const EXPECTED_VERSION = "1.0.66";
+const EXPECTED_ANDROID_VERSION_CODE = 73;
 const EXPECTED_IOS_BUILD_NUMBER = "50";
 const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
 
@@ -264,6 +265,21 @@ if (
   pass("Internal QA blueprints default to the no-vendor-cost Reviewer tier");
 } else {
   fail("Internal QA blueprints must use DEV_DEFAULT_TIER=reviewer");
+}
+
+// 12) RevenueCat must handle both upgrades and inactive/expired entitlements.
+// Ignoring an empty CustomerInfo leaves a paid tier visible until restart.
+const appSource = readUtf8(appSourcePath);
+const clearsInactiveRevenueCatTier =
+  /if\s*\(!purchasedTier\)\s*\{[\s\S]{0,240}?revenueCatTierRef\.current\s*=\s*null;[\s\S]{0,240}?refreshEntitlementAndUsage\(true\)/.test(
+    appSource
+  );
+const ignoresInactiveCustomerInfo =
+  /if\s*\(!active\s*\|\|\s*!activeRevenueCatTier\(customerInfo\)\)\s*return/.test(appSource);
+if (clearsInactiveRevenueCatTier && !ignoresInactiveCustomerInfo) {
+  pass("RevenueCat inactive and expired entitlement updates force a backend refresh");
+} else {
+  fail("RevenueCat CustomerInfo updates must clear inactive tiers and refresh backend entitlements");
 }
 
 if (process.exitCode) {

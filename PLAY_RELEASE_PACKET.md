@@ -18,9 +18,9 @@ Current source status:
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
 - Current production release is `1.0.50 / versionCode 57`.
-- Local QA candidate `1.0.54 / versionCode 61` uses package
-  `com.urmiaworks.readflow.qa`; it has not been uploaded or released and does
-  not consume production version codes `58` through `61`.
+- Latest tested local QA build is `1.0.65 / versionCode 72` under package
+  `com.urmiaworks.readflow.qa`. The pending Play candidate is production package
+  `com.urmiaworks.readflow`, version `1.0.66 / versionCode 73`.
 - Release checker passes for the current source configuration.
 - Android permissions include the minimum required for subscriptions plus
   generated-audio playback/model download services: `INTERNET`,
@@ -35,6 +35,8 @@ Current source status:
   Google Play products are published in RevenueCat, and the `default` offering
   has all six paid packages. Build `1.0.50` / code `57` is the current Play
   production release.
+- Inactive/expired RevenueCat CustomerInfo now clears the mobile SDK-tier guard
+  and forces a backend refresh; this is protected by the release checker.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, Advertising ID (`No`), foreground services, government apps, financial
   features, health, content rating, target audience, Data Safety, and app

@@ -38,7 +38,9 @@ keys, or recovery codes.
   publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
-- Current local QA source is `1.0.65` / Android code `72` at commit `881ca6c`.
+- Current release-candidate source is `1.0.66` / Android code `73`. It adds
+  inactive/expired RevenueCat entitlement handling and has not yet been sent to
+  EAS or Play.
 - Latest tested local QA APK: `artifacts/readflow-qa-1.0.65-72.apk`
   (231,562,883 bytes; SHA-256
   `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`).
@@ -48,6 +50,21 @@ keys, or recovery codes.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.66 Subscription Release Gate - 2026-08-11
+
+- RevenueCat CustomerInfo updates with no active entitlement are no longer
+  ignored. The mobile app clears its SDK-tier guard and forces a backend
+  entitlement/usage refresh, so an expired subscription does not remain shown
+  as paid until restart.
+- Restore now synchronizes both active and inactive CustomerInfo before showing
+  its result. The release checker guards the inactive/expiry path.
+- Play production was verified active at `1.0.50 (57)`, the internal track was
+  verified active at `1.0.29 (35)`, all six subscriptions had one active base
+  plan, backend health passed, and a random non-buyer resolved as
+  `source: revenuecat`, `tier: free`.
+- A Play internal build, sandbox purchase/restore/expiry test, and production
+  promotion remain pending for this candidate.
 
 ## 1.0.65 Running Furniture and Title-Break QA - 2026-08-11
 

@@ -24,16 +24,17 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ---
 
-## Local QA Candidate - 2026-08-11
+## Android Release Candidate - 2026-08-11
 
-- Source version `1.0.65`, Android code `72`, is a local side-by-side QA
-  candidate only. It includes general running-furniture/title-break cleanup.
+- Source version `1.0.66`, Android code `73`, is the pending Play release
+  candidate. It includes the tested running-furniture/title-break cleanup plus
+  inactive/expired RevenueCat entitlement refresh handling.
 - QA package: `com.urmiaworks.readflow.qa`; local artifact:
   `artifacts/readflow-qa-1.0.65-72.apk`; SHA-256
   `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`.
-- Google Play production remains `1.0.50 (57)`. The QA package does not consume
-  production version codes `58` through `72`; use code `73` or higher for the
-  next build attempt and recheck Play/EAS before any public build.
+- Google Play production remains `1.0.50 (57)`. The QA package did not consume
+  production code `72`; code `73` is reserved for this candidate. Recheck
+  Play/EAS before starting the store build.
 - Real-device results and remaining live-purchase limitation are recorded in
   `HANDOVER_CURRENT.md` and `READER_REGRESSION_CHECKLIST.md`.
 
@@ -41,8 +42,8 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ## Public Release Gate — 2026-07-01
 
-Current source release candidate: **1.0.65 / Android versionCode 72**, local QA
-only; production remains **1.0.50 / Android versionCode 57**.
+Current source release candidate: **1.0.66 / Android versionCode 73**;
+production remains **1.0.50 / Android versionCode 57**.
 
 What is already prepared in source:
 - `mobile/app.json` points at the public backend host
@@ -58,8 +59,8 @@ What is already prepared in source:
 - Android permissions are intentionally minimal for Play review plus billing:
   `INTERNET` and `com.android.vending.BILLING`. `expo-audio` is configured
   with `recordAudioAndroid:false` and `microphonePermission:false`.
-- Free tier is a limited reading preview: 1 document/month, first 100 pages of
-  native-text documents, no OCR, Cloud AI, or AI Q&A. It includes up to 10
+- Free tier is a limited reading preview: 1 document/month, up to 300 pages of
+  native-text documents, no OCR, Cloud AI, or AI Q&A. It includes up to 5
   minutes/day of on-device rF AI so users can sample read-aloud without vendor
   cost; the voice model downloads on demand and uses phone CPU/battery.
 - The mobile app sends a locally generated `x-app-user-id` so free backend
