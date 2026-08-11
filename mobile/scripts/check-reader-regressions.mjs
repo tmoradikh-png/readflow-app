@@ -251,6 +251,16 @@ assert.deepEqual(
   { preserve: true, suppressSpeech: false, reason: "sparse" },
   "a mixed portrait and biography page must preserve its artwork without silencing prose"
 );
+assert.deepEqual(
+  classifyVisualPage({
+    page: 19,
+    source: "native",
+    hasRasterImage: true,
+    text: "FIRST WALK\n\n" + "Ordinary chapter prose remains in clean reflow. ".repeat(30),
+  }),
+  { preserve: false, suppressSpeech: false },
+  "a text-heavy scanned chapter opening must reflow instead of restoring printed furniture"
+);
 
 const visualRows = TextReflow.buildSentences(
   [corruptCoverPage, { page: 2, source: "native", text: "The readable chapter begins here." }],

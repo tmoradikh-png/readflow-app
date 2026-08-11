@@ -410,6 +410,14 @@ export function classifyVisualPage(p: PdfPage): VisualPageClassification {
     return { preserve: true, suppressSpeech: true, reason: "caption" };
   }
 
+  const illustratedAuthorPage =
+    p.hasRasterImage &&
+    /\babout\s+(?:the\s+)?authors?\b/iu.test(raw) &&
+    visibleChars <= 1800;
+  if (illustratedAuthorPage) {
+    return { preserve: true, suppressSpeech: false, reason: "sparse" };
+  }
+
   const tableLike =
     lines.length >= 6 &&
     numericLineRatio >= 0.3 &&
@@ -430,7 +438,13 @@ export function classifyVisualPage(p: PdfPage): VisualPageClassification {
     visibleChars <= 1400;
   if (diagramLike) return { preserve: true, suppressSpeech: true, reason: "diagram" };
 
-  if (p.hasRasterImage && visibleChars <= 1600) {
+  // A full-page scan can contain a perfectly usable text layer. Do not switch
+  // a text-heavy chapter opening back to its source image merely because the
+  // PDF also paints a raster background; that would reintroduce its printed
+  // running headers, footnotes, and page number. Genuine sparse image pages
+  // remain visual here, while captions, tables, diagrams, and author portraits
+  // are handled by the stronger rules above.
+  if (p.hasRasterImage && visibleChars <= 650) {
     return { preserve: true, suppressSpeech: false, reason: "sparse" };
   }
 
