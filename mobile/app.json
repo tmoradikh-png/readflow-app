@@ -2,7 +2,7 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.57",
+    "version": "1.0.58",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "scheme": "readflow",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 64,
+      "versionCode": 65,
       "permissions": [
         "INTERNET",
         "android.permission.FOREGROUND_SERVICE",

@@ -1226,6 +1226,7 @@ assert.match(
   "off-screen visual pages must not eagerly mount native PDF renderers"
 );
 assert.match(readerSource, /const PRECISE_TAP_TOKEN_LIMIT = 140;/);
+assert.match(readerSource, /const LONG_TEXT_TAP_CHUNK_WORDS = 32;/);
 assert.match(readerSource, /tokenSource\.length > PRECISE_TAP_TOKEN_LIMIT/);
 assert.match(readerSource, /renderRangeText\(start, end\)/);
 assert.match(readerSource, /initialNumToRender=\{6\}/);
