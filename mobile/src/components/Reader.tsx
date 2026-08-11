@@ -1156,6 +1156,10 @@ export function Reader({
     windowEndRef.current = nextEnd;
     suppressBackwardExpansionRef.current = target > 0;
     pendingBackwardSeedRef.current = target > 0;
+    readerCellLayoutsRef.current.clear();
+    viewportAnchorKeyRef.current = null;
+    readerScrollOffsetRef.current = 0;
+    readerScrollDirectionRef.current = null;
     setWindowStart(nextStart);
     setWindowEnd(nextEnd);
     setWindowFocusIndex(target);

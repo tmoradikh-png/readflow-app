@@ -1234,6 +1234,11 @@ assert.match(readerSource, /const LONG_TEXT_TAP_CHUNK_WORDS = 24;/);
 assert.match(readerSource, /tokenSource\.length > PRECISE_TAP_TOKEN_LIMIT/);
 assert.match(readerSource, /readerScrollDirectionRef\.current === "backward"/);
 assert.match(readerSource, /readerCellLayoutsRef\.current\.clear\(\)/);
+assert.match(
+  readerSource,
+  /function resetWindowAround[\s\S]*readerCellLayoutsRef\.current\.clear\(\)[\s\S]*readerScrollOffsetRef\.current = 0[\s\S]*readerScrollDirectionRef\.current = null/,
+  "a rebuilt reader window must discard measurements and offsets from the previous generation"
+);
 assert.match(readerSource, /renderRangeText\(start, end\)/);
 assert.match(readerSource, /initialNumToRender=\{6\}/);
 assert.match(readerSource, /maxToRenderPerBatch=\{4\}/);
