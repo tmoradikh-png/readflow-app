@@ -38,16 +38,38 @@ keys, or recovery codes.
   publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
-- Current local QA source is `1.0.55` / Android code `62`. It is built only
-  as side-by-side package `com.urmiaworks.readflow.qa`; it has not been sent to
-  EAS, Google Play, or any public release track. This QA package does not
-  consume production Play version codes `58` through `62`.
-- Local QA APK: `artifacts/readflow-qa-1.0.55-62.apk` (231,559,111 bytes;
-  220.83 MiB). SHA-256:
-  `A6F6C21DC452B727F31983610EF8D19F556ACCFFECAB31057CDD7804BB9AF3E9`.
+- Current local QA source is `1.0.63` / Android code `70` at commit `2d8b5ca`.
+  Its final measured-layout reset is committed and pushed but not built because
+  three local build attempts ended in a locked dex file and then a Metro bundle
+  failure from a dependency junction. Use code `71` or higher for the next
+  attempt.
+- Latest tested local QA APK: `artifacts/readflow-qa-1.0.62-69.apk`
+  (231,560,947 bytes; SHA-256
+  `154559A5FA03283DBDF83C653664F0FF5DD3510C60AB99FAB49863718721BA91`).
+  It is installed as side-by-side package `com.urmiaworks.readflow.qa` on
+  Samsung SM-G975F. No local candidate was sent to EAS or Google Play; QA codes
+  `58` through `70` do not consume production-package Play codes.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.62 Reader Runtime QA / 1.0.63 Pending Build - 2026-08-11
+
+- Fresh Persian import/open no longer ANRs. Long extracted page paragraphs use
+  bounded tap spans, and Extreme Ownership page 59/60 scrolling produced zero
+  span, skipped-frame, ANR, or fatal warnings on `1.0.62 (69)`.
+- The header followed the measured viewport center from page 59 to page 60.
+  Direction-aware window expansion prevented forward scrolling from prepending
+  older pages.
+- One uninterrupted rF AI session ran for more than ten minutes, advanced from
+  page 60 to page 64 at media speed 1.0, survived Follow off/on, and stopped
+  cleanly. No `rF AI paused`, AudioTrack `-12/-20`, ANR, or fatal error occurred.
+- Rousseau opened Original on reflow page 4 without crashing, but returning to
+  Reflow landed on page 6. Source `1.0.63 (70)` resets measured cells and scroll
+  state whenever a reader generation/page jump is rebuilt; automated checks
+  pass, but a final APK/device retest is pending the next build.
+- Relevant commits: `087ddb1`, `b4b55b1`, `7487b63`, `7e8fdfd`, `6d9dfa7`,
+  `9062197`, `19e7b82`, and `2d8b5ca`. No public release was performed.
 
 ## 1.0.55 General Text-Fidelity Candidate - 2026-08-11
 

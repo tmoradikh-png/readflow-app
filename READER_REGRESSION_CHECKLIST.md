@@ -154,14 +154,14 @@ Supertonic 3 runtime/model configuration.
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.
 
-Latest record: `1.0.54 (61)`, Samsung SM-G975F, QA Reviewer. The side-by-side
-QA APK retained four imported books. Rousseau stayed on page 3 through two
-Original/Reflow cycles; System -> Light -> System worked while an inline source
-page remained mounted. rF AI stayed in Pause/playing state through Follow
-off/on, emitted no pause/fatal error, and Stop returned to Play without an app
-restart. Exact local processing of all 283 Rousseau pages retained First/Second
-Walk prose and removed sampled editorial notes. The prior `1.0.53` visual-page
-checks and `1.0.52` 10-minute rF AI resource check remain valid. The
+Latest device record: `1.0.62 (69)`, Samsung SM-G975F, QA Reviewer. Extreme
+Ownership crossed page 59/60 with a correct page-60 header and zero span,
+skipped-frame, ANR, or fatal warnings. rF AI played continuously for more than
+ten minutes at media speed 1.0, advanced page 60 -> 64, survived Follow off/on,
+and stopped without an app restart or pause/AudioTrack error. Rousseau Original
+opened page 4 without crashing, but the return landed on page 6. Source `1.0.63
+(70)` at `2d8b5ca` resets viewport measurements on every reader-generation
+jump; automated checks pass, but its APK/device retest is pending. The
 purchase-state fix still needs an internal Play build because the `.qa` package
 cannot use production Google Billing; final pronunciation/timbre remains an
 owner listening judgment.

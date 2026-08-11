@@ -23,6 +23,11 @@ The product must not be marketed as compatible with every PDF, scan, language,
 font, layout, formula, or device. Extraction, OCR, speech, and AI are assistive
 processing. Readers should compare important material with the original.
 
+Local QA position on 2026-08-11: `1.0.62 (69)` passed a continuous ten-minute
+rF AI run and measured page-boundary checks on Samsung SM-G975F. Source `1.0.63
+(70)` contains an additional Original/Reflow jump reset but is not yet built or
+device-verified. Production remains `1.0.50 (57)`.
+
 ## Current Plan Contract
 
 The backend definition in `backend/src/config/plans.ts` is authoritative.
