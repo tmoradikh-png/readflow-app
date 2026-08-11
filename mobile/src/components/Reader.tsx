@@ -106,7 +106,7 @@ const READER_WINDOW_BEFORE = 12;
 const READER_WINDOW_AFTER = 180;
 const READER_WINDOW_BACKWARD_EXPAND = 12;
 const READER_WINDOW_FORWARD_EXPAND = 120;
-const PRECISE_TAP_TOKEN_LIMIT = 140;
+const PRECISE_TAP_TOKEN_LIMIT = 64;
 const LONG_TEXT_TAP_CHUNK_WORDS = 32;
 const TITLE_PAUSE_MS = 220;
 const PAGE_DIVIDER_ESTIMATED_HEIGHT = 38;
@@ -1260,13 +1260,13 @@ export function Reader({
   // Base page tracking on the viewport, not on the full row height. A long
   // paragraph can be taller than the screen and never reach an item-based
   // percentage threshold, leaving the page header and saved position stale.
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 5 }).current;
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
   const onViewableItemsChanged = useRef((info: { viewableItems: ViewToken[] }) => {
     if (showOriginalRef.current) return;
     const visible = info.viewableItems
       .filter((token) => token.isViewable && token.item)
       .sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
-    const anchor = visible[Math.floor(visible.length / 2)];
+    const anchor = visible[0];
     if (anchor && anchor.item) {
       const sentence = anchor.item as Sentence;
       const p = sentence.page;

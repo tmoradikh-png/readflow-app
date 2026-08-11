@@ -1216,21 +1216,21 @@ assert.match(
 );
 assert.match(
   readerSource,
-  /viewAreaCoveragePercentThreshold: 5/,
+  /viewAreaCoveragePercentThreshold: 50/,
   "page tracking must work when a paragraph row is taller than the viewport"
 );
 assert.doesNotMatch(readerSource, /itemVisiblePercentThreshold/);
 assert.match(
   readerSource,
-  /const anchor = visible\[Math\.floor\(visible\.length \/ 2\)\]/,
-  "page tracking must use the viewport's middle visible row instead of a trailing sliver"
+  /const anchor = visible\[0\]/,
+  "page tracking must use the row covering most of the viewport instead of a trailing sliver"
 );
 assert.match(
   readerSource,
   /renderVisualPage=\{item\.page === currentPage\}[\s\S]*renderVisualPage \? \([\s\S]*<VisualPdfPage/,
   "off-screen visual pages must not eagerly mount native PDF renderers"
 );
-assert.match(readerSource, /const PRECISE_TAP_TOKEN_LIMIT = 140;/);
+assert.match(readerSource, /const PRECISE_TAP_TOKEN_LIMIT = 64;/);
 assert.match(readerSource, /const LONG_TEXT_TAP_CHUNK_WORDS = 32;/);
 assert.match(readerSource, /tokenSource\.length > PRECISE_TAP_TOKEN_LIMIT/);
 assert.match(readerSource, /renderRangeText\(start, end\)/);
