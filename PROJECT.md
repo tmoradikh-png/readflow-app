@@ -40,12 +40,13 @@ Current shape:
 - Current source Android `versionCode`: `73` (release candidate; not yet
   consumed by EAS or Play)
 - Current source iOS `buildNumber`: `50`
-- Latest finished Android EAS build: `1.0.50` / code `57`
-- Latest finished Android EAS build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`
+- Latest finished Android EAS build: `1.0.66` / code `73` (Play internal)
+- Latest finished Android EAS build id: `4ee76bca-814b-4a79-8acf-e5c9881002a7`
 - Latest finished Android AAB:
-  `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`
+  `https://expo.dev/artifacts/eas/iKL2zWQ-jR_iXAZJfPrEnnUsu0qCEnD5FvyPeRgTExg.aab`
 - Latest finished Android AAB local copy:
-  `artifacts/readflow-1.0.50-57-production.aab`.
+  `artifacts/readflow-1.0.66-73-internal.aab`; SHA-256
+  `335964023DCD72DEE5A881DC0111EDFDDF5DB51334444FEF41FB2D895625BB03`.
 - Latest tested local-only Android QA APK: `1.0.65 (72)`, side-by-side package
   `com.urmiaworks.readflow.qa`, at
   `artifacts/readflow-qa-1.0.65-72.apk`. SHA-256:
@@ -58,6 +59,8 @@ Current shape:
   at 8:51 PM, across 177 countries/regions. Managed publishing is off. Public
   listing:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
+- Play internal-testing release `1.0.66 (73) internal QA` is available to the
+  configured tester list. Production promotion is gated on sandbox billing QA.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
 - The prepared production Android candidate uses code `73`. Confirm no

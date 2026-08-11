@@ -18,9 +18,10 @@ keys, or recovery codes.
   reference-marker, bounded local-synthesis, and independent speech
   text-intelligence and progressive-rF-playback repairs described below. It is
   available on Google Play.
-- Latest EAS Android build id: `ce809eb4-029a-48a0-88f3-6279fb1cb08e`.
+- Latest EAS Android build id: `4ee76bca-814b-4a79-8acf-e5c9881002a7`
+  (`1.0.66 (73)`, internal/store profile, commit `d941d50`).
 - Latest EAS Android artifact:
-  `https://expo.dev/artifacts/eas/cx-tWaIQ0nolDxoF6ssdf9e704biXRvIuhNdvU8qIXQ.aab`
+  `https://expo.dev/artifacts/eas/iKL2zWQ-jR_iXAZJfPrEnnUsu0qCEnD5FvyPeRgTExg.aab`
 - Local AAB copy: `artifacts/readflow-1.0.50-57-production.aab`
   (140,629,623 bytes; 134.11 MiB)
 - SHA-256:
@@ -39,8 +40,8 @@ keys, or recovery codes.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
 - Current release-candidate source is `1.0.66` / Android code `73`. It adds
-  inactive/expired RevenueCat entitlement handling and has not yet been sent to
-  EAS or Play.
+  inactive/expired RevenueCat entitlement handling and is available on the Play
+  internal-testing track, but has not been promoted to production.
 - Latest tested local QA APK: `artifacts/readflow-qa-1.0.65-72.apk`
   (231,562,883 bytes; SHA-256
   `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`).
@@ -63,8 +64,18 @@ keys, or recovery codes.
   verified active at `1.0.29 (35)`, all six subscriptions had one active base
   plan, backend health passed, and a random non-buyer resolved as
   `source: revenuecat`, `tier: free`.
-- A Play internal build, sandbox purchase/restore/expiry test, and production
-  promotion remain pending for this candidate.
+- EAS build `4ee76bca-814b-4a79-8acf-e5c9881002a7` finished. Local AAB:
+  `artifacts/readflow-1.0.66-73-internal.aab` (151,501,398 bytes; SHA-256
+  `335964023DCD72DEE5A881DC0111EDFDDF5DB51334444FEF41FB2D895625BB03`).
+  Play accepted it and made release `1.0.66 (73) internal QA` available to the
+  configured internal testers on Aug 11.
+- The connected SM-G975F showed the internal-beta Update button, but Play
+  refused the update with certificate mismatch because its old `1.0.28 (34)`
+  package was installed with a different signing certificate. Replacing that
+  old package requires an uninstall that may erase its local library; do not do
+  that without owner confirmation. The side-by-side QA package and its books
+  are unaffected.
+- Sandbox purchase/restore/expiry QA and production promotion remain pending.
 
 ## 1.0.65 Running Furniture and Title-Break QA - 2026-08-11
 

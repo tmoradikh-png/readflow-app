@@ -37,6 +37,11 @@ Current source status:
   production release.
 - Inactive/expired RevenueCat CustomerInfo now clears the mobile SDK-tier guard
   and forces a backend refresh; this is protected by the release checker.
+- EAS build `4ee76bca-814b-4a79-8acf-e5c9881002a7` produced `1.0.66 (73)` and
+  Play accepted it on the internal track. Local AAB SHA-256:
+  `335964023DCD72DEE5A881DC0111EDFDDF5DB51334444FEF41FB2D895625BB03`.
+  Do not promote it until the Play-signed sandbox purchase/restore/expiry pass
+  is complete.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, Advertising ID (`No`), foreground services, government apps, financial
   features, health, content rating, target audience, Data Safety, and app

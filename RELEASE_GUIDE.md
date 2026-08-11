@@ -33,8 +33,9 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
   `artifacts/readflow-qa-1.0.65-72.apk`; SHA-256
   `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`.
 - Google Play production remains `1.0.50 (57)`. The QA package did not consume
-  production code `72`; code `73` is reserved for this candidate. Recheck
-  Play/EAS before starting the store build.
+  production code `72`; code `73` is consumed by EAS build
+  `4ee76bca-814b-4a79-8acf-e5c9881002a7` and is available on Play internal
+  testing. Do not rebuild or reuse code `73`.
 - Real-device results and remaining live-purchase limitation are recorded in
   `HANDOVER_CURRENT.md` and `READER_REGRESSION_CHECKLIST.md`.
 

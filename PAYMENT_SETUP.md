@@ -49,6 +49,13 @@ and force a backend refresh. Restore synchronizes inactive CustomerInfo too, so
 expiry no longer requires an app restart to leave the paid tier. The release
 checker now guards this behavior.
 
+EAS build `4ee76bca-814b-4a79-8acf-e5c9881002a7` is available on Play internal
+testing as `1.0.66 (73) internal QA`. Play exposed its Update button on the
+connected tester phone, but the old locally signed `1.0.28 (34)` package could
+not be updated because its certificate differs from Play App Signing. The old
+production package must be uninstalled before the Play-signed test build can be
+installed; that may erase its local library, so owner confirmation is required.
+
 Already present:
 
 - Backend plan definitions in `backend/src/config/plans.ts`.
