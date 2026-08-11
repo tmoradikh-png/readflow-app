@@ -1,6 +1,6 @@
 # readFlow Reader Regression Checklist
 
-Updated: 2026-08-05
+Updated: 2026-08-11
 
 This is the permanent reader/audio bug ledger. Every change to document
 reflow, scrolling, saved position, bookmarks, voice, highlighting, lifecycle,
@@ -90,6 +90,10 @@ Supertonic 3 runtime/model configuration.
 | RF-R59 | Next/Previous in Original mode opens an OCR upgrade gate on scanned pages | Original-mode navigation must move directly through source PDF pages without text extraction or OCR | Connected-phone test navigated scanned `Confessions` pages 1-5 and rendered page 5 without a paywall |
 | RF-R60 | rF AI stops after several minutes with `AudioTrack` `-12`/`-20` errors | Reuse a bounded pair of native players instead of allocating one ExoPlayer/AudioTrack per short clip | Source checks pin one allocation site, a two-player cap, outgoing-player recycling, and disposal release; connected-phone gate requires 10 minutes without the warning or error signatures |
 | RF-R61 | Photos, covers, charts, or tables disappear in Reflow, while corrupted cover text is displayed or spoken | Render the exact retained source PDF page inline for visual layouts, keep dense prose reflowed, and silence only corrupt/visual furniture | Local classifier handles cached books; backend raster hint handles future imports. Fixtures cover captions, tables, short prose, corrupted covers, mixed portrait/prose, and speech skipping; phone checks passed on Extreme pages 15/30, Rousseau page 1, and Confessions page 1 |
+| RF-R62 | Follow loses the highlight, and toggling Follow leaves Play unable to restart until the app is closed | Clear stale manual-scroll guards, immediately re-anchor to the active spoken line, and recreate a failed local provider before retry | Source checks pin Follow recovery and provider disposal/recreation; phone Follow off/on kept rF AI playing and Stop returned to Play without restart |
+| RF-R63 | Original opens at page 1, returning loses the Reflow position, or repeated switching crashes Android | Keep independent Original/Reflow anchors and never tear down a native PDF surface during a renderer frame | Source checks pin separate anchors, stale-callback guards, and persistent PDF layers; two connected-phone page-3 round trips passed without fatal logs |
+| RF-R64 | Editorial notes, footnotes, or endnotes become normal Reflow prose | Omit explicit note sections across pages until the next strong structural heading while retaining ordinary numbered body text | Rousseau-style multi-page fixture and exact 283-page extraction check; Original remains complete |
+| RF-R65 | Theme selection is unavailable or changing theme crashes an inline visual page | Expose System/Light/Dark in Reader Settings and isolate retained native PDF pages from theme rerenders | Source checks plus connected-phone System -> Light -> System test with inline Rousseau page visible |
 
 ## Connected-Phone Candidate Gate
 
@@ -147,20 +151,14 @@ Supertonic 3 runtime/model configuration.
 Record the candidate, phone model, entitlement, document/page, and pass/fail in
 `HANDOVER_CURRENT.md` after every release QA session.
 
-Latest record: `1.0.53 (60)`, Samsung SM-G975F, QA Reviewer. The side-by-side
-QA APK retained four imported books. Extreme Ownership pages 15 and 30 rendered
-their source photos/captions inline; Rousseau page 1 rendered the real title
-cover without exposing its garbled text layer; Confessions page 1 rendered its
-scanned cover. Dense following pages remained ordinary reflow. The prior
-`1.0.52` microphone-recorded rF AI run continued for 10 minutes, moved from
-page 4 through page 13, kept both audio services
-foreground, and produced no watchdog notice, crash, or `AudioTrack` `-12`/`-20`
-error. A Stop/Play restart then advanced to page 14 for another 60 seconds with
-zero matching errors. A phone `Slow charging` system dialog covered the reader
-during the latter part of the long run, but page/highlight progression and both
-foreground services continued. The earlier `1.0.51` lock, saved-position,
-Original/Reflow, theme, OCR-gating, and four-book retention checks remain valid.
-The purchase-state fix still needs an internal Play build because the `.qa`
-package cannot use production Google Billing. Automated transcription confirmed
-speech through the old 4:38 failure boundary; final pronunciation/timbre remains
-an owner listening judgment.
+Latest record: `1.0.54 (61)`, Samsung SM-G975F, QA Reviewer. The side-by-side
+QA APK retained four imported books. Rousseau stayed on page 3 through two
+Original/Reflow cycles; System -> Light -> System worked while an inline source
+page remained mounted. rF AI stayed in Pause/playing state through Follow
+off/on, emitted no pause/fatal error, and Stop returned to Play without an app
+restart. Exact local processing of all 283 Rousseau pages retained First/Second
+Walk prose and removed sampled editorial notes. The prior `1.0.53` visual-page
+checks and `1.0.52` 10-minute rF AI resource check remain valid. The
+purchase-state fix still needs an internal Play build because the `.qa` package
+cannot use production Google Billing; final pronunciation/timbre remains an
+owner listening judgment.

@@ -71,8 +71,15 @@ export const TextReflow = {
   PAGES_PER_CHUNK: 10,
 
   /** Normalize whitespace and join hard-wrapped lines into flowing paragraphs. */
-  cleanPageText(raw: string, pageNumber?: number, skipLines?: Set<string>): string {
-    return cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
+  cleanPageText(
+    raw: string,
+    pageNumber?: number,
+    skipLines?: Set<string>,
+    footnoteCutoff?: number
+  ): string {
+    return cleanCorruptScriptArtifacts(
+      stripNonReadingLines(raw, pageNumber, skipLines, footnoteCutoff)
+    )
       .replace(/\r/g, "")
       // de-hyphenate words split across line breaks: "exam-\nple" -> "example"
       .replace(/(\w)-\n(\w)/g, "$1$2")
@@ -89,9 +96,16 @@ export const TextReflow = {
    * instead of being flowed into one paragraph (which previously ran every
    * step together).
    */
-  cleanOcrText(raw: string, pageNumber?: number, skipLines?: Set<string>): string {
+  cleanOcrText(
+    raw: string,
+    pageNumber?: number,
+    skipLines?: Set<string>,
+    footnoteCutoff?: number
+  ): string {
     return repairLatinOcrWordBreaks(
-      cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
+      cleanCorruptScriptArtifacts(
+        stripNonReadingLines(raw, pageNumber, skipLines, footnoteCutoff)
+      )
     )
       .replace(/\r/g, "")
       // de-hyphenate words split across line breaks: "exam-\nple" -> "example"
@@ -110,9 +124,13 @@ export const TextReflow = {
    * Native pages flow wrapped lines into paragraphs; OCR pages keep each line
    * as its own unit so list/figure structure (and page enters) survive.
    */
-  unitsForPage(p: PdfPage, skipLines?: Set<string>): TextUnit[] {
+  unitsForPage(
+    p: PdfPage,
+    skipLines?: Set<string>,
+    footnoteCutoff?: number
+  ): TextUnit[] {
     if (p.source === "ocr") {
-      const clean = this.cleanOcrText(p.text, p.page, skipLines);
+      const clean = this.cleanOcrText(p.text, p.page, skipLines, footnoteCutoff);
       const units: TextUnit[] = [];
       const lines = clean.split("\n");
       let paragraphIndex = 0;
@@ -144,7 +162,7 @@ export const TextReflow = {
       }
       return units;
     }
-    return nativeStructuredUnits(p.text, p.page, skipLines);
+    return nativeStructuredUnits(p.text, p.page, skipLines, footnoteCutoff);
   },
 
   splitSentences(text: string): string[] {
@@ -167,13 +185,16 @@ export const TextReflow = {
   buildSentences(pages: PdfPage[], options?: BuildSentenceOptions): Sentence[] {
     const out: Sentence[] = [];
     const skipLines = buildRepeatedSkipLines(pages);
+    const footnoteCutoffs = buildFootnoteCutoffs(pages);
     let id = 0;
     for (const p of pages) {
-      const visual = options?.preserveOriginalPages
+      const footnoteCutoff = footnoteCutoffs.get(p.page);
+      if (footnoteCutoff === 0) continue;
+      const visual = options?.preserveOriginalPages && footnoteCutoff == null
         ? classifyVisualPage(p)
         : { preserve: false, suppressSpeech: false };
       if (visual.preserve) {
-        const units = this.unitsForPage(p, skipLines);
+        const units = this.unitsForPage(p, skipLines, footnoteCutoff);
         const text = units.map((unit) => unit.text).join(" ").trim();
         out.push({
           id: id++,
@@ -192,7 +213,7 @@ export const TextReflow = {
         continue;
       }
       let pageSentenceIndex = 0;
-      for (const unit of this.unitsForPage(p, skipLines)) {
+      for (const unit of this.unitsForPage(p, skipLines, footnoteCutoff)) {
         out.push({
           id: id++,
           page: p.page,
@@ -216,6 +237,7 @@ export const TextReflow = {
   buildChunks(pages: PdfPage[]): ReflowChunk[] {
     const chunks: ReflowChunk[] = [];
     const skipLines = buildRepeatedSkipLines(pages);
+    const footnoteCutoffs = buildFootnoteCutoffs(pages);
     let sentenceId = 0;
 
     for (let i = 0; i < pages.length; i += this.PAGES_PER_CHUNK) {
@@ -224,7 +246,7 @@ export const TextReflow = {
 
       for (const p of slice) {
         let pageSentenceIndex = 0;
-        for (const unit of this.unitsForPage(p, skipLines)) {
+        for (const unit of this.unitsForPage(p, skipLines, footnoteCutoffs.get(p.page))) {
           sentences.push({
             id: sentenceId++,
             page: p.page,
@@ -515,9 +537,12 @@ function canonicalizeLegacyReferenceMarkers(text: string, kind: Sentence["kind"]
 function nativeStructuredUnits(
   raw: string,
   pageNumber: number | undefined,
-  skipLines: Set<string> | undefined
+  skipLines: Set<string> | undefined,
+  footnoteCutoff?: number
 ): TextUnit[] {
-  const cleaned = cleanCorruptScriptArtifacts(stripNonReadingLines(raw, pageNumber, skipLines))
+  const cleaned = cleanCorruptScriptArtifacts(
+    stripNonReadingLines(raw, pageNumber, skipLines, footnoteCutoff)
+  )
     .replace(/\r/g, "")
     .replace(/(\w)-\n(\w)/g, "$1$2")
     .replace(/[ \t]{2,}/g, " ");
@@ -640,6 +665,7 @@ function isChapterMarker(text: string): boolean {
     /^(chapter|part|book|section|prologue|epilogue|introduction|conclusion|preface|foreword|appendix)\b/i.test(
       value
     ) ||
+    /^(?:(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+walk|walk\s+(?:[ivxlcdm]+|\d+))\b/i.test(value) ||
     /^(فصل|بخش|کتاب|مقدمه|نتیجه|پیوست)(?:\s|$)/.test(value) ||
     /^(الفصل|الباب|الجزء|الكتاب|مقدمة|الخاتمة|ملحق)(?:\s|$)/.test(value) ||
     /^(kapittel|del|innledning|konklusjon|vedlegg)\b/i.test(value) ||
@@ -704,7 +730,8 @@ function isHeadingLine(
 function stripNonReadingLines(
   raw: string,
   pageNumber?: number,
-  skipLines?: Set<string>
+  skipLines?: Set<string>,
+  footnoteCutoff?: number
 ): string {
   const lines = (raw || "")
     .replace(/\r/g, "")
@@ -720,6 +747,7 @@ function stripNonReadingLines(
   ]);
 
   for (let i = 0; i < lines.length; i++) {
+    if (footnoteCutoff != null && i >= footnoteCutoff) continue;
     const line = lines[i];
     const trimmed = line.trim();
 
@@ -827,6 +855,53 @@ function isRepeatableBoilerplate(normalized: string): boolean {
   if (/^\d+$/.test(normalized)) return true;
   if (/[.!?]$/.test(normalized)) return false;
   return true;
+}
+
+/**
+ * Locate explicit multi-page NOTES/FOOTNOTES/ENDNOTES sections. Once such a
+ * heading appears, all following lines stay out of reflow until the next clear
+ * book/chapter/walk heading. Original mode still renders the untouched PDF.
+ */
+function buildFootnoteCutoffs(pages: PdfPage[]): Map<number, number> {
+  const cutoffs = new Map<number, number>();
+  let insideNotes = false;
+
+  for (const page of pages) {
+    const lines = (page.text || "").replace(/\r/g, "").split("\n");
+    if (insideNotes) {
+      const restart = lines.findIndex((line) => isFootnoteSectionEnd(line.trim()));
+      if (restart < 0) {
+        cutoffs.set(page.page, 0);
+        continue;
+      }
+      insideNotes = false;
+    }
+
+    const notesStart = lines.findIndex((line) => isNotesHeading(line.trim()));
+    if (notesStart >= 0) {
+      cutoffs.set(page.page, notesStart);
+      insideNotes = true;
+    }
+  }
+
+  return cutoffs;
+}
+
+function isNotesHeading(value: string): boolean {
+  return /^(?:translator'?s?\s+)?(?:notes?|footnotes?|endnotes?)(?:\s+to\b.*)?$/i.test(value);
+}
+
+function isFootnoteSectionEnd(value: string): boolean {
+  if (!value) return false;
+  const text = unwrapStructuralHeading(value).text;
+  if (
+    /^(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth)\s+walk\s+\d+$/i.test(
+      text
+    )
+  ) {
+    return false;
+  }
+  return isChapterMarker(text);
 }
 
 function boilerplatePattern(normalized: string): string {

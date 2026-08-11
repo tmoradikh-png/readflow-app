@@ -22,7 +22,7 @@ import { ParsedPdf, PdfPage } from "../services/PDFParser";
 import { OcrLoader, OcrProgress } from "../services/OcrLoader";
 import { Sentence, TextReflow } from "../services/TextReflow";
 import { Bookmark, Bookmarks } from "../services/Bookmarks";
-import { createTTSProvider } from "../services/tts";
+import { createTTSProvider, TTSProvider } from "../services/tts";
 import { Controls, ReadingSettings } from "./Controls";
 import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
@@ -253,6 +253,10 @@ export function Reader({
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [activeLine, setActiveLine] = useState<ActiveLine>({ sentenceId: null, lineIndex: 0 });
   const [currentPage, setCurrentPage] = useState(1);
+  const [originalPage, setOriginalPage] = useState(
+    flat[initialSentenceIndex]?.page || startPosition?.page || 1
+  );
+  const [originalMounted, setOriginalMounted] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoFollow, setAutoFollow] = useState(true);
   const [immersive, setImmersive] = useState(false);
@@ -353,6 +357,8 @@ export function Reader({
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const ttsRef = useRef(createTTSProvider(providerKindFor(voiceMode)));
+  const ttsRecoveryRef = useRef<Promise<void> | null>(null);
+  const readerMountedRef = useRef(true);
   const playingRef = useRef(false);
   const indexRef = useRef(0); // global sentence index being read
   const epochRef = useRef(0); // invalidates stale TTS onDone callbacks
@@ -404,9 +410,14 @@ export function Reader({
   const onTapWordRef = useRef<(id: number, offset: number) => void>(() => {});
   const tapHandler = useRef((id: number, offset: number) => onTapWordRef.current(id, offset))
     .current;
+  const onOpenOriginalRef = useRef<(page: number) => void>(() => {});
+  onOpenOriginalRef.current = openOriginalPage;
 
   // ----- background OCR (global engine: keeps loading across book/app switches) -----
   const currentPageRef = useRef(1); // page currently in view (drives OCR priority)
+  const showOriginalRef = useRef(false);
+  const originalPageRef = useRef(originalPage);
+  const reflowPositionBeforeOriginalRef = useRef<ReadingPosition | null>(null);
   const pendingJumpRef = useRef<number | null>(null); // page to jump to once loaded
   const ocrOfflineRef = useRef(false); // background OCR paused because we're offline
   const anchorRef = useRef<{ page: number; within: number } | null>(null);
@@ -758,7 +769,9 @@ export function Reader({
   }
 
   useEffect(() => {
+    readerMountedRef.current = true;
     return () => {
+      readerMountedRef.current = false;
       // Hard-stop on unmount so the voice never keeps reading after you leave.
       epochRef.current++;
       playingRef.current = false;
@@ -793,6 +806,10 @@ export function Reader({
         setShowBookmarks(false);
         return true;
       }
+      if (showOriginal) {
+        leaveOriginalView();
+        return true;
+      }
       if (immersive) {
         setImmersive(false);
         return true;
@@ -802,7 +819,7 @@ export function Reader({
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [immersive, readerNotice, showAI, showBookmarks, showPaywall]);
+  }, [immersive, readerNotice, showAI, showBookmarks, showOriginal, showPaywall]);
 
   // Resume at the stable page-relative position from the Library.
   useEffect(() => {
@@ -1216,20 +1233,31 @@ export function Reader({
     followRef.current = next;
     setAutoFollow(next);
     followPlacementRef.current = null;
-    if (next && currentIdRef.current != null) {
-      keepActiveLineVisible(
-        currentIdRef.current,
-        activeLineRef.current.sentenceId === currentIdRef.current
-          ? activeLineRef.current.lineIndex
-          : 0,
-        true
-      );
+    if (!next) return;
+
+    // An interrupted drag can leave the manual-scroll guard active even after
+    // the user explicitly turns Follow back on. Follow is an authoritative
+    // request to return to the spoken position, so clear that stale guard.
+    if (scrollInteractionTimerRef.current) clearTimeout(scrollInteractionTimerRef.current);
+    scrollInteractionTimerRef.current = null;
+    isUserScrollingRef.current = false;
+    const target = currentIdRef.current ?? indexRef.current;
+    if (!flatRef.current[target]) return;
+    if (target < windowStartRef.current || target >= windowEndRef.current) {
+      resetWindowAround(target);
+      return;
     }
+    keepActiveLineVisible(
+      target,
+      activeLineRef.current.sentenceId === target ? activeLineRef.current.lineIndex : 0,
+      true
+    );
   }
 
   // onViewableItemsChanged / viewabilityConfig must be stable across renders.
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 35 }).current;
   const onViewableItemsChanged = useRef((info: { viewableItems: ViewToken[] }) => {
+    if (showOriginalRef.current) return;
     const visible = info.viewableItems
       .filter((token) => token.isViewable && token.item)
       .sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
@@ -1434,7 +1462,8 @@ export function Reader({
       else continueReading();
     };
 
-    ttsRef.current.speak(text, {
+    const speakingProvider = ttsRef.current;
+    speakingProvider.speak(text, {
       language,
       rate: speech.rate,
       voiceId: voiceIdFor(voiceMode, preferences),
@@ -1508,13 +1537,13 @@ export function Reader({
         epochRef.current++;
         playingRef.current = false;
         setIsPlaying(false);
-        void ttsRef.current.stop();
+        void recoverTtsProvider(speakingProvider);
         setReaderNotice({
           title: "rF AI paused",
           body:
             error instanceof Error && error.message
-              ? `${error.message} Your place was kept. Tap Listen to retry.`
-              : "Playback was interrupted. Your place was kept. Tap Listen to retry.",
+              ? `${error.message} Your place was kept. Tap Play to retry.`
+              : "Playback was interrupted. Your place was kept. Tap Play to retry.",
           primary: { label: "OK", onPress: () => setReaderNotice(null) },
         });
       },
@@ -1529,13 +1558,36 @@ export function Reader({
     ttsRef.current.stop();
   }
 
-  function play() {
+  async function play() {
     if (readAloudBlocked()) return;
     if (voiceAccessBlocked()) return;
+    if (ttsRecoveryRef.current) await ttsRecoveryRef.current;
+    if (readAloudBlocked() || voiceAccessBlocked()) return;
     sessionSpeedRef.current = settingsRef.current.speed;
     playingRef.current = true;
     setIsPlaying(true);
     void speakAt(indexRef.current);
+  }
+
+  async function recoverTtsProvider(failedProvider: TTSProvider): Promise<void> {
+    if (ttsRef.current !== failedProvider) return;
+    if (ttsRecoveryRef.current) return ttsRecoveryRef.current;
+    const replacementKind = providerKindFor(voiceMode);
+    const recovery = (async () => {
+      try {
+        if (failedProvider.dispose) await failedProvider.dispose();
+        else await failedProvider.stop();
+      } catch {
+        // Replacing the failed provider is still the recovery path.
+      }
+      if (readerMountedRef.current && ttsRef.current === failedProvider) {
+        ttsRef.current = createTTSProvider(replacementKind);
+      }
+    })().finally(() => {
+      if (ttsRecoveryRef.current === recovery) ttsRecoveryRef.current = null;
+    });
+    ttsRecoveryRef.current = recovery;
+    return recovery;
   }
 
   function pause() {
@@ -1565,27 +1617,52 @@ export function Reader({
   }
 
   function onPlayPause() {
-    isPlaying ? pause() : play();
+    if (isPlaying) pause();
+    else void play();
   }
 
   function toggleOriginalView() {
-    if (showOriginal) {
-      setShowOriginal(false);
-      return;
-    }
+    if (showOriginalRef.current) leaveOriginalView();
+    else enterOriginalView();
+  }
+
+  function enterOriginalView(requestedPage?: number) {
+    const reflowSentence = playingRef.current ? currentSentence() : visibleSentence();
+    const reflowPosition = reflowSentence
+      ? positionForSentence(reflowSentence)
+      : visiblePositionRef.current;
+    reflowPositionBeforeOriginalRef.current = reflowPosition;
+    const target = Math.max(
+      1,
+      Math.min(totalPages, requestedPage ?? reflowPosition?.page ?? currentPageRef.current)
+    );
     stop();
     setShowAI(false);
     setShowBookmarks(false);
+    showOriginalRef.current = true;
+    originalPageRef.current = target;
+    setOriginalPage(target);
+    setCurrentPage(target);
+    currentPageRef.current = target;
+    setOriginalMounted(true);
     setShowOriginal(true);
   }
 
+  function leaveOriginalView() {
+    const targetPage = originalPageRef.current;
+    const previous = reflowPositionBeforeOriginalRef.current;
+    const targetPosition: ReadingPosition =
+      previous?.page === targetPage
+        ? previous
+        : { page: targetPage, pageSentenceIndex: 0, sentenceId: 0, preview: "" };
+    showOriginalRef.current = false;
+    setShowOriginal(false);
+    const target = resolveReadingPosition(flatRef.current, targetPosition);
+    setTimeout(() => jumpToSentence(target, false, true), 0);
+  }
+
   function openOriginalPage(page: number) {
-    stop();
-    setShowAI(false);
-    setShowBookmarks(false);
-    setCurrentPage(page);
-    currentPageRef.current = page;
-    setShowOriginal(true);
+    enterOriginalView(page);
   }
 
   // ----- tap-to-read -----
@@ -1633,7 +1710,9 @@ export function Reader({
   // ----- navigation -----
   function navigatePage(page: number) {
     const target = Math.max(1, Math.min(totalPages, page));
-    if (showOriginal) {
+    if (showOriginalRef.current) {
+      originalPageRef.current = target;
+      setOriginalPage(target);
       setCurrentPage(target);
       currentPageRef.current = target;
       return;
@@ -1960,26 +2039,10 @@ export function Reader({
         </>
       )}
 
-      {showOriginal && doc.kind === "pdf" && doc.sourceUri ? (
-        <Pdf
-          source={{ uri: doc.sourceUri, cache: true }}
-          page={Math.max(1, currentPage)}
-          style={styles.originalPdf}
-          enablePaging={false}
-          horizontal={false}
-          trustAllCerts={false}
-          onPageChanged={(page) => setCurrentPage(page)}
-          onError={(error) =>
-            setReaderNotice({
-              title: "Original page unavailable",
-              body: error instanceof Error ? error.message : "The stored PDF could not be displayed.",
-              primary: { label: "Use reflow", onPress: () => setShowOriginal(false) },
-            })
-          }
-        />
-      ) : (
-      /* reading surface - virtualized for smooth, uninterrupted scrolling */
-      <FlatList
+      <View style={styles.readerStack}>
+        {/* Keep native PDF surfaces mounted while switching views. Unmounting an
+            active Android PDF render thread can close its document mid-frame. */}
+        <FlatList
         key={`${doc.docId}:${listGeneration}`}
         ref={listRef}
         data={renderedFlat}
@@ -1999,12 +2062,13 @@ export function Reader({
             rtl={Boolean(readingLanguage.rtl)}
             sourceUri={doc.sourceUri}
             onTapWord={tapHandler}
-            onOpenOriginal={openOriginalPage}
+            onOpenOriginalRef={onOpenOriginalRef}
             onLineRanges={handleLineRanges}
             showPageDivider={index > 0 && renderedFlat[index - 1].page !== item.page}
           />
         )}
-        style={styles.reader}
+        style={[styles.reader, showOriginal && styles.readerHidden]}
+        pointerEvents={showOriginal ? "none" : "auto"}
         contentContainerStyle={[styles.readerContent, { paddingBottom: readerBottomPad }]}
         onLayout={(event) => {
           const nextHeight = Number(event.nativeEvent.layout.height || 0);
@@ -2040,8 +2104,41 @@ export function Reader({
         }
         onEndReachedThreshold={0.45}
         removeClippedSubviews={false}
-      />
-      )}
+        />
+        {originalMounted && doc.kind === "pdf" && doc.sourceUri ? (
+          <View
+            pointerEvents={showOriginal ? "auto" : "none"}
+            style={[styles.originalLayer, !showOriginal && styles.originalLayerHidden]}
+          >
+            <Pdf
+              key={`${doc.docId}:original`}
+              source={{ uri: doc.sourceUri, cache: true }}
+              page={Math.max(1, originalPage)}
+              style={styles.originalPdf}
+              enablePaging={false}
+              horizontal={false}
+              trustAllCerts={false}
+              onPageChanged={(page) => {
+                if (!showOriginalRef.current) return;
+                originalPageRef.current = page;
+                setOriginalPage(page);
+                setCurrentPage(page);
+                currentPageRef.current = page;
+              }}
+              onError={(error) =>
+                setReaderNotice({
+                  title: "Original page unavailable",
+                  body:
+                    error instanceof Error
+                      ? error.message
+                      : "The stored PDF could not be displayed.",
+                  primary: { label: "Use reflow", onPress: leaveOriginalView },
+                })
+              }
+            />
+          </View>
+        ) : null}
+      </View>
 
       {/* controls — pinned while listening; otherwise reveal/hide with the chrome */}
       {controlsShown && !showOriginal && (
@@ -2130,10 +2227,57 @@ interface SentenceRowProps {
   rtl: boolean;
   sourceUri?: string;
   onTapWord: (globalId: number, charOffset: number) => void;
-  onOpenOriginal: (page: number) => void;
+  onOpenOriginalRef: React.MutableRefObject<(page: number) => void>;
   onLineRanges: (sentenceId: number, ranges: LineRange[]) => void;
   showPageDivider?: boolean;
 }
+
+interface VisualPdfPageProps {
+  sourceUri: string;
+  page: number;
+  onOpenOriginalRef: React.MutableRefObject<(page: number) => void>;
+}
+
+const VisualPdfPage = React.memo(function VisualPdfPage({
+  sourceUri,
+  page,
+  onOpenOriginalRef,
+}: VisualPdfPageProps) {
+  const source = useMemo(() => ({ uri: sourceUri, cache: true }), [sourceUri]);
+  const [aspectRatio, setAspectRatio] = useState(0.74);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setAspectRatio(0.74);
+    setFailed(false);
+  }, [page, sourceUri]);
+
+  if (failed) return null;
+
+  return (
+    <View style={[visualPdfStyles.frame, { aspectRatio }]}>
+      <Pdf
+        source={source}
+        page={page}
+        style={visualPdfStyles.pdf}
+        singlePage
+        scrollEnabled={false}
+        fitPolicy={2}
+        trustAllCerts={false}
+        renderActivityIndicator={() => <ActivityIndicator color="#666666" />}
+        onLoadComplete={(_pages, _path, size) => {
+          const ratio = Number(size?.width) / Number(size?.height);
+          if (Number.isFinite(ratio) && ratio > 0) {
+            setAspectRatio(Math.max(0.45, Math.min(1.25, ratio)));
+          }
+        }}
+        onPageSingleTap={() => onOpenOriginalRef.current(page)}
+        onError={() => setFailed(true)}
+      />
+    </View>
+  );
+});
+
 const SentenceRow = React.memo(function SentenceRow({
   sentence,
   active,
@@ -2145,7 +2289,7 @@ const SentenceRow = React.memo(function SentenceRow({
   rtl,
   sourceUri,
   onTapWord,
-  onOpenOriginal,
+  onOpenOriginalRef,
   onLineRanges,
   showPageDivider,
 }: SentenceRowProps) {
@@ -2156,17 +2300,10 @@ const SentenceRow = React.memo(function SentenceRow({
     [sentence.kind, sentence.text]
   );
   const [lines, setLines] = useState<LineSegment[] | null>(null);
-  const [visualAspectRatio, setVisualAspectRatio] = useState(0.74);
-  const [visualFailed, setVisualFailed] = useState(false);
 
   useEffect(() => {
     setLines(null);
   }, [sentence.text, fontSize, lineHeight, layoutKey]);
-
-  useEffect(() => {
-    setVisualAspectRatio(0.74);
-    setVisualFailed(false);
-  }, [sentence.page, sourceUri]);
 
   function handleTextLayout(e: any) {
     if (!measureForHighlight) return;
@@ -2246,7 +2383,7 @@ const SentenceRow = React.memo(function SentenceRow({
   const highlightedRange =
     active && activeLineIndex != null && lines?.length ? lines[activeLineIndex] : undefined;
 
-  if (sentence.visualPage && sourceUri && !visualFailed) {
+  if (sentence.visualPage && sourceUri) {
     return (
       <View style={rtl ? styles.rtlRowWrap : undefined}>
         {showPageDivider ? (
@@ -2256,27 +2393,11 @@ const SentenceRow = React.memo(function SentenceRow({
             <View style={styles.pageDividerLine} />
           </View>
         ) : null}
-        <View style={[styles.visualPage, { aspectRatio: visualAspectRatio }]}>
-          <Pdf
-            key={`${sourceUri}:${sentence.page}`}
-            source={{ uri: sourceUri, cache: true }}
-            page={sentence.page}
-            style={styles.visualPdf}
-            singlePage
-            scrollEnabled={false}
-            fitPolicy={2}
-            trustAllCerts={false}
-            renderActivityIndicator={() => <ActivityIndicator color={styles.pageNavBtn.color} />}
-            onLoadComplete={(_pages, _path, size) => {
-              const ratio = Number(size?.width) / Number(size?.height);
-              if (Number.isFinite(ratio) && ratio > 0) {
-                setVisualAspectRatio(Math.max(0.45, Math.min(1.25, ratio)));
-              }
-            }}
-            onPageSingleTap={() => onOpenOriginal(sentence.page)}
-            onError={() => setVisualFailed(true)}
-          />
-        </View>
+        <VisualPdfPage
+          sourceUri={sourceUri}
+          page={sentence.page}
+          onOpenOriginalRef={onOpenOriginalRef}
+        />
       </View>
     );
   }
@@ -2299,6 +2420,20 @@ const SentenceRow = React.memo(function SentenceRow({
       </Text>
     </View>
   );
+});
+
+const visualPdfStyles = StyleSheet.create({
+  frame: {
+    width: "100%",
+    minHeight: 280,
+    maxHeight: 720,
+    marginVertical: 4,
+    backgroundColor: "#ffffff",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "#b8b8b8",
+    overflow: "hidden",
+  },
+  pdf: { flex: 1, width: "100%", backgroundColor: "#ffffff" },
 });
 
 function buildLineSegments(text: string, nativeLines: any[]): LineSegment[] {
@@ -2568,20 +2703,17 @@ const createStyles = (theme: AppTheme) => ({
     fontSize: 12,
     fontFamily: theme.fonts.sansSemiBold,
   },
+  readerStack: { flex: 1 },
   reader: { flex: 1 },
+  readerHidden: { opacity: 0 },
   readerContent: { padding: theme.spacing(3) },
   originalPdf: { flex: 1, backgroundColor: theme.colors.bg },
-  visualPage: {
-    width: "100%",
-    minHeight: 280,
-    maxHeight: 720,
-    marginVertical: theme.spacing(1),
-    backgroundColor: theme.colors.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
+  originalLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+    backgroundColor: theme.colors.bg,
   },
-  visualPdf: { flex: 1, width: "100%", backgroundColor: theme.colors.surface },
+  originalLayerHidden: { opacity: 0, zIndex: 0 },
   row: { color: theme.colors.body, fontFamily: theme.fonts.serif, paddingVertical: 3 },
   headingRow: {
     color: theme.colors.text,

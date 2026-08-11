@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import Slider from "@react-native-community/slider";
-import { AppTheme, useAppTheme, useThemedStyles } from "../theme";
+import { AppTheme, ThemeMode, useAppTheme, useThemeController, useThemedStyles } from "../theme";
 import { VoiceEngine } from "../services/Preferences";
 
 export interface ReadingSettings {
@@ -52,6 +52,7 @@ export function Controls({
   bottomInset = 0,
 }: Props) {
   const theme = useAppTheme();
+  const { mode: themeMode, setMode: setThemeMode } = useThemeController();
   const styles = useThemedStyles(createStyles);
   return (
     <View style={[styles.wrap, { paddingBottom: theme.spacing(1) + bottomInset }]}>
@@ -94,6 +95,28 @@ export function Controls({
               onDec={() => onChange({ ...settings, speed: Math.max(0.5, +(settings.speed - 0.1).toFixed(2)) })}
               onInc={() => onChange({ ...settings, speed: Math.min(2.0, +(settings.speed + 0.1).toFixed(2)) })}
             />
+          </View>
+
+          <View style={styles.themeSection}>
+            <Text style={styles.voiceLabel}>Theme</Text>
+            <View style={styles.themeRow}>
+              {(["system", "light", "dark"] as ThemeMode[]).map((mode) => (
+                <Pressable
+                  key={mode}
+                  style={[styles.themeOption, themeMode === mode && styles.themeOptionActive]}
+                  onPress={() => setThemeMode(mode)}
+                >
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      themeMode === mode && styles.themeOptionTextActive,
+                    ]}
+                  >
+                    {mode[0].toUpperCase() + mode.slice(1)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
 
           <View style={styles.voiceSection}>
@@ -206,6 +229,28 @@ const createStyles = (theme: AppTheme) => ({
   label: { color: theme.colors.textDim, fontSize: 13, width: 64 },
   slider: { flex: 1, height: 36 },
   voiceSection: { gap: 6 },
+  themeSection: { gap: 6 },
+  themeRow: { flexDirection: "row", gap: theme.spacing(0.75) },
+  themeOption: {
+    flex: 1,
+    minHeight: 38,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  themeOptionActive: {
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.accentSoft,
+  },
+  themeOptionText: {
+    color: theme.colors.textMute,
+    fontFamily: theme.fonts.sansSemiBold,
+    fontSize: 12,
+  },
+  themeOptionTextActive: { color: theme.colors.accent },
   voiceLabel: {
     color: theme.colors.textDim,
     fontSize: 12,

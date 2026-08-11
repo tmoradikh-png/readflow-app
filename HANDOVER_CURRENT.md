@@ -1,6 +1,6 @@
 # readFlow Current Handover
 
-Updated: 2026-08-05
+Updated: 2026-08-11
 
 Start here when taking over readFlow. This file is a short operational map. It
 does not contain passwords, API keys, service-account JSON contents, signing
@@ -38,16 +38,52 @@ keys, or recovery codes.
   publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
-- Current local QA source is `1.0.53` / Android code `60`. It is installed only
+- Current local QA source is `1.0.54` / Android code `61`. It is installed only
   as side-by-side package `com.urmiaworks.readflow.qa`; it has not been sent to
   EAS, Google Play, or any public release track. This QA package does not
-  consume production Play version code `58` or `59`.
-- Local QA APK: `artifacts/readflow-qa-1.0.53-60.apk` (231,552,291 bytes;
+  consume production Play version codes `58` through `61`.
+- Local QA APK: `artifacts/readflow-qa-1.0.54-61.apk` (231,557,459 bytes;
   220.83 MiB). SHA-256:
-  `8A6EFF0BE924EB4FEB4154046D2C1C2CB0CF6BB6821EEF2B35261C5E7D8A65D7`.
+  `CF1014904EB25BCD0FB13B1D4AEDC332ED7B1B886EFBC16A57D809BF70808E14`.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.54 Local Reader Recovery and Note-Cleanup Candidate - 2026-08-11
+
+This local candidate addresses the owner's latest reader failures and deferred
+reader-quality items without changing production:
+
+- Turning Follow back on clears stale manual-scroll state and immediately
+  reanchors to the spoken line. A failed local rF AI provider is disposed and
+  recreated before Play retries, so playback no longer requires an app restart.
+- Original and Reflow keep separate positions. Entering Original opens the
+  current source page; returning resolves the same page-relative sentence.
+  Native PDF surfaces remain mounted across switches, preventing the Android
+  PDF-renderer teardown race (`Get page pdf document null`).
+- Reader Settings now exposes persistent System, Light, and Dark controls.
+  Retained visual PDF pages are isolated from theme-driven rerenders.
+- Explicit NOTES, FOOTNOTES, and ENDNOTES sections are removed from Reflow and
+  speech across page boundaries until a strong chapter/book/walk heading.
+  Numbered ordinary body prose remains intact; Original still preserves the
+  complete source pages.
+
+Verification:
+
+- The real 283-page Rousseau PDF produced 660 reflow rows; First Walk and
+  Second Walk body text remained, while sampled editorial notes and the NOTES
+  heading were absent.
+- On Samsung SM-G975F, Rousseau stayed on page 3 through two complete
+  Original/Reflow cycles with no crash. System -> Light -> System worked while
+  an inline source page remained visible.
+- rF AI remained in Pause/playing state after Follow off/on, produced no `rF AI
+  paused` notice or fatal log, and Stop returned the control to Play without an
+  app restart.
+- Mobile TypeScript, release checks, reader regressions, backend build, and the
+  clean local Android release build passed. No EAS build, Play upload, backend
+  deployment, or public release was performed.
+- Before tag: `readflow-before-reader-recovery-notes-local-1.0.54-20260811`.
+- After tag: `readflow-after-reader-recovery-notes-local-1.0.54-20260811`.
 
 ## 1.0.53 Local Visual-Page and Import-Quality Candidate - 2026-08-05
 

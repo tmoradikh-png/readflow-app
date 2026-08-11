@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-08-05
+Updated: 2026-08-11
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -8,10 +8,10 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 
 ## Current Play Status
 
-- Local QA candidate `1.0.53 (60)` uses side-by-side package
+- Local QA candidate `1.0.54 (61)` uses side-by-side package
   `com.urmiaworks.readflow.qa` and has not been uploaded to EAS or Play.
-  Production remains `1.0.50 (57)`, and production codes `58`/`59`/`60` are not
-  consumed by this local package.
+  Production remains `1.0.50 (57)`, and production codes `58` through `61` are
+  not consumed by this local package.
 - Google Play production release `1.0.50 (57)` is currently live. On
   2026-07-27 Play Console showed the production track as active, latest release
   `1.0.50 (57)`, status `Available on Google Play`, released on Jul 22 at

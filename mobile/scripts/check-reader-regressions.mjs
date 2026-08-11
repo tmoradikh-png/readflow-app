@@ -121,6 +121,44 @@ assert.deepEqual(classifyVisualPage(sparseReadablePage), {
   reason: "sparse",
 });
 
+const notesSectionRows = TextReflow.buildSentences([
+  {
+    page: 1,
+    source: "native",
+    text: "The walk ends with this complete body paragraph.\n\nNOTES\n1. Editorial history that must not enter reflow.",
+  },
+  {
+    page: 2,
+    source: "native",
+    text: "First Walk 10\nThis is a continuation of the editorial note.\n2. Another note.",
+  },
+  {
+    page: 3,
+    source: "native",
+    text: "SECOND WALK\n\nThe next walk begins with ordinary body prose.",
+  },
+], { preserveOriginalPages: true });
+const notesSectionText = notesSectionRows.map((row) => row.text).join(" ");
+assert.match(notesSectionText, /The walk ends with this complete body paragraph\./);
+assert.match(notesSectionText, /SECOND WALK[\s\S]*The next walk begins/);
+assert.doesNotMatch(
+  notesSectionText,
+  /Editorial history|continuation of the editorial note|Another note/,
+  "explicit multi-page notes must stay out of reflow until the next Walk"
+);
+const numberedBodyRows = TextReflow.buildSentences([
+  {
+    page: 1,
+    source: "native",
+    text: "1. First instruction remains part of the body.\n2. Second instruction remains too.",
+  },
+]);
+assert.match(
+  numberedBodyRows.map((row) => row.text).join(" "),
+  /First instruction[\s\S]*Second instruction/,
+  "ordinary numbered body text must not be mistaken for footnotes"
+);
+
 assert.deepEqual(
   classifyVisualPage({
     page: 282,
@@ -1048,6 +1086,7 @@ const docCacheSource = fs.readFileSync(path.join(root, "src/services/DocCache.ts
 assert.match(docCacheSource, /cached\.docId !== fresh\.docId/);
 
 const readerSource = fs.readFileSync(path.join(root, "src/components/Reader.tsx"), "utf8");
+const controlsSource = fs.readFileSync(path.join(root, "src/components/Controls.tsx"), "utf8");
 assert.match(
   readerSource,
   /const LOCAL_AI_PREFETCH_AHEAD = 1;/,
@@ -1058,6 +1097,41 @@ assert.match(readerSource, /voice pack itself does not require registration or a
 assert.match(readerSource, /<ThemedNotice[\s\S]*visible=\{Boolean\(readerNotice\)\}/);
 assert.match(readerSource, /function keepActiveLineVisible/);
 assert.match(readerSource, /viewOffset: targetY - lineY/);
+assert.match(
+  readerSource,
+  /function toggleFollow[\s\S]*isUserScrollingRef\.current = false[\s\S]*keepActiveLineVisible/,
+  "turning Follow back on must clear a stale manual-scroll guard and re-anchor immediately"
+);
+assert.match(
+  readerSource,
+  /recoverTtsProvider\(speakingProvider\)[\s\S]*failedProvider\.dispose[\s\S]*createTTSProvider/,
+  "a failed rF AI player pool must be disposed and recreated before retry"
+);
+assert.match(
+  readerSource,
+  /reflowPositionBeforeOriginalRef[\s\S]*originalPageRef[\s\S]*leaveOriginalView/,
+  "Original and reflow must keep separate page/position anchors"
+);
+assert.match(
+  readerSource,
+  /setOriginalMounted\(true\)[\s\S]*pointerEvents=\{showOriginal \? "none" : "auto"\}[\s\S]*originalMounted/,
+  "Original and reflow PDF surfaces must remain mounted across view switches"
+);
+assert.match(
+  readerSource,
+  /if \(showOriginalRef\.current\) return;/,
+  "stale reflow viewability callbacks must not overwrite the Original page"
+);
+assert.match(
+  controlsSource,
+  /Theme[\s\S]*\["system", "light", "dark"\][\s\S]*setThemeMode/,
+  "reader settings must expose System, Light, and Dark appearance controls"
+);
+assert.match(
+  readerSource,
+  /const VisualPdfPage = React\.memo[\s\S]*const source = useMemo[\s\S]*visualPdfStyles\.pdf/,
+  "retained visual PDF pages must be isolated from theme-driven reader rerenders"
+);
 assert.match(readerSource, /style=\{styles\.pageNavAi\}/);
 assert.doesNotMatch(readerSource, /styles\.aiFab/);
 assert.match(readerSource, /textIntelligence\.prepare\(input\)/);
@@ -1071,7 +1145,7 @@ assert.match(readerSource, /<Pdf[\s\S]*source=\{\{ uri: doc\.sourceUri, cache: t
 assert.match(readerSource, /controlsShown && !showOriginal/);
 assert.match(
   readerSource,
-  /function navigatePage[\s\S]*if \(showOriginal\)[\s\S]*setCurrentPage\(target\)/,
+  /function navigatePage[\s\S]*if \(showOriginalRef\.current\)[\s\S]*setOriginalPage\(target\)[\s\S]*setCurrentPage\(target\)/,
   "Original PDF navigation must show scanned and image pages without invoking OCR gates"
 );
 assert.match(readerSource, /onPress=\{\(\) => navigatePage\(currentPage [+-] 1\)\}/g);

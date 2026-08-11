@@ -1,6 +1,6 @@
 # readFlow Quality, Support, and Risk Register
 
-Updated: 2026-07-22
+Updated: 2026-08-11
 
 Owner: Urmia Works  
 Support: `support@urmiaworks.com`
@@ -111,12 +111,15 @@ the defect. Regression coverage is recorded in
 | Text extraction | Wrong order, missing glyphs, odd characters | Keep original file; offer Fix text/OCR on eligible plans |
 | OCR | Misspelled or joined words, low confidence | Show OCR source/progress; user verifies against original |
 | Reflow | Heading, list, table, caption, or footnote misclassified | Preserve displayed wording; report with page and language |
+| Notes | Editorial notes/footnotes leak into continuous reading | Remove explicit note sections from Reflow/speech; preserve them in Original |
 | Visual layout | Photo, cover, chart, or table is lost or corrupt text replaces it | Preserve the exact source page inline; keep Original mode as the fallback |
 | Speech preparation | Pause, emphasis, abbreviation, or name sounds wrong | Preserve meaningful words; fall back to source text when confidence is low |
 | rF AI | English-only, model/device incompatibility, CPU/battery use | Explain model requirement; offer Phone voice or eligible Cloud AI |
 | Device voice | Voice quality or language varies by phone | Let reader select an installed voice/accent |
 | Cloud AI | Network latency, allowance exhaustion, language quality gate | Prefetch, stop cleanly, and offer local/device alternatives |
 | Reader position | Resume, bookmark, rotation, or list re-anchor drift | Stable page/sentence anchors; regression-test long books |
+| Reader mode switch | Original opens at the wrong page or repeated switching crashes | Independent anchors and persistent native PDF surfaces; run two round trips |
+| Follow/playback | Highlight stops following and Play cannot recover | Clear stale scroll state and recreate a failed local provider before retry |
 | Background audio | Stops outside the app on ineligible plan/device | Only AI Pro and Power promise eligible generated-audio background playback |
 | Subscription | Store purchase temporarily still shows Free | Refresh/restore; match Support ID in RevenueCat; inspect Play order |
 | Backend | Render restart, overload, or provider outage | Fail closed for paid features; retain local reading where possible |
