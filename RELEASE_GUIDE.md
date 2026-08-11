@@ -26,13 +26,13 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ## Local QA Candidate - 2026-08-11
 
-- Source version `1.0.54`, Android code `61`, is a local side-by-side QA
+- Source version `1.0.55`, Android code `62`, is a local side-by-side QA
   candidate only. It has not been submitted to EAS or Google Play.
 - QA package: `com.urmiaworks.readflow.qa`; local artifact:
-  `artifacts/readflow-qa-1.0.54-61.apk`; SHA-256
-  `CF1014904EB25BCD0FB13B1D4AEDC332ED7B1B886EFBC16A57D809BF70808E14`.
+  `artifacts/readflow-qa-1.0.55-62.apk`; SHA-256
+  `A6F6C21DC452B727F31983610EF8D19F556ACCFFECAB31057CDD7804BB9AF3E9`.
 - Google Play production remains `1.0.50 (57)`. The QA package does not consume
-  production version codes `58` through `61`; recheck Play and EAS before the
+  production version codes `58` through `62`; recheck Play and EAS before the
   next public build.
 - Real-device results and remaining live-purchase limitation are recorded in
   `HANDOVER_CURRENT.md` and `READER_REGRESSION_CHECKLIST.md`.
@@ -41,7 +41,7 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ## Public Release Gate — 2026-07-01
 
-Current source release candidate: **1.0.54 / Android versionCode 61**, local QA
+Current source release candidate: **1.0.55 / Android versionCode 62**, local QA
 only; production remains **1.0.50 / Android versionCode 57**.
 
 What is already prepared in source:

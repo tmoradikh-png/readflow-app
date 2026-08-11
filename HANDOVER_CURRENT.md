@@ -38,16 +38,53 @@ keys, or recovery codes.
   publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
-- Current local QA source is `1.0.54` / Android code `61`. It is installed only
+- Current local QA source is `1.0.55` / Android code `62`. It is built only
   as side-by-side package `com.urmiaworks.readflow.qa`; it has not been sent to
   EAS, Google Play, or any public release track. This QA package does not
-  consume production Play version codes `58` through `61`.
-- Local QA APK: `artifacts/readflow-qa-1.0.54-61.apk` (231,557,459 bytes;
+  consume production Play version codes `58` through `62`.
+- Local QA APK: `artifacts/readflow-qa-1.0.55-62.apk` (231,559,111 bytes;
   220.83 MiB). SHA-256:
-  `CF1014904EB25BCD0FB13B1D4AEDC332ED7B1B886EFBC16A57D809BF70808E14`.
+  `A6F6C21DC452B727F31983610EF8D19F556ACCFFECAB31057CDD7804BB9AF3E9`.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.55 General Text-Fidelity Candidate - 2026-08-11
+
+This local candidate fixes general failures found by comparing all 2,718 pages
+of the nine real-book fixtures against their source PDFs:
+
+- A three-asterisk scene divider no longer starts a footnote block. Prose sharing
+  its extracted line remains, including the affected Extreme Ownership and
+  World as Will pages.
+- A trailing inline asterisk no longer removes the rest of a page. A true footer
+  line that begins with an asterisk is still omitted.
+- Multi-page note suppression resumes at a strong new section such as
+  `INTERPRETATIVE ESSAY`, not only at numbered chapter/walk markers.
+- Native PDF extraction returns an optional, backward-compatible
+  `footnoteStartLine` only when page geometry shows a repeated small citation
+  marker near the bottom followed by smaller note text. The mobile app removes
+  that suffix from Reflow/speech; released clients ignore the extra field, OCR
+  clears it, and Original mode remains exact.
+
+Verification completed before phone installation:
+
+- All nine real books (2,718 pages) were extracted and reflowed. No reflow row
+  was empty outside intentional multi-page note suppression. Previously missing
+  body prose improved in Confessions (page 615), Extreme Ownership scene-break
+  pages, Rousseau pages 162-170, and World as Will scene-break pages.
+- Visual renders confirmed the source layout on Persian page 73, Rousseau pages
+  26 and 30, and Extreme Ownership page 59. The lower Persian retention score
+  reflects removal of real numbered footer notes; sampled boundaries retain the
+  body above them.
+- Backend build, mobile TypeScript, release checks, reader regressions, and a
+  clean local Android release build passed. A live 182-page Persian import
+  verified the deployed backend returns the page-73 boundary at the visual
+  footer start.
+- Source commit: `db6bad3`. Before tag:
+  `readflow-before-general-text-fidelity-local-1.0.55-20260811`.
+- Connected-phone installation and runtime checks are pending ADB reconnection.
+  No EAS build, Play upload, rollout, or public app release was performed.
 
 ## 1.0.54 Local Reader Recovery and Note-Cleanup Candidate - 2026-08-11
 

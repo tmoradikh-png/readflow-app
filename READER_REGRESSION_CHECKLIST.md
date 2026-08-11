@@ -94,6 +94,9 @@ Supertonic 3 runtime/model configuration.
 | RF-R63 | Original opens at page 1, returning loses the Reflow position, or repeated switching crashes Android | Keep independent Original/Reflow anchors and never tear down a native PDF surface during a renderer frame | Source checks pin separate anchors, stale-callback guards, and persistent PDF layers; two connected-phone page-3 round trips passed without fatal logs |
 | RF-R64 | Editorial notes, footnotes, or endnotes become normal Reflow prose | Omit explicit note sections across pages until the next strong structural heading while retaining ordinary numbered body text | Rousseau-style multi-page fixture and exact 283-page extraction check; Original remains complete |
 | RF-R65 | Theme selection is unavailable or changing theme crashes an inline visual page | Expose System/Light/Dark in Reader Settings and isolate retained native PDF pages from theme rerenders | Source checks plus connected-phone System -> Light -> System test with inline Rousseau page visible |
+| RF-R66 | A three-asterisk scene divider removes all following prose | Strip the divider while retaining prose on the same extracted line and every later body line | Synthetic regression plus full Extreme Ownership and World as Will extraction audit |
+| RF-R67 | Numbered footer notes enter Reflow, or a repeated body number causes valid prose loss | Use PDF font size and lower-page geometry to mark a footer boundary; never infer it from repeated plain text alone | Positioned Persian fixture and live page-73 extraction retain body markers and omit the four smaller footer notes |
+| RF-R68 | A multi-page NOTES section suppresses a following unnumbered essay | Resume at a strong page-opening section heading while keeping running note headers suppressed | Rousseau fixture resumes at `INTERPRETATIVE ESSAY`; exact pages 162-170 retain essay prose |
 
 ## Connected-Phone Candidate Gate
 

@@ -110,8 +110,8 @@ the defect. Regression coverage is recorded in
 | --- | --- | --- |
 | Text extraction | Wrong order, missing glyphs, odd characters | Keep original file; offer Fix text/OCR on eligible plans |
 | OCR | Misspelled or joined words, low confidence | Show OCR source/progress; user verifies against original |
-| Reflow | Heading, list, table, caption, or footnote misclassified | Preserve displayed wording; report with page and language |
-| Notes | Editorial notes/footnotes leak into continuous reading | Remove explicit note sections from Reflow/speech; preserve them in Original |
+| Reflow | Heading, list, table, caption, divider, or footnote misclassified | Preserve displayed wording; use source-layout evidence for destructive cleanup; report with page and language |
+| Notes | Editorial notes/footnotes leak into continuous reading | Remove explicit note sections and geometry-confirmed footer notes from Reflow/speech; preserve them in Original |
 | Visual layout | Photo, cover, chart, or table is lost or corrupt text replaces it | Preserve the exact source page inline; keep Original mode as the fallback |
 | Speech preparation | Pause, emphasis, abbreviation, or name sounds wrong | Preserve meaningful words; fall back to source text when confidence is low |
 | rF AI | English-only, model/device incompatibility, CPU/battery use | Explain model requirement; offer Phone voice or eligible Cloud AI |
