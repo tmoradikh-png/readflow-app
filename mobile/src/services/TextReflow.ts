@@ -146,6 +146,9 @@ export const TextReflow = {
             index === lines.length - 1 ||
             !lines[index - 1].trim() ||
             !lines[index + 1].trim(),
+          surroundedByBreaks:
+            (index === 0 || !lines[index - 1].trim()) &&
+            (index === lines.length - 1 || !lines[index + 1].trim()),
           followsChapterMarker: Boolean(previousText && isChapterMarker(previousText)),
           previousText,
           nextText,
@@ -580,6 +583,7 @@ function nativeStructuredUnits(
     const chapterMarker = isChapterMarker(text);
     const heading = structuralHeading.marked || isHeadingLine(text, {
       isolated: previousBlank || nextBlank,
+      surroundedByBreaks: previousBlank && nextBlank,
       followsChapterMarker: previousWasChapterMarker,
       previousText: nearestNonBlankLine(lines, index, -1),
       nextText: nearestNonBlankLine(lines, index, 1),
@@ -661,6 +665,10 @@ function unwrapStructuralHeading(value: string): { text: string; marked: boolean
 
 function isChapterMarker(text: string): boolean {
   const value = text.trim();
+  // A body line can legitimately begin with a structural word (for example,
+  // "Appendix A, the manuscript ..."). Lowercase prose after a comma or
+  // semicolon is continuation syntax, not a standalone book title.
+  if (/[,;]\s+[a-z\u00e0-\u00ff]/.test(value)) return false;
   return (
     /^(chapter|part|book|section|prologue|epilogue|introduction|conclusion|preface|foreword|appendix)\b/i.test(
       value
@@ -686,6 +694,7 @@ function isHeadingLine(
   text: string,
   context: {
     isolated: boolean;
+    surroundedByBreaks?: boolean;
     followsChapterMarker: boolean;
     previousText?: string;
     nextText?: string;
@@ -693,28 +702,24 @@ function isHeadingLine(
 ): boolean {
   const value = text.trim();
   if (!value || value.length > 100) return false;
-  if (isChapterMarker(value)) return true;
+  if (context.isolated && isChapterMarker(value)) return true;
   if (context.followsChapterMarker && value.split(/\s+/).length <= 14 && !/[.!?؟]$/.test(value)) {
     return true;
   }
   const words = value.split(/\s+/).filter(Boolean);
   if (words.length === 0 || words.length > 12) return false;
 
-  // PDF text layers often preserve visual line breaks but lose the blank
-  // space around a heading. A short sentence-case line between a completed
-  // body line and a new capitalized body line is still a heading. Requiring
-  // the next line to start with a capital avoids treating wrapped fragments
-  // such as "Human life is\nwritten ..." as headings.
   const previousText = context.previousText?.trim() || "";
   const nextText = context.nextText?.trim() || "";
-  const sentenceCaseHeading =
-    words.length <= 12 &&
-    value.length <= 100 &&
+  if (
+    context.surroundedByBreaks &&
     !/[.!?؟]["'\u201d\u2019)]?$/.test(value) &&
     /^[A-Z\u00c0-\u00de\u0400-\u042f]/.test(value) &&
     /[.!?]["'\u201d\u2019)]?$/.test(previousText) &&
-    /^["'\u201c\u2018([]?[A-Z\u00c0-\u00de\u0400-\u042f]/.test(nextText);
-  if (sentenceCaseHeading) return true;
+    /^["'\u201c\u2018([]?[A-Z\u00c0-\u00de\u0400-\u042f]/.test(nextText)
+  ) {
+    return true;
+  }
 
   if (!context.isolated || /[.!?؟]$/.test(value)) return false;
   if (/^[IVXLCDM\d\s.:-]+$/i.test(value)) return true;
@@ -834,6 +839,7 @@ function isMostlyLatin(value: string): boolean {
 
 function buildRepeatedSkipLines(pages: PdfPage[]): Set<string> {
   const counts = new Map<string, number>();
+  const damagedCandidates = new Map<string, Set<string>>();
   for (const page of pages) {
     const seen = new Set<string>();
     const lines = (page.text || "").split(/\r?\n/).filter((line) => line.trim());
@@ -844,6 +850,11 @@ function buildRepeatedSkipLines(pages: PdfPage[]): Set<string> {
       seen.add(normalized);
       const pattern = boilerplatePattern(normalized);
       if (pattern !== normalized) seen.add(`#pattern:${pattern}`);
+      for (const damagedPattern of damagedBoilerplatePatterns(normalized)) {
+        const candidates = damagedCandidates.get(normalized) || new Set<string>();
+        candidates.add(damagedPattern);
+        damagedCandidates.set(normalized, candidates);
+      }
     }
     for (const line of seen) counts.set(line, (counts.get(line) || 0) + 1);
   }
@@ -852,10 +863,15 @@ function buildRepeatedSkipLines(pages: PdfPage[]): Set<string> {
   // complete book. Requiring a large percentage of every page leaves those
   // section headers in long books, while three edge-only repeats are already
   // strong evidence that a line is not body prose.
-  const threshold = 3;
   const skip = new Set<string>();
   for (const [line, count] of counts) {
+    const threshold = line.startsWith("#pattern:") ? 2 : 3;
     if (count >= threshold) skip.add(line);
+  }
+  for (const [line, patterns] of damagedCandidates) {
+    if ([...patterns].some((pattern) => (counts.get(`#pattern:${pattern}`) || 0) >= 2)) {
+      skip.add(line);
+    }
   }
   return skip;
 }
@@ -929,7 +945,7 @@ function isFootnoteSectionEnd(value: string, pageOpening = false): boolean {
   ) {
     return false;
   }
-  if (structural.marked || isChapterMarker(text)) return true;
+  if (structural.marked || (pageOpening && isChapterMarker(text))) return true;
   return pageOpening && isStrongSectionHeading(text);
 }
 
@@ -949,14 +965,29 @@ function isStrongSectionHeading(value: string): boolean {
 
 function boilerplatePattern(normalized: string): string {
   return normalized
-    .replace(/^\b[ivxlcdm]{1,8}\b/i, "#roman")
-    .replace(/\b[ivxlcdm]{1,8}\b$/i, "#roman")
-    .replace(/\d+/g, "#")
-    // Old scans frequently damage a running Roman page label into another
-    // short token (for example `viii Preface` -> `ate Preface`). Group those
-    // edge-only variants by their stable section title.
-    .replace(/^(?:#roman|[a-z]{1,4})\s+/i, "#edge ")
-    .replace(/\s+(?:#roman|[a-z]{1,4})$/i, " #edge");
+    // Printed page labels alternate sides and may switch between Arabic and
+    // Roman numerals. Collapse both forms to one token so a running section
+    // label is recognized across odd/even pages and numeral styles.
+    .replace(/^(?:[[(]?\d{1,5}[\])}.]?|[ivxlcdm]{1,8})\s+/i, "#edge ")
+    .replace(/\s+(?:[[(]?\d{1,5}[\])}.]?|[ivxlcdm]{1,8})$/i, " #edge")
+    .replace(/\d+/g, "#");
+}
+
+/**
+ * A damaged Roman page label can become a short alphabetic token (`xviii` ->
+ * `ate`). Treat it as furniture only when its remaining title also appears on
+ * at least two pages with a valid numeric label; the short word alone is never
+ * enough to discard a genuine title such as `FIRST WALK`.
+ */
+function damagedBoilerplatePatterns(normalized: string): string[] {
+  const patterns: string[] = [];
+  if (/^[a-z]{1,4}\s+\S/i.test(normalized)) {
+    patterns.push(normalized.replace(/^[a-z]{1,4}\s+/i, "#edge "));
+  }
+  if (/\S\s+[a-z]{1,4}$/i.test(normalized)) {
+    patterns.push(normalized.replace(/\s+[a-z]{1,4}$/i, " #edge"));
+  }
+  return patterns;
 }
 
 function isPageNumberLine(normalized: string, pageNumber?: number): boolean {
@@ -977,7 +1008,9 @@ function isUrlOrWatermarkLine(normalized: string): boolean {
 }
 
 function normalizeReaderLine(line: string): string {
-  return normalizeDigits(line)
+  return normalizeDigits(
+    line.replace(new RegExp(`[${STRUCTURAL_HEADING_START}${STRUCTURAL_HEADING_END}]`, "g"), "")
+  )
     .replace(/\s+/g, " ")
     .replace(/[ـ]+/g, "")
     .trim()

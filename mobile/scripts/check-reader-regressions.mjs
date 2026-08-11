@@ -802,6 +802,57 @@ const longBookFurnitureText = longBookFurnitureRows.map((row) => row.text).join(
 assert.doesNotMatch(longBookFurnitureText, /\b(?:vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi) Preface\b|\bPreface (?:vii|viii|ix|x|xi|xii|xiii|xiv|xv|xvi)\b/i);
 assert.doesNotMatch(longBookFurnitureText, /\b(?:ate|iy) Preface\b/i);
 assert.match(longBookFurnitureText, /Preface body sentence 6 remains/);
+
+const mixedNumeralFurnitureRows = TextReflow.buildSentences([
+  {
+    page: 6,
+    source: "native",
+    text: "\uE100PREFACE\uE101\n\nThe genuine preface begins here.",
+  },
+  { page: 19, source: "native", text: "\uE100FIRST WALK\uE101\n\nThe first walk begins here." },
+  { page: 21, source: "native", text: "First Walk 3\nBody page twenty-one." },
+  { page: 23, source: "native", text: "First Walk 5\nBody page twenty-three." },
+  { page: 25, source: "native", text: "First Walk vi\nBody page twenty-five." },
+  { page: 27, source: "native", text: "First Walk 9\nBody page twenty-seven." },
+  { page: 159, source: "native", text: "Tenth Walk 14]\nBody page one hundred fifty-nine." },
+  { page: 160, source: "native", text: "Tenth Walk 142\nBody page one hundred sixty." },
+]);
+const mixedNumeralFurnitureText = mixedNumeralFurnitureRows.map((row) => row.text).join(" ");
+assert.doesNotMatch(mixedNumeralFurnitureText, /First Walk (?:3|5|vi|9)/i);
+assert.doesNotMatch(mixedNumeralFurnitureText, /Tenth Walk (?:14\]|142)/i);
+assert.equal(
+  mixedNumeralFurnitureRows.find((row) => row.text === "PREFACE")?.kind,
+  "heading",
+  "a genuine preface title must remain a structural break"
+);
+assert.equal(
+  mixedNumeralFurnitureRows.find((row) => row.text === "FIRST WALK")?.kind,
+  "heading",
+  "a genuine walk title must remain a structural break"
+);
+
+const wrappedRousseauBodyRows = TextReflow.buildSentences([
+  {
+    page: 9,
+    source: "native",
+    text:
+      "The present translation follows the manuscript.\n" +
+      "Appendix A, the manuscript has been described quite extensively,\n" +
+      "Readers can consult that discussion for details.",
+  },
+  {
+    page: 13,
+    source: "native",
+    text:
+      "The earlier project had finally ended.\n" +
+      "Awarded a prize in 1750 and published the following year, the\n" +
+      "First Discourse won Rousseau immediate recognition.",
+  },
+]);
+assert.ok(
+  wrappedRousseauBodyRows.every((row) => row.kind === "body"),
+  "ordinary wrapped Rousseau prose must not be promoted to a title"
+);
 assert.equal(
   canonicalLegacyYear[0]?.text,
   "Income in 2024.¹¹ This continues. A real version 2024.11 remains unchanged.",
@@ -1085,12 +1136,12 @@ const manuscriptPage43 = TextReflow.buildSentences([
       "People who lived under emperors were not simple believers in emperors, and people inside\n" +
       "modern states are not identical with their governments. The powerful write in the language of\n" +
       "national unity. Human life is written in smaller and less obedient sentences.\n" +
-      "Loyalty that refuses\n" +
+      "\uE100Loyalty that refuses\uE101\n" +
       "In April 1963, Martin Luther King Jr. sat in a jail cell in Birmingham, Alabama.",
   },
 ]);
 const loyaltyHeading = manuscriptPage43.find((row) => row.text === "Loyalty that refuses");
-assert.equal(loyaltyHeading?.kind, "heading", "page-43 sentence-case title must remain a heading");
+assert.equal(loyaltyHeading?.kind, "heading", "a typography-marked sentence-case title must remain a heading");
 assert.equal(
   manuscriptPage43.find((row) => row.text.startsWith("People who lived"))?.kind,
   "body",
