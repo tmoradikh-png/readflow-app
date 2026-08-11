@@ -1222,16 +1222,18 @@ assert.match(
 assert.doesNotMatch(readerSource, /itemVisiblePercentThreshold/);
 assert.match(readerSource, /CellRendererComponent=\{readerCellRenderer\}/);
 assert.match(readerSource, /const centerY = offsetY \+ readerViewportHeightRef\.current \/ 2/);
-assert.match(readerSource, /onScroll=\{\(event\) => syncViewportAnchor\(event\.nativeEvent\.contentOffset\.y\)\}/);
+assert.match(readerSource, /onScroll=\{\(event\) => onReaderScroll\(event\.nativeEvent\.contentOffset\.y\)\}/);
 assert.match(readerSource, /scrollEventThrottle=\{100\}/);
 assert.match(
   readerSource,
   /renderVisualPage=\{item\.page === currentPage\}[\s\S]*renderVisualPage \? \([\s\S]*<VisualPdfPage/,
   "off-screen visual pages must not eagerly mount native PDF renderers"
 );
-assert.match(readerSource, /const PRECISE_TAP_TOKEN_LIMIT = 64;/);
-assert.match(readerSource, /const LONG_TEXT_TAP_CHUNK_WORDS = 32;/);
+assert.match(readerSource, /const PRECISE_TAP_TOKEN_LIMIT = 48;/);
+assert.match(readerSource, /const LONG_TEXT_TAP_CHUNK_WORDS = 24;/);
 assert.match(readerSource, /tokenSource\.length > PRECISE_TAP_TOKEN_LIMIT/);
+assert.match(readerSource, /readerScrollDirectionRef\.current === "backward"/);
+assert.match(readerSource, /readerCellLayoutsRef\.current\.clear\(\)/);
 assert.match(readerSource, /renderRangeText\(start, end\)/);
 assert.match(readerSource, /initialNumToRender=\{6\}/);
 assert.match(readerSource, /maxToRenderPerBatch=\{4\}/);

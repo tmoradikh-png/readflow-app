@@ -112,8 +112,8 @@ const READER_WINDOW_BEFORE = 12;
 const READER_WINDOW_AFTER = 180;
 const READER_WINDOW_BACKWARD_EXPAND = 12;
 const READER_WINDOW_FORWARD_EXPAND = 120;
-const PRECISE_TAP_TOKEN_LIMIT = 64;
-const LONG_TEXT_TAP_CHUNK_WORDS = 32;
+const PRECISE_TAP_TOKEN_LIMIT = 48;
+const LONG_TEXT_TAP_CHUNK_WORDS = 24;
 const TITLE_PAUSE_MS = 220;
 const PAGE_DIVIDER_ESTIMATED_HEIGHT = 38;
 
@@ -400,6 +400,8 @@ export function Reader({
   const listRef = useRef<FlatList<Sentence>>(null);
   const readerCellLayoutsRef = useRef<Map<string, ReaderCellLayout>>(new Map());
   const viewportAnchorKeyRef = useRef<string | null>(null);
+  const readerScrollOffsetRef = useRef(0);
+  const readerScrollDirectionRef = useRef<"forward" | "backward" | null>(null);
   const readerViewportHeightRef = useRef(0);
   const followPlacementRef = useRef<{
     sentenceId: number;
@@ -1300,6 +1302,14 @@ export function Reader({
     if (nearest) updateViewportAnchor(nearest.sentence);
   }
 
+  function onReaderScroll(offsetY: number) {
+    const previous = readerScrollOffsetRef.current;
+    if (offsetY > previous + 1) readerScrollDirectionRef.current = "forward";
+    else if (offsetY < previous - 1) readerScrollDirectionRef.current = "backward";
+    readerScrollOffsetRef.current = offsetY;
+    syncViewportAnchor(offsetY);
+  }
+
   const readerCellRenderer = useRef(
     ({ children, item, onFocusCapture, onLayout, style }: any) =>
       React.createElement(
@@ -1311,6 +1321,7 @@ export function Reader({
             onLayout?.(event);
             const { y, height } = event.nativeEvent.layout;
             readerCellLayoutsRef.current.set(item.key, { y, height, sentence: item });
+            syncViewportAnchor(readerScrollOffsetRef.current);
           },
         } as any,
         children
@@ -1338,9 +1349,12 @@ export function Reader({
       }
       if (
         !suppressBackwardExpansionRef.current &&
+        readerScrollDirectionRef.current === "backward" &&
         first.id <= currentWindowStart + 8 &&
         currentWindowStart > 0
       ) {
+        readerCellLayoutsRef.current.clear();
+        viewportAnchorKeyRef.current = null;
         setWindowStart((start) => {
           const next = Math.max(0, start - READER_WINDOW_BACKWARD_EXPAND);
           windowStartRef.current = next;
@@ -2131,7 +2145,7 @@ export function Reader({
         }}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
-        onScroll={(event) => syncViewportAnchor(event.nativeEvent.contentOffset.y)}
+        onScroll={(event) => onReaderScroll(event.nativeEvent.contentOffset.y)}
         scrollEventThrottle={100}
         onScrollToIndexFailed={onScrollToIndexFailed}
         onScrollBeginDrag={onReaderScrollBeginDrag}
