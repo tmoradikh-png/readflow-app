@@ -38,20 +38,40 @@ keys, or recovery codes.
   publishing remains off.
 - Android version code `57` is consumed. The next Android build must use a code
   greater than `57`.
-- Current local QA source is `1.0.63` / Android code `70` at commit `2d8b5ca`.
-  Its final measured-layout reset is committed and pushed but not built because
-  three local build attempts ended in a locked dex file and then a Metro bundle
-  failure from a dependency junction. Use code `71` or higher for the next
-  attempt.
-- Latest tested local QA APK: `artifacts/readflow-qa-1.0.62-69.apk`
-  (231,560,947 bytes; SHA-256
-  `154559A5FA03283DBDF83C653664F0FF5DD3510C60AB99FAB49863718721BA91`).
+- Current local QA source is `1.0.65` / Android code `72` at commit `881ca6c`.
+- Latest tested local QA APK: `artifacts/readflow-qa-1.0.65-72.apk`
+  (231,562,883 bytes; SHA-256
+  `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`).
   It is installed as side-by-side package `com.urmiaworks.readflow.qa` on
-  Samsung SM-G975F. No local candidate was sent to EAS or Google Play; QA codes
-  `58` through `70` do not consume production-package Play codes.
+  Samsung SM-G975F. No local candidate was sent to EAS or Google Play. Use
+  Android code `73` or higher for the next local build attempt.
 - A duplicate `1.0.28` / code `34` EAS build
   `46806d5f-aa25-4e9f-9031-5d3866824fe3` was started by a CLI timeout retry and
   also finished. Do not upload it as a separate release; it has the same code.
+
+## 1.0.65 Running Furniture and Title-Break QA - 2026-08-11
+
+- General edge-pattern detection now groups alternating Arabic/Roman page
+  labels, tolerates damaged closing glyphs, and removes OCR-damaged labels only
+  when they match independently observed numbered running furniture.
+- Genuine isolated or typography-marked titles remain structural breaks. Broad
+  legacy guesses no longer turn body lines beginning with `Appendix`, `Book`,
+  `Introduction`, or a Walk name into headings.
+- Parsed-text cache schema `5` forces older ambiguous extracts to refresh.
+  Text-heavy scanned chapter openings now use clean reflow; photos, captions,
+  covers, tables, diagrams, sparse image pages, and illustrated author pages
+  keep their source layout.
+- A full 283-page Rousseau extraction/reflow audit retained the genuine
+  `PREFACE`, ten Walk openings, `INTERPRETATIVE ESSAY`, and `APPENDIX A/B`,
+  removed running headers/page labels, and suppressed the multi-page Notes
+  blocks. Automated reader/release checks, mobile TypeScript, backend build,
+  and the local Android release build passed.
+- On Samsung SM-G975F, page 9 began with `editions of Spink...` and contained
+  no `x Preface`; page 19 displayed `FIRST WALK` as a separate reflow heading
+  without its printed footer/page number. No fatal Android or React error was
+  observed. Commits: `fce9ebe`, `881ca6c`. Before tag:
+  `readflow-before-running-furniture-title-breaks-local-1.0.64-20260811`.
+  No public release was performed.
 
 ## 1.0.62 Reader Runtime QA / 1.0.63 Pending Build - 2026-08-11
 
