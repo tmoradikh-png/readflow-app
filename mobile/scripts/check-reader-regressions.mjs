@@ -1214,6 +1214,17 @@ assert.match(
   /const VisualPdfPage = React\.memo[\s\S]*const source = useMemo[\s\S]*visualPdfStyles\.pdf/,
   "retained visual PDF pages must be isolated from theme-driven reader rerenders"
 );
+assert.match(
+  readerSource,
+  /viewAreaCoveragePercentThreshold: 2/,
+  "page tracking must work when a paragraph row is taller than the viewport"
+);
+assert.doesNotMatch(readerSource, /itemVisiblePercentThreshold/);
+assert.match(
+  readerSource,
+  /renderVisualPage=\{item\.page === currentPage\}[\s\S]*renderVisualPage \? \([\s\S]*<VisualPdfPage/,
+  "off-screen visual pages must not eagerly mount native PDF renderers"
+);
 assert.match(readerSource, /style=\{styles\.pageNavAi\}/);
 assert.doesNotMatch(readerSource, /styles\.aiFab/);
 assert.match(readerSource, /textIntelligence\.prepare\(input\)/);

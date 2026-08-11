@@ -1255,7 +1255,10 @@ export function Reader({
   }
 
   // onViewableItemsChanged / viewabilityConfig must be stable across renders.
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 35 }).current;
+  // Base page tracking on the viewport, not on the full row height. A long
+  // paragraph can be taller than the screen and never reach an item-based
+  // percentage threshold, leaving the page header and saved position stale.
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 2 }).current;
   const onViewableItemsChanged = useRef((info: { viewableItems: ViewToken[] }) => {
     if (showOriginalRef.current) return;
     const visible = info.viewableItems
@@ -2047,7 +2050,7 @@ export function Reader({
         ref={listRef}
         data={renderedFlat}
         keyExtractor={(s) => s.key}
-        extraData={`${currentId ?? "n"}:${activeLine.sentenceId ?? "n"}:${activeLine.lineIndex}:${settings.fontSize}:${lineHeight}`}
+        extraData={`${currentId ?? "n"}:${activeLine.sentenceId ?? "n"}:${activeLine.lineIndex}:${settings.fontSize}:${lineHeight}:${currentPage}`}
         renderItem={({ item, index }: ListRenderItemInfo<Sentence>) => (
           <SentenceRow
             sentence={item}
@@ -2061,6 +2064,7 @@ export function Reader({
             layoutKey={`${Math.round(windowWidth)}:${lineHeight}`}
             rtl={Boolean(readingLanguage.rtl)}
             sourceUri={doc.sourceUri}
+            renderVisualPage={item.page === currentPage}
             onTapWord={tapHandler}
             onOpenOriginalRef={onOpenOriginalRef}
             onLineRanges={handleLineRanges}
@@ -2226,6 +2230,7 @@ interface SentenceRowProps {
   layoutKey: string;
   rtl: boolean;
   sourceUri?: string;
+  renderVisualPage: boolean;
   onTapWord: (globalId: number, charOffset: number) => void;
   onOpenOriginalRef: React.MutableRefObject<(page: number) => void>;
   onLineRanges: (sentenceId: number, ranges: LineRange[]) => void;
@@ -2288,6 +2293,7 @@ const SentenceRow = React.memo(function SentenceRow({
   layoutKey,
   rtl,
   sourceUri,
+  renderVisualPage,
   onTapWord,
   onOpenOriginalRef,
   onLineRanges,
@@ -2393,11 +2399,17 @@ const SentenceRow = React.memo(function SentenceRow({
             <View style={styles.pageDividerLine} />
           </View>
         ) : null}
-        <VisualPdfPage
-          sourceUri={sourceUri}
-          page={sentence.page}
-          onOpenOriginalRef={onOpenOriginalRef}
-        />
+        {renderVisualPage ? (
+          <VisualPdfPage
+            sourceUri={sourceUri}
+            page={sentence.page}
+            onOpenOriginalRef={onOpenOriginalRef}
+          />
+        ) : (
+          <View style={[visualPdfStyles.frame, visualPdfStyles.placeholder]}>
+            <ActivityIndicator color="#666666" />
+          </View>
+        )}
       </View>
     );
   }
@@ -2433,6 +2445,7 @@ const visualPdfStyles = StyleSheet.create({
     borderColor: "#b8b8b8",
     overflow: "hidden",
   },
+  placeholder: { alignItems: "center", justifyContent: "center" },
   pdf: { flex: 1, width: "100%", backgroundColor: "#ffffff" },
 });
 
