@@ -1260,15 +1260,15 @@ export function Reader({
   // Base page tracking on the viewport, not on the full row height. A long
   // paragraph can be taller than the screen and never reach an item-based
   // percentage threshold, leaving the page header and saved position stale.
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 2 }).current;
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 5 }).current;
   const onViewableItemsChanged = useRef((info: { viewableItems: ViewToken[] }) => {
     if (showOriginalRef.current) return;
     const visible = info.viewableItems
       .filter((token) => token.isViewable && token.item)
       .sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
-    const first = visible[0];
-    if (first && first.item) {
-      const sentence = first.item as Sentence;
+    const anchor = visible[Math.floor(visible.length / 2)];
+    if (anchor && anchor.item) {
+      const sentence = anchor.item as Sentence;
       const p = sentence.page;
       const position = positionForSentence(sentence);
       visiblePositionRef.current = position;

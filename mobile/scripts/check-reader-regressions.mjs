@@ -1216,10 +1216,15 @@ assert.match(
 );
 assert.match(
   readerSource,
-  /viewAreaCoveragePercentThreshold: 2/,
+  /viewAreaCoveragePercentThreshold: 5/,
   "page tracking must work when a paragraph row is taller than the viewport"
 );
 assert.doesNotMatch(readerSource, /itemVisiblePercentThreshold/);
+assert.match(
+  readerSource,
+  /const anchor = visible\[Math\.floor\(visible\.length \/ 2\)\]/,
+  "page tracking must use the viewport's middle visible row instead of a trailing sliver"
+);
 assert.match(
   readerSource,
   /renderVisualPage=\{item\.page === currentPage\}[\s\S]*renderVisualPage \? \([\s\S]*<VisualPdfPage/,
