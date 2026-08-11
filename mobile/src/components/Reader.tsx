@@ -106,6 +106,8 @@ const READER_WINDOW_BEFORE = 12;
 const READER_WINDOW_AFTER = 180;
 const READER_WINDOW_BACKWARD_EXPAND = 12;
 const READER_WINDOW_FORWARD_EXPAND = 120;
+const PRECISE_TAP_TOKEN_LIMIT = 140;
+const LONG_TEXT_TAP_CHUNK_WORDS = 10;
 const TITLE_PAUSE_MS = 220;
 const PAGE_DIVIDER_ESTIMATED_HEIGHT = 38;
 
@@ -2094,10 +2096,10 @@ export function Reader({
         onScrollEndDrag={() => markUserScrollSettling(260)}
         onMomentumScrollEnd={() => markUserScrollSettling(80)}
         initialScrollIndex={initialWindowIndex > 0 ? initialWindowIndex : undefined}
-        initialNumToRender={24}
-        maxToRenderPerBatch={16}
-        windowSize={9}
-        updateCellsBatchingPeriod={32}
+        initialNumToRender={6}
+        maxToRenderPerBatch={4}
+        windowSize={5}
+        updateCellsBatchingPeriod={50}
         maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
         onEndReached={() =>
           setWindowEnd((end) => {
@@ -2319,12 +2321,11 @@ const SentenceRow = React.memo(function SentenceRow({
     onLineRanges(sentence.id, next);
   }
 
-  function renderWordText(word: string, absoluteStart: number) {
-    const absoluteEnd = absoluteStart + word.length;
+  function renderRangeText(absoluteStart: number, absoluteEnd: number) {
     const markers = referenceMarkers.filter(
       (marker) => marker.start < absoluteEnd && marker.end > absoluteStart
     );
-    if (!markers.length) return word;
+    if (!markers.length) return sentence.text.slice(absoluteStart, absoluteEnd);
 
     const parts: React.ReactNode[] = [];
     let cursor = absoluteStart;
@@ -2353,6 +2354,56 @@ const SentenceRow = React.memo(function SentenceRow({
     baseOffset = 0,
     highlightedRange?: LineRange
   ) {
+    // Some PDFs expose an entire page as one paragraph. Thousands of nested
+    // tappable Text spans can then block Android's UI thread long enough to
+    // trigger an ANR. Keep exact word taps for normal paragraphs, but group
+    // unusually long ones into bounded chunks while preserving every source
+    // character, reference marker, and active-line boundary.
+    if (tokenSource.length > PRECISE_TAP_TOKEN_LIMIT) {
+      const chunks: React.ReactNode[] = [];
+      for (let index = 0; index < tokenSource.length; index += LONG_TEXT_TAP_CHUNK_WORDS) {
+        const chunkStart = baseOffset + tokenSource[index].offset;
+        const nextToken = tokenSource[index + LONG_TEXT_TAP_CHUNK_WORDS];
+        const chunkEnd = nextToken
+          ? baseOffset + nextToken.offset
+          : baseOffset + sentence.text.length;
+        const boundaries = [chunkStart, chunkEnd];
+        if (
+          highlightedRange &&
+          highlightedRange.start > chunkStart &&
+          highlightedRange.start < chunkEnd
+        ) {
+          boundaries.push(highlightedRange.start);
+        }
+        if (
+          highlightedRange &&
+          highlightedRange.end > chunkStart &&
+          highlightedRange.end < chunkEnd
+        ) {
+          boundaries.push(highlightedRange.end);
+        }
+        boundaries.sort((a, b) => a - b);
+
+        for (let part = 0; part < boundaries.length - 1; part++) {
+          const start = boundaries[part];
+          const end = boundaries[part + 1];
+          const highlighted = Boolean(
+            highlightedRange && start >= highlightedRange.start && start < highlightedRange.end
+          );
+          chunks.push(
+            <Text
+              key={`chunk-${index}-${part}`}
+              onPress={() => onTapWord(sentence.id, start)}
+              style={highlighted ? styles.activeLine : undefined}
+            >
+              {renderRangeText(start, end)}
+            </Text>
+          );
+        }
+      }
+      return chunks;
+    }
+
     return tokenSource.map((t, wi) => {
       const absoluteOffset = baseOffset + t.offset;
       const highlighted = Boolean(
@@ -2366,7 +2417,7 @@ const SentenceRow = React.memo(function SentenceRow({
         onPress={() => onTapWord(sentence.id, absoluteOffset)}
         style={highlighted ? styles.activeLine : undefined}
       >
-        {renderWordText(t.word, baseOffset + t.offset)}
+        {renderRangeText(baseOffset + t.offset, baseOffset + t.offset + t.word.length)}
         {wi < tokenSource.length - 1 ? " " : ""}
       </Text>
       );

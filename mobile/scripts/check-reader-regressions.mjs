@@ -1225,6 +1225,11 @@ assert.match(
   /renderVisualPage=\{item\.page === currentPage\}[\s\S]*renderVisualPage \? \([\s\S]*<VisualPdfPage/,
   "off-screen visual pages must not eagerly mount native PDF renderers"
 );
+assert.match(readerSource, /const PRECISE_TAP_TOKEN_LIMIT = 140;/);
+assert.match(readerSource, /tokenSource\.length > PRECISE_TAP_TOKEN_LIMIT/);
+assert.match(readerSource, /renderRangeText\(start, end\)/);
+assert.match(readerSource, /initialNumToRender=\{6\}/);
+assert.match(readerSource, /maxToRenderPerBatch=\{4\}/);
 assert.match(readerSource, /style=\{styles\.pageNavAi\}/);
 assert.doesNotMatch(readerSource, /styles\.aiFab/);
 assert.match(readerSource, /textIntelligence\.prepare\(input\)/);
