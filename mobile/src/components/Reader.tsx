@@ -97,6 +97,12 @@ interface LineSegment extends LineRange {
   text: string;
 }
 
+interface ReaderCellLayout {
+  y: number;
+  height: number;
+  sentence: Sentence;
+}
+
 const TTS_PREFETCH_AHEAD = 8;
 // One local render ahead is enough for a smooth handoff. Queuing several native
 // Supertonic jobs makes Stop/Back appear frozen on long or malformed paragraphs.
@@ -392,6 +398,8 @@ export function Reader({
   const localVoiceWriteRef = useRef<Promise<number>>(Promise.resolve(0));
   const followRef = useRef(true); // auto-scroll to follow the voice (optional)
   const listRef = useRef<FlatList<Sentence>>(null);
+  const readerCellLayoutsRef = useRef<Map<string, ReaderCellLayout>>(new Map());
+  const viewportAnchorKeyRef = useRef<string | null>(null);
   const readerViewportHeightRef = useRef(0);
   const followPlacementRef = useRef<{
     sentenceId: number;
@@ -1256,50 +1264,81 @@ export function Reader({
     );
   }
 
-  // onViewableItemsChanged / viewabilityConfig must be stable across renders.
-  // Base page tracking on the viewport, not on the full row height. A long
-  // paragraph can be taller than the screen and never reach an item-based
-  // percentage threshold, leaving the page header and saved position stale.
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+  function updateViewportAnchor(sentence: Sentence) {
+    if (viewportAnchorKeyRef.current === sentence.key) return;
+    viewportAnchorKeyRef.current = sentence.key;
+    const p = sentence.page;
+    visiblePositionRef.current = positionForSentence(sentence);
+    setCurrentPage(p);
+    currentPageRef.current = p;
+    if (!playingRef.current || !followRef.current) indexRef.current = sentence.id;
+    OcrLoader.setPriority(docRef.current.docId, p);
+
+    if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
+    progressSaveTimerRef.current = setTimeout(() => {
+      progressSaveTimerRef.current = null;
+      saveLastReadRef.current(false);
+    }, 700);
+  }
+
+  function syncViewportAnchor(offsetY: number) {
+    if (showOriginalRef.current || readerViewportHeightRef.current <= 0) return;
+    const centerY = offsetY + readerViewportHeightRef.current / 2;
+    let nearest: ReaderCellLayout | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const layout of readerCellLayoutsRef.current.values()) {
+      if (centerY >= layout.y && centerY < layout.y + layout.height) {
+        updateViewportAnchor(layout.sentence);
+        return;
+      }
+      const distance = Math.abs(centerY - (layout.y + layout.height / 2));
+      if (distance < nearestDistance) {
+        nearest = layout;
+        nearestDistance = distance;
+      }
+    }
+    if (nearest) updateViewportAnchor(nearest.sentence);
+  }
+
+  const readerCellRenderer = useRef(
+    ({ children, item, onFocusCapture, onLayout, style }: any) =>
+      React.createElement(
+        View,
+        {
+          style,
+          onFocusCapture,
+          onLayout: (event: any) => {
+            onLayout?.(event);
+            const { y, height } = event.nativeEvent.layout;
+            readerCellLayoutsRef.current.set(item.key, { y, height, sentence: item });
+          },
+        } as any,
+        children
+      )
+  ).current;
+
+  // Viewability only expands the bounded render window. Page/progress tracking
+  // uses measured cell geometry because a page can span several uneven rows.
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 5 }).current;
   const onViewableItemsChanged = useRef((info: { viewableItems: ViewToken[] }) => {
     if (showOriginalRef.current) return;
     const visible = info.viewableItems
       .filter((token) => token.isViewable && token.item)
       .sort((a, b) => Number(a.index ?? 0) - Number(b.index ?? 0));
-    const anchor = visible[0];
-    if (anchor && anchor.item) {
-      const sentence = anchor.item as Sentence;
-      const p = sentence.page;
-      const position = positionForSentence(sentence);
-      visiblePositionRef.current = position;
-      setCurrentPage(p);
-      currentPageRef.current = p;
-      if (!playingRef.current || !followRef.current) indexRef.current = sentence.id;
-      // Bias the background OCR engine toward what's on screen so scrolling keeps
-      // loading the pages just ahead of you.
-      OcrLoader.setPriority(docRef.current.docId, p);
-
-      if (progressSaveTimerRef.current) clearTimeout(progressSaveTimerRef.current);
-      progressSaveTimerRef.current = setTimeout(() => {
-        progressSaveTimerRef.current = null;
-        // Persist the visible location after scrolling settles. The named
-        // "Last read" bookmark is updated on stop/back/background to avoid a
-        // second storage write while the user is actively reading.
-        saveLastReadRef.current(false);
-      }, 700);
-
+    const first = visible[0]?.item as Sentence | undefined;
+    if (first) {
       const last = visible[visible.length - 1]?.item as Sentence | undefined;
       const currentWindowStart = windowStartRef.current;
       const currentWindowEnd = windowEndRef.current;
       if (
         suppressBackwardExpansionRef.current &&
-        sentence.id > currentWindowStart + 8
+        first.id > currentWindowStart + 8
       ) {
         suppressBackwardExpansionRef.current = false;
       }
       if (
         !suppressBackwardExpansionRef.current &&
-        sentence.id <= currentWindowStart + 8 &&
+        first.id <= currentWindowStart + 8 &&
         currentWindowStart > 0
       ) {
         setWindowStart((start) => {
@@ -2051,6 +2090,7 @@ export function Reader({
         key={`${doc.docId}:${listGeneration}`}
         ref={listRef}
         data={renderedFlat}
+        CellRendererComponent={readerCellRenderer}
         keyExtractor={(s) => s.key}
         extraData={`${currentId ?? "n"}:${activeLine.sentenceId ?? "n"}:${activeLine.lineIndex}:${settings.fontSize}:${lineHeight}:${currentPage}`}
         renderItem={({ item, index }: ListRenderItemInfo<Sentence>) => (
@@ -2091,6 +2131,8 @@ export function Reader({
         }}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        onScroll={(event) => syncViewportAnchor(event.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={100}
         onScrollToIndexFailed={onScrollToIndexFailed}
         onScrollBeginDrag={onReaderScrollBeginDrag}
         onScrollEndDrag={() => markUserScrollSettling(260)}

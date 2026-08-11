@@ -1216,15 +1216,14 @@ assert.match(
 );
 assert.match(
   readerSource,
-  /viewAreaCoveragePercentThreshold: 50/,
+  /viewAreaCoveragePercentThreshold: 5/,
   "page tracking must work when a paragraph row is taller than the viewport"
 );
 assert.doesNotMatch(readerSource, /itemVisiblePercentThreshold/);
-assert.match(
-  readerSource,
-  /const anchor = visible\[0\]/,
-  "page tracking must use the row covering most of the viewport instead of a trailing sliver"
-);
+assert.match(readerSource, /CellRendererComponent=\{readerCellRenderer\}/);
+assert.match(readerSource, /const centerY = offsetY \+ readerViewportHeightRef\.current \/ 2/);
+assert.match(readerSource, /onScroll=\{\(event\) => syncViewportAnchor\(event\.nativeEvent\.contentOffset\.y\)\}/);
+assert.match(readerSource, /scrollEventThrottle=\{100\}/);
 assert.match(
   readerSource,
   /renderVisualPage=\{item\.page === currentPage\}[\s\S]*renderVisualPage \? \([\s\S]*<VisualPdfPage/,
