@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-08-11
+Updated: 2026-08-17
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -8,10 +8,10 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 
 ## Current Play Status
 
-- Local QA candidate `1.0.54 (61)` uses side-by-side package
-  `com.urmiaworks.readflow.qa` and has not been uploaded to EAS or Play.
-  Production remains `1.0.50 (57)`, and production codes `58` through `61` are
-  not consumed by this local package.
+- Release `1.0.66 (73)` was promoted from internal testing to a 100% production
+  rollout and sent for review on 2026-08-17. Play shows `Changes in review`.
+  Managed publishing is off, so approval publishes automatically.
+- The currently live release remains `1.0.50 (57)` until that review completes.
 - Google Play production release `1.0.50 (57)` is currently live. On
   2026-07-27 Play Console showed the production track as active, latest release
   `1.0.50 (57)`, status `Available on Google Play`, released on Jul 22 at
@@ -29,7 +29,7 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
   phone/tablet device coverage. It estimated about 34 MB for a new install and
   5.01 MB for an update. The only release warning was the non-blocking absence
   of an R8/ProGuard deobfuscation file.
-- Android version code `57` is consumed. Use `58` or higher next, after checking
+- Android version code `73` is consumed. Use `74` or higher next, after checking
   both EAS and Play.
 - Google Play production release `1.0.27` / version code `33` was submitted for
   review on 2026-07-01 and approved/released by 2026-07-14.

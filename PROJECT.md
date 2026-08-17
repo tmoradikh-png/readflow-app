@@ -1,6 +1,6 @@
 # readFlow Developer Handoff
 
-Updated: 2026-08-11
+Updated: 2026-08-17
 
 Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
 file for the fuller map of accounts, services, release status, and operational
@@ -37,8 +37,7 @@ Current shape:
 - GitHub account rule: always use `tmoradikh-png` for this project unless the
   owner explicitly changes the repository owner.
 - Current source version: `1.0.66`
-- Current source Android `versionCode`: `73` (release candidate; not yet
-  consumed by EAS or Play)
+- Current source Android `versionCode`: `73` (consumed by EAS and Play)
 - Current source iOS `buildNumber`: `50`
 - Latest finished Android EAS build: `1.0.66` / code `73` (Play internal)
 - Latest finished Android EAS build id: `4ee76bca-814b-4a79-8acf-e5c9881002a7`
@@ -59,13 +58,15 @@ Current shape:
   at 8:51 PM, across 177 countries/regions. Managed publishing is off. Public
   listing:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
+- Release `1.0.66 (73)` was promoted to a 100% production rollout and sent for
+  review on 2026-08-17. Play shows `Changes in review`; managed publishing is
+  off, so approval will publish it automatically.
 - Play internal-testing release `1.0.66 (73) internal QA` is available to the
-  configured tester list. Production promotion is gated on sandbox billing QA.
+  configured tester list.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios
   --limit 5 --json --non-interactive` returned `[]` on 2026-06-29.
-- The prepared production Android candidate uses code `73`. Confirm no
-  concurrent EAS/Play build consumed it by running the EAS `build:list` command
-  in `RELEASE_GUIDE.md` immediately before spending build quota.
+- Android code `73` is consumed. The next Android build must use code `74` or
+  higher after checking EAS and Play immediately before spending build quota.
 - The prepared iOS source uses buildNumber `50`. No iOS EAS build has been
   recorded; verify with the `build:list --platform ios` command in
   `IOS_RELEASE_GUIDE.md` and use `50` only if it is still unconsumed.
