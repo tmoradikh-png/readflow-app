@@ -1,6 +1,6 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-08-17
+Updated: 2026-08-26
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -8,10 +8,9 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
 
 ## Current Play Status
 
-- Release `1.0.66 (73)` was promoted from internal testing to a 100% production
-  rollout and sent for review on 2026-08-17. Play shows `Changes in review`.
-  Managed publishing is off, so approval publishes automatically.
-- The currently live release remains `1.0.50 (57)` until that review completes.
+- Release `1.0.66 (73)` completed its 100% production rollout and is
+  `Available on Google Play`. Play records it as released on 2026-08-17 at
+  5:14 PM; on 2026-08-26 the track showed 177 countries/regions and 10 installs.
 - Google Play production release `1.0.50 (57)` is currently live. On
   2026-07-27 Play Console showed the production track as active, latest release
   `1.0.50 (57)`, status `Available on Google Play`, released on Jul 22 at

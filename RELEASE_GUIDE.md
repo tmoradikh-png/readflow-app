@@ -24,18 +24,17 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ---
 
-## Android Release Candidate - 2026-08-17
+## Android Production Release - 2026-08-26
 
-- Source version `1.0.66`, Android code `73`, is submitted for Play production
-  review. It includes the tested running-furniture/title-break cleanup plus
+- Source version `1.0.66`, Android code `73`, is live on Play production. It
+  includes the tested running-furniture/title-break cleanup plus
   inactive/expired RevenueCat entitlement refresh handling.
 - QA package: `com.urmiaworks.readflow.qa`; local artifact:
   `artifacts/readflow-qa-1.0.65-72.apk`; SHA-256
   `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`.
-- Google Play live production remains `1.0.50 (57)`. Code `73` is consumed by
-  EAS build `4ee76bca-814b-4a79-8acf-e5c9881002a7`; release `1.0.66 (73)` was
-  submitted for a 100% production rollout on 2026-08-17 and is in review. Do
-  not rebuild or reuse code `73`; use `74` or higher next.
+- Google Play live production is `1.0.66 (73)`. It became `Available on Google
+  Play` on 2026-08-17 at 5:14 PM. Code `73` is consumed by EAS build
+  `4ee76bca-814b-4a79-8acf-e5c9881002a7`; use `74` or higher next.
 - Real-device results and remaining live-purchase limitation are recorded in
   `HANDOVER_CURRENT.md` and `READER_REGRESSION_CHECKLIST.md`.
 
@@ -43,8 +42,7 @@ use **[IOS_RELEASE_GUIDE.md](IOS_RELEASE_GUIDE.md)** and
 
 ## Public Release Gate — 2026-07-01
 
-Current source release: **1.0.66 / Android versionCode 73**; live production
-remains **1.0.50 / Android versionCode 57** while `1.0.66 (73)` is in review.
+Current source and live production release: **1.0.66 / Android versionCode 73**.
 
 What is already prepared in source:
 - `mobile/app.json` points at the public backend host

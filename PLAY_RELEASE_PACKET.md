@@ -1,6 +1,6 @@
 # readFlow Play Release Packet
 
-Updated: 2026-08-17
+Updated: 2026-08-26
 
 This packet gathers the launch text and review checklist for Google Play. Keep
 it in sync with `PAYMENT_SETUP.md`, `PRIVACY_POLICY_DRAFT.md`,
@@ -17,7 +17,7 @@ Current source status:
 - App name/copy uses `readFlow` and `rF AI`.
 - No tracked mobile source contains the previous local-AI label or old
   capability field.
-- Current live production release is `1.0.50 / versionCode 57`.
+- Current live production release is `1.0.66 / versionCode 73`.
 - Latest tested local QA build is `1.0.65 / versionCode 72` under package
   `com.urmiaworks.readflow.qa`. The submitted Play release is production package
   `com.urmiaworks.readflow`, version `1.0.66 / versionCode 73`.
@@ -40,8 +40,8 @@ Current source status:
 - EAS build `4ee76bca-814b-4a79-8acf-e5c9881002a7` produced `1.0.66 (73)` and
   Play accepted it on the internal track. Local AAB SHA-256:
   `335964023DCD72DEE5A881DC0111EDFDDF5DB51334444FEF41FB2D895625BB03`.
-  It was promoted to a 100% production rollout and sent for review on
-  2026-08-17. Play shows `Changes in review`; managed publishing is off.
+  It completed a 100% production rollout and became `Available on Google Play`
+  on 2026-08-17 at 5:14 PM.
 - Play Console app-content progress on 2026-07-01: privacy policy, app access,
   ads, Advertising ID (`No`), foreground services, government apps, financial
   features, health, content rating, target audience, Data Safety, and app

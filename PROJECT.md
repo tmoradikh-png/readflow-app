@@ -1,6 +1,6 @@
 # readFlow Developer Handoff
 
-Updated: 2026-08-17
+Updated: 2026-08-26
 
 Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
 file for the fuller map of accounts, services, release status, and operational
@@ -52,15 +52,15 @@ Current shape:
   `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`.
   It was installed and tested on Samsung SM-G975F from source commit `881ca6c`.
   None of these local QA builds was submitted to EAS or Play.
-- Android production status: Google Play release `1.0.50 (57)` is live.
+- Android production status: Google Play release `1.0.66 (73)` is live.
   On 2026-07-27 Play Console showed the production track as active, latest
   release `1.0.50 (57)`, status `Available on Google Play`, released on Jul 22
   at 8:51 PM, across 177 countries/regions. Managed publishing is off. Public
   listing:
   `https://play.google.com/store/apps/details?id=com.urmiaworks.readflow`.
-- Release `1.0.66 (73)` was promoted to a 100% production rollout and sent for
-  review on 2026-08-17. Play shows `Changes in review`; managed publishing is
-  off, so approval will publish it automatically.
+- Release `1.0.66 (73)` completed its 100% production rollout and became
+  `Available on Google Play` on 2026-08-17 at 5:14 PM. On 2026-08-26 the track
+  showed 177 countries/regions and 10 installs.
 - Play internal-testing release `1.0.66 (73) internal QA` is available to the
   configured tester list.
 - Latest iOS EAS build: none. `npx --yes eas-cli build:list --platform ios

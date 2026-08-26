@@ -1,6 +1,6 @@
 # readFlow Current Handover
 
-Updated: 2026-08-17
+Updated: 2026-08-26
 
 Start here when taking over readFlow. This file is a short operational map. It
 does not contain passwords, API keys, service-account JSON contents, signing
@@ -13,7 +13,7 @@ keys, or recovery codes.
 - App name on Play listing: `readFlow PDF Reader with AI`
 - Brand casing in product copy: `readFlow`
 - Android package: `com.urmiaworks.readflow`
-- Current live production release: `1.0.50` / version code `57`.
+- Current live production release: `1.0.66` / version code `73`.
   It contains the reader stability, reviewer-access, page-continuity, title,
   reference-marker, bounded local-synthesis, and independent speech
   text-intelligence and progressive-rF-playback repairs described below. It is
@@ -40,8 +40,8 @@ keys, or recovery codes.
 - Android version code `73` is consumed. The next Android build must use code
   `74` or higher.
 - Release `1.0.66 (73)` was promoted from internal testing to a 100% production
-  rollout and sent for review on 2026-08-17. Play shows `Changes in review`.
-  Managed publishing is off, so approval will publish it automatically.
+  rollout and became `Available on Google Play` on 2026-08-17 at 5:14 PM.
+  Play showed 177 countries/regions and 10 installs on 2026-08-26.
 - Latest tested local QA APK: `artifacts/readflow-qa-1.0.65-72.apk`
   (231,562,883 bytes; SHA-256
   `AED70B6DFB12AAAD2E578C2897A12D0AE4A4363B0EC51DD2A63544D80025F722`).
@@ -75,8 +75,8 @@ keys, or recovery codes.
   old package requires an uninstall that may erase its local library; do not do
   that without owner confirmation. The side-by-side QA package and its books
   are unaffected.
-- Production promotion was submitted on 2026-08-17. Play shows `Changes in review`;
-  sandbox purchase/restore/expiry monitoring remains a post-rollout check.
+- Production promotion completed on 2026-08-17. Sandbox
+  purchase/restore/expiry monitoring remains a post-rollout check.
 
 ## 1.0.65 Running Furniture and Title-Break QA - 2026-08-11
 
