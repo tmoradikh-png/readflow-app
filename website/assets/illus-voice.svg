@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none" role="img" aria-label="Listen aloud with voice">
+  <defs>
+    <linearGradient id="vg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E2724E"/><stop offset="100%" stop-color="#C24A2B"/>
+    </linearGradient>
+  </defs>
+  <!-- play button -->
+  <circle cx="74" cy="90" r="36" fill="url(#vg)"/>
+  <path d="M65 74l24 16-24 16z" fill="#FFFDF8"/>
+  <!-- sound arcs -->
+  <path d="M120 66a32 32 0 0 1 0 48" stroke="#D95D39" stroke-width="4" stroke-linecap="round" opacity="0.85"/>
+  <path d="M134 56a50 50 0 0 1 0 68" stroke="#D95D39" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+  <path d="M148 46a68 68 0 0 1 0 88" stroke="#D95D39" stroke-width="4" stroke-linecap="round" opacity="0.25"/>
+  <!-- waveform -->
+  <g fill="#F2B79E">
+    <rect x="170" y="78" width="6" height="24" rx="3"/>
+    <rect x="182" y="66" width="6" height="48" rx="3" fill="#D95D39"/>
+    <rect x="194" y="84" width="6" height="12" rx="3"/>
+    <rect x="206" y="58" width="6" height="64" rx="3" fill="#D95D39"/>
+    <rect x="218" y="74" width="6" height="32" rx="3"/>
+  </g>
+</svg>

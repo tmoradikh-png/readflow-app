@@ -7,9 +7,8 @@ const path = require("path");
 const fs = require("fs");
 const sharp = require(path.join(__dirname, "..", "backend", "node_modules", "sharp"));
 
-const SRC =
-  "C:/Users/Greencom/Downloads/Icon cleanup request/uploads/PDF Reader App Design (1)/app-icon-rF-clean.png";
 const OUT = path.join(__dirname, "assets");
+const SRC = path.join(OUT, "app-icon-rF-clean.png");
 const S = 1024;
 const ADAPTIVE_SCALE = 0.66;
 

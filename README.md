@@ -78,9 +78,8 @@ cd mobile
 npm run android             # runs expo run:android for a connected Android phone
 ```
 
-On Windows, local native builds are more reliable from a short physical path
-such as `C:\rf-mobile-test`; see `RELEASE_GUIDE.md` for the no-EAS local test
-workflow.
+On Windows, keep local native builds inside this repository. See
+`RELEASE_GUIDE.md` for the project-local no-EAS test workflow.
 
 > Reading aloud can use **Device voice** (works offline after import, no
 > ReadFlow voice cost), capped backend-powered **Cloud AI**, or downloaded

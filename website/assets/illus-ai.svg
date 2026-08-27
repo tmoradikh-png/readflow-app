@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none" role="img" aria-label="AI reading help">
+  <!-- chat bubble -->
+  <path d="M46 44h120a16 16 0 0 1 16 16v40a16 16 0 0 1-16 16H86l-20 18v-18H46a16 16 0 0 1-16-16V60a16 16 0 0 1 16-16Z" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/>
+  <!-- AI pill -->
+  <rect x="46" y="56" width="34" height="16" rx="8" fill="#FBE3D9"/>
+  <text x="63" y="68" font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="11" font-weight="700" fill="#B94A2C" text-anchor="middle">AI</text>
+  <!-- lines -->
+  <rect x="46" y="82" width="106" height="6" rx="3" fill="#E3DACB"/>
+  <rect x="46" y="94" width="86" height="6" rx="3" fill="#E3DACB"/>
+  <rect x="46" y="106" width="64" height="6" rx="3" fill="#F2B79E"/>
+  <!-- sparkles -->
+  <path d="M196 40c2 10 4 12 14 14-10 2-12 4-14 14-2-10-4-12-14-14 10-2 12-4 14-14Z" fill="#D95D39"/>
+  <path d="M176 22c1 6 2 7 8 8-6 1-7 2-8 8-1-6-2-7-8-8 6-1 7-2 8-8Z" fill="#D4B25F"/>
+  <path d="M210 78c1 5 2 6 7 7-5 1-6 2-7 7-1-5-2-6-7-7 5-1 6-2 7-7Z" fill="#1F7A6D"/>
+</svg>

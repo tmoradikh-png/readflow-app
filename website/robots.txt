@@ -1,0 +1,6 @@
+# Urmia Works — live, but not ready for search engines yet.
+# Discourage crawling/indexing for now. Flip back to "Allow: /" when ready.
+User-agent: *
+Disallow: /
+
+# Sitemap: https://urmiaworks.com/sitemap.xml

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none" role="img" aria-label="Multilingual reading support">
+  <!-- globe (teal) -->
+  <circle cx="120" cy="90" r="50" fill="#DDEDE8" stroke="#1F7A6D" stroke-width="2.5"/>
+  <ellipse cx="120" cy="90" rx="22" ry="50" stroke="#1F7A6D" stroke-width="2" opacity="0.6"/>
+  <line x1="70" y1="90" x2="170" y2="90" stroke="#1F7A6D" stroke-width="2" opacity="0.6"/>
+  <path d="M76 66h88M76 114h88" stroke="#1F7A6D" stroke-width="2" opacity="0.4"/>
+  <!-- language chips -->
+  <g font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-weight="700">
+    <g><rect x="24" y="40" width="30" height="30" rx="9" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/><text x="39" y="61" font-size="16" fill="#1F2523" text-anchor="middle">A</text></g>
+    <g><rect x="186" y="34" width="30" height="30" rx="9" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/><text x="201" y="55" font-size="15" fill="#1F7A6D" text-anchor="middle">あ</text></g>
+    <g><rect x="196" y="100" width="30" height="30" rx="9" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/><text x="211" y="121" font-size="15" fill="#1F2523" text-anchor="middle">中</text></g>
+    <g><rect x="150" y="140" width="30" height="30" rx="9" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/><text x="165" y="161" font-size="15" fill="#D95D39" text-anchor="middle">ع</text></g>
+    <g><rect x="30" y="112" width="30" height="30" rx="9" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/><text x="45" y="133" font-size="15" fill="#1F2523" text-anchor="middle">Я</text></g>
+  </g>
+</svg>

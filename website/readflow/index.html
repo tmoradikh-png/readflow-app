@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>readFlow — PDF Reader & Voice | Urmia Works</title>
+  <meta name="description" content="readFlow makes long PDFs and Word documents easier to read and listen to on your phone. Reflow, listen aloud, and ask AI when you need help." />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="canonical" href="https://urmiaworks.com/readflow/" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="readFlow — PDF Reader & Voice" />
+  <meta property="og:description" content="Reflow PDFs into clean mobile reading, listen aloud, and ask AI when you need help." />
+  <meta property="og:url" content="https://urmiaworks.com/readflow/" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Spectral:ital,wght@0,500;0,600;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body class="theme-readflow">
+  <!-- ============ Header ============ -->
+  <header class="site-header" id="header">
+    <div class="wrap bar">
+      <a class="brand" href="../" aria-label="Urmia Works home">
+        <svg class="mark" viewBox="0 0 136.14 240.0" fill="none" aria-hidden="true"><g transform="translate(-80.248 -16.22) scale(0.22894)" fill-rule="evenodd"><path d="M 604 133 L 597 136 L 588 145 L 514 304 L 447 363 L 443 373 L 443 386 L 448 396 L 534 477 L 512 580 L 512 593 L 524 665 L 552 670 L 540 593 L 540 580 L 563 479 L 562 467 L 556 459 L 473 382 L 471 378 L 537 320 L 606 170 L 610 165 L 611 561 L 618 573 L 722 670 L 752 661 L 688 599 L 638 554 L 638 154 L 633 142 L 626 136 L 615 132 Z" fill="currentColor"/><path d="M 796 705 L 772 717 L 771 719 L 857 808 L 856 813 L 633 1029 L 626 1029 L 570 972 L 570 774 L 564 737 L 562 735 L 535 731 L 542 773 L 542 975 L 548 990 L 611 1053 L 621 1057 L 632 1058 L 650 1051 L 852 856 L 880 827 L 884 818 L 884 803 L 880 793 Z" fill="currentColor"/><path d="M813.00,657.00 C814.00,652.50 813.67,649.83 813.00,646.00 C812.33,642.17 811.00,637.83 809.00,634.00 C807.00,630.17 804.33,626.50 801.00,623.00 C797.67,619.50 795.00,616.83 789.00,613.00 C783.00,609.17 770.83,602.83 765.00,600.00 C759.17,597.17 763.67,598.67 754.00,596.00 C744.33,593.33 715.00,585.83 707.00,584.00 C699.00,582.17 703.50,582.17 706.00,585.00 C708.50,587.83 713.67,596.67 722.00,601.00 C730.33,605.33 746.33,607.17 756.00,611.00 C765.67,614.83 773.83,619.33 780.00,624.00 C786.17,628.67 790.67,635.00 793.00,639.00 C795.33,643.00 794.33,645.33 794.00,648.00 C793.67,650.67 793.67,651.83 791.00,655.00 C788.33,658.17 783.33,663.50 778.00,667.00 C772.67,670.50 767.33,673.00 759.00,676.00 C750.67,679.00 740.50,682.33 728.00,685.00 C715.50,687.67 696.50,690.50 684.00,692.00 C671.50,693.50 667.67,693.83 653.00,694.00 C638.33,694.17 611.50,693.83 596.00,693.00 C580.50,692.17 573.17,691.00 560.00,689.00 C546.83,687.00 532.00,684.83 517.00,681.00 C502.00,677.17 481.50,670.50 470.00,666.00 C458.50,661.50 453.33,657.50 448.00,654.00 C442.67,650.50 440.17,647.33 438.00,645.00 C435.83,642.67 435.50,642.83 435.00,640.00 C434.50,637.17 433.17,632.17 435.00,628.00 C436.83,623.83 441.17,618.83 446.00,615.00 C450.83,611.17 457.67,607.83 464.00,605.00 C470.33,602.17 481.00,601.33 484.00,598.00 C487.00,594.67 487.00,585.67 482.00,585.00 C477.00,584.33 462.33,590.50 454.00,594.00 C445.67,597.50 438.33,601.17 432.00,606.00 C425.67,610.83 419.33,617.83 416.00,623.00 C412.67,628.17 412.33,632.17 412.00,637.00 C411.67,641.83 412.17,647.00 414.00,652.00 C415.83,657.00 418.50,662.00 423.00,667.00 C427.50,672.00 434.17,677.50 441.00,682.00 C447.83,686.50 454.67,690.00 464.00,694.00 C473.33,698.00 486.33,702.67 497.00,706.00 C507.67,709.33 517.33,711.67 528.00,714.00 C538.67,716.33 549.00,718.33 561.00,720.00 C573.00,721.67 585.83,723.17 600.00,724.00 C614.17,724.83 632.83,725.17 646.00,725.00 C659.17,724.83 668.67,724.00 679.00,723.00 C689.33,722.00 697.33,721.00 708.00,719.00 C718.67,717.00 733.33,713.67 743.00,711.00 C752.67,708.33 757.50,707.00 766.00,703.00 C774.50,699.00 787.17,692.00 794.00,687.00 C800.83,682.00 803.83,678.00 807.00,673.00 C810.17,668.00 812.00,661.50 813.00,657.00 Z" fill="var(--lake-ring,#ff3b30)"/></g></svg>
+        <span>Urmia Works<small>Software Studio</small></span>
+      </a>
+
+      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
+
+      <nav class="nav" id="nav">
+        <a href="#features">Features</a>
+        <a href="#voice">Voice</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#" class="btn btn-primary">Get readFlow</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ Hero ============ -->
+    <section class="hero">
+      <div class="wrap product-hero">
+        <div class="hero-text">
+          <div class="rf-icon reveal" aria-hidden="true">rF</div>
+          <h1 class="reveal">Long documents,<br /><span class="grad">made easy.</span></h1>
+          <p class="lead reveal">
+            An e-book reader and an audiobook player for your own documents &mdash;
+            right in your pocket. readFlow reflows PDFs and Word files into clean
+            phone-first reading, listens aloud as you go, and answers with AI when
+            you need a hand.
+          </p>
+          <div class="hero-actions reveal">
+            <a href="#" class="btn btn-primary">Get readFlow</a>
+            <a href="#features" class="text-link">See features <span class="chev">&rsaquo;</span></a>
+          </div>
+        </div>
+        <div class="phone-wrap reveal">
+          <div class="phone" aria-hidden="true">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div class="phone-bar">
+                <span class="phone-back">&lsaquo;</span>
+                <span class="phone-title">The Origins of Language</span>
+                <span class="phone-rf">rF</span>
+              </div>
+              <div class="rf-doc">
+                <div class="rf-chapter">Chapter 3 &middot; The First Words</div>
+                <p class="rf-para">Long before writing, humans shaped meaning through sound &mdash; a shared rhythm that bound the group together.</p>
+                <p class="rf-read">A single spoken word could carry warning, memory, or hope across a crowded valley.</p>
+                <p class="rf-para">Over centuries those signals deepened into the languages we know today.</p>
+              </div>
+              <div class="rf-airow"><span class="rf-ai">&#10022; Ask AI</span></div>
+              <div class="rf-player">
+                <span class="rf-play">&#9654;</span>
+                <span class="rf-wave">
+                  <i class="on" style="height:30%"></i><i class="on" style="height:55%"></i><i class="on" style="height:40%"></i><i class="on" style="height:70%"></i><i class="on" style="height:48%"></i><i class="on" style="height:82%"></i><i class="on" style="height:60%"></i><i class="on" style="height:38%"></i><i class="on" style="height:64%"></i><i style="height:52%"></i><i style="height:76%"></i><i style="height:44%"></i><i style="height:58%"></i><i style="height:34%"></i><i style="height:68%"></i><i style="height:50%"></i><i style="height:80%"></i><i style="height:42%"></i><i style="height:60%"></i><i style="height:36%"></i>
+                </span>
+                <span class="rf-time">1.0&times;</span>
+              </div>
+              <div class="rf-home"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Problem ============ -->
+    <section class="section alt">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="kicker">The problem</div>
+          <h2>PDFs weren't built for phones.</h2>
+          <p>You pinch, you zoom, you lose your place. Reading long documents on a phone shouldn't be a fight.</p>
+        </div>
+        <div class="problem-grid">
+          <div class="problem-card reveal">
+            <div class="problem-icon">&#128070;</div>
+            <h3>Pinch &amp; zoom fatigue</h3>
+            <p>PDF pages are fixed-layout. On a phone, that means constant pinching and scrolling to read a single line.</p>
+          </div>
+          <div class="problem-card reveal">
+            <div class="problem-icon">&#128205;</div>
+            <h3>Where was I?</h3>
+            <p>Lose your place every time you switch apps. Long PDFs become impossible to pick up where you left off.</p>
+          </div>
+          <div class="problem-card reveal">
+            <div class="problem-icon">&#128263;</div>
+            <h3>No way to listen</h3>
+            <p>You want to listen on your commute, but most PDF readers don't even try to read aloud well.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Features ============ -->
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="kicker">Features</div>
+          <h2>Read and listen, your way.</h2>
+          <p>Everything you need to make long documents actually enjoyable on your phone.</p>
+        </div>
+
+        <div class="feature reveal">
+          <div class="feature-media" aria-hidden="true"><img class="illus" src="../assets/illus-reflow.svg" alt="" /></div>
+          <div>
+            <h3>Clean, reflowed text</h3>
+            <p>readFlow extracts text from PDFs and Word docs and reflows it into beautiful, phone-friendly typography. No more pinch-zooming. Common page numbers, headers, and watermarks are filtered out when possible.</p>
+          </div>
+        </div>
+
+        <div class="feature reverse reveal">
+          <div class="feature-media" aria-hidden="true"><img class="illus" src="../assets/illus-voice.svg" alt="" /></div>
+          <div>
+            <h3>Listen your way</h3>
+            <p>Three voice options to suit your needs: your phone's built-in voice, rF AI voice downloaded to your device, or premium Cloud AI voice on paid plans. Text highlights follow along as you listen.</p>
+          </div>
+        </div>
+
+        <div class="feature reveal">
+          <div class="feature-media" aria-hidden="true"><img class="illus" src="../assets/illus-ai.svg" alt="" /></div>
+          <div>
+            <h3>AI reading help</h3>
+            <p>Stuck on a dense paragraph? Ask for summaries, explanations, simplified text, key points, or ask a specific question about what you're reading. Available on AI plans.</p>
+          </div>
+        </div>
+
+        <div class="feature reverse reveal">
+          <div class="feature-media" aria-hidden="true"><img class="illus" src="../assets/illus-ocr.svg" alt="" /></div>
+          <div>
+            <h3>OCR for scanned pages</h3>
+            <p>Scanned PDFs don't have to be off-limits. readFlow can extract text with OCR on AI plans. Progress saves automatically, so large scanned books can continue later.</p>
+          </div>
+        </div>
+
+        <div class="feature reveal">
+          <div class="feature-media" aria-hidden="true"><img class="illus" src="../assets/illus-multilingual.svg" alt="" /></div>
+          <div>
+            <h3>Multilingual support</h3>
+            <p>Read documents in many languages. OCR supports English, European languages, Arabic, Persian, Russian, Chinese, Japanese, Korean, and more. Quality varies by language and source file.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Voice options ============ -->
+    <section class="section alt" id="voice">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="kicker">Voice</div>
+          <h2>Three ways to listen.</h2>
+          <p>Choose the voice that fits your reading moment.</p>
+        </div>
+        <div class="voice-grid">
+          <div class="voice-card reveal">
+            <div class="voice-label">Built-in</div>
+            <h4>Phone voice</h4>
+            <p>Uses your device's installed voices. No cloud cost, no download needed. Great for long listening sessions without draining your data.</p>
+          </div>
+          <div class="voice-card reveal">
+            <div class="voice-label">On-device AI</div>
+            <h4>rF AI voice</h4>
+            <p>Downloaded AI voice model that runs locally on eligible phones. Uses local CPU, storage, and battery after the initial model download.</p>
+          </div>
+          <div class="voice-card reveal">
+            <div class="voice-label">Premium</div>
+            <h4>Cloud AI voice</h4>
+            <p>Higher-quality cloud voice for approved languages on paid plans. Capped by monthly allowance and quality-tested language by language.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Pricing ============ -->
+    <section class="section" id="pricing">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="kicker">Plans</div>
+          <h2>Start free. Upgrade when ready.</h2>
+          <p>Every plan includes the core reading experience. Upgrade for AI, OCR, and premium voice.</p>
+        </div>
+        <div class="pricing-grid reveal">
+          <div class="price-card">
+            <h3>Free</h3>
+            <p class="price-desc">Try phone-first reading</p>
+            <div class="price-amount">Free forever</div>
+            <ul class="price-features">
+              <li>1 PDF import per month</li>
+              <li>First 100 pages</li>
+              <li>Device voice</li>
+              <li>Basic bookmarks</li>
+              <li class="no">No AI features</li>
+              <li class="no">No OCR</li>
+              <li class="no">No Cloud AI voice</li>
+            </ul>
+            <a href="#" class="btn btn-ghost">Try free</a>
+          </div>
+
+          <div class="price-card">
+            <h3>Reader Plus</h3>
+            <p class="price-desc">Your whole library, in your pocket</p>
+            <div class="price-amount">Paid monthly plan</div>
+            <ul class="price-features">
+              <li>Larger PDF/Word imports</li>
+              <li>Full text-based books</li>
+              <li>Device voice</li>
+              <li>Bookmarks &amp; progress</li>
+              <li>Ad-free experience</li>
+              <li class="no">No AI features</li>
+              <li class="no">No OCR</li>
+            </ul>
+            <a href="#" class="btn btn-ghost">Get Reader Plus</a>
+          </div>
+
+          <div class="price-card popular">
+            <span class="price-badge">Most popular</span>
+            <h3>AI Pro</h3>
+            <p class="price-desc">AI help, OCR &amp; Cloud voice</p>
+            <div class="price-amount">Paid monthly plan</div>
+            <ul class="price-features">
+              <li>Everything in Reader Plus</li>
+              <li>500 AI actions / month</li>
+              <li>1,000 OCR pages / month</li>
+              <li>60K Cloud AI voice chars</li>
+              <li>rF AI voice option</li>
+              <li>Summaries &amp; Q&amp;A</li>
+            </ul>
+            <a href="#" class="btn btn-primary">Get AI Pro</a>
+          </div>
+
+          <div class="price-card">
+            <h3>Power</h3>
+            <p class="price-desc">Higher limits for heavy readers</p>
+            <div class="price-amount">Paid monthly plan</div>
+            <ul class="price-features">
+              <li>Everything in AI Pro</li>
+              <li>2,000 AI actions / month</li>
+              <li>3,000 OCR pages / month</li>
+              <li>180K Cloud AI voice chars</li>
+              <li>Higher file &amp; page limits</li>
+            </ul>
+            <a href="#" class="btn btn-ghost">Get Power</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Trust ============ -->
+    <section class="section alt">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <div class="kicker">Transparency</div>
+          <h2>Honest about what we can do.</h2>
+          <p>readFlow is actively improving. Here's what to expect.</p>
+        </div>
+        <div class="trust-block reveal">
+          <h3>A few things to know</h3>
+          <p>readFlow works best with clean, text-based PDFs and Word documents. Scanned, image-heavy, or damaged files may require OCR and may not always convert perfectly.</p>
+          <p>AI answers are generated from your document text and may miss context or make mistakes. They're designed for reading assistance &mdash; always verify important information from the original.</p>
+          <p>Voice quality and availability vary by language, device, installed voices, and plan. Cloud AI voice is capped by monthly allowance and enabled only for quality-tested languages.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CTA ============ -->
+    <section class="section mint">
+      <div class="wrap">
+        <div class="notify reveal">
+          <h2>Ready to read better?</h2>
+          <p>
+            Download readFlow and turn your next long PDF into something
+            you'll actually finish.
+          </p>
+          <div class="hero-actions" style="justify-content:center">
+            <a href="#" class="btn btn-primary">Get readFlow on Google Play</a>
+            <a href="../#notify" class="text-link">Get updates <span class="chev">&rsaquo;</span></a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ Footer ============ -->
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="foot-brand">
+          <a class="brand" href="../" aria-label="Urmia Works home">
+            <svg class="mark" viewBox="0 0 136.14 240.0" fill="none" aria-hidden="true"><g transform="translate(-80.248 -16.22) scale(0.22894)" fill-rule="evenodd"><path d="M 604 133 L 597 136 L 588 145 L 514 304 L 447 363 L 443 373 L 443 386 L 448 396 L 534 477 L 512 580 L 512 593 L 524 665 L 552 670 L 540 593 L 540 580 L 563 479 L 562 467 L 556 459 L 473 382 L 471 378 L 537 320 L 606 170 L 610 165 L 611 561 L 618 573 L 722 670 L 752 661 L 688 599 L 638 554 L 638 154 L 633 142 L 626 136 L 615 132 Z" fill="currentColor"/><path d="M 796 705 L 772 717 L 771 719 L 857 808 L 856 813 L 633 1029 L 626 1029 L 570 972 L 570 774 L 564 737 L 562 735 L 535 731 L 542 773 L 542 975 L 548 990 L 611 1053 L 621 1057 L 632 1058 L 650 1051 L 852 856 L 880 827 L 884 818 L 884 803 L 880 793 Z" fill="currentColor"/><path d="M813.00,657.00 C814.00,652.50 813.67,649.83 813.00,646.00 C812.33,642.17 811.00,637.83 809.00,634.00 C807.00,630.17 804.33,626.50 801.00,623.00 C797.67,619.50 795.00,616.83 789.00,613.00 C783.00,609.17 770.83,602.83 765.00,600.00 C759.17,597.17 763.67,598.67 754.00,596.00 C744.33,593.33 715.00,585.83 707.00,584.00 C699.00,582.17 703.50,582.17 706.00,585.00 C708.50,587.83 713.67,596.67 722.00,601.00 C730.33,605.33 746.33,607.17 756.00,611.00 C765.67,614.83 773.83,619.33 780.00,624.00 C786.17,628.67 790.67,635.00 793.00,639.00 C795.33,643.00 794.33,645.33 794.00,648.00 C793.67,650.67 793.67,651.83 791.00,655.00 C788.33,658.17 783.33,663.50 778.00,667.00 C772.67,670.50 767.33,673.00 759.00,676.00 C750.67,679.00 740.50,682.33 728.00,685.00 C715.50,687.67 696.50,690.50 684.00,692.00 C671.50,693.50 667.67,693.83 653.00,694.00 C638.33,694.17 611.50,693.83 596.00,693.00 C580.50,692.17 573.17,691.00 560.00,689.00 C546.83,687.00 532.00,684.83 517.00,681.00 C502.00,677.17 481.50,670.50 470.00,666.00 C458.50,661.50 453.33,657.50 448.00,654.00 C442.67,650.50 440.17,647.33 438.00,645.00 C435.83,642.67 435.50,642.83 435.00,640.00 C434.50,637.17 433.17,632.17 435.00,628.00 C436.83,623.83 441.17,618.83 446.00,615.00 C450.83,611.17 457.67,607.83 464.00,605.00 C470.33,602.17 481.00,601.33 484.00,598.00 C487.00,594.67 487.00,585.67 482.00,585.00 C477.00,584.33 462.33,590.50 454.00,594.00 C445.67,597.50 438.33,601.17 432.00,606.00 C425.67,610.83 419.33,617.83 416.00,623.00 C412.67,628.17 412.33,632.17 412.00,637.00 C411.67,641.83 412.17,647.00 414.00,652.00 C415.83,657.00 418.50,662.00 423.00,667.00 C427.50,672.00 434.17,677.50 441.00,682.00 C447.83,686.50 454.67,690.00 464.00,694.00 C473.33,698.00 486.33,702.67 497.00,706.00 C507.67,709.33 517.33,711.67 528.00,714.00 C538.67,716.33 549.00,718.33 561.00,720.00 C573.00,721.67 585.83,723.17 600.00,724.00 C614.17,724.83 632.83,725.17 646.00,725.00 C659.17,724.83 668.67,724.00 679.00,723.00 C689.33,722.00 697.33,721.00 708.00,719.00 C718.67,717.00 733.33,713.67 743.00,711.00 C752.67,708.33 757.50,707.00 766.00,703.00 C774.50,699.00 787.17,692.00 794.00,687.00 C800.83,682.00 803.83,678.00 807.00,673.00 C810.17,668.00 812.00,661.50 813.00,657.00 Z" fill="var(--lake-ring,#ff3b30)"/></g></svg>
+            <span>Urmia Works<small>Software Studio</small></span>
+          </a>
+          <p>Thoughtful AI, crafted for a calmer, better everyday life.</p>
+        </div>
+
+        <div class="foot-col">
+          <h4>readFlow</h4>
+          <a href="#features">Features</a>
+          <a href="#voice">Voice</a>
+          <a href="#pricing">Pricing</a>
+          <a href="privacy.html">Privacy Policy</a>
+        </div>
+
+        <div class="foot-col">
+          <h4>Urmia Works</h4>
+          <a href="../">Home</a>
+          <a href="../#studio">Studio</a>
+          <a href="../contact.html">Contact</a>
+          <a href="../support.html">Support</a>
+        </div>
+
+        <div class="foot-col">
+          <h4>Legal</h4>
+          <a href="privacy.html">Privacy</a>
+          <a href="../terms.html">Terms</a>
+          <a href="mailto:support@urmiaworks.com">support@urmiaworks.com</a>
+        </div>
+      </div>
+
+      <div class="foot-bottom">
+        <span>&copy; <span id="year">2026</span> Urmia Works &mdash; operated by Urmia Holding AS.</span>
+        <span>Made with care.</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../app.js" defer></script>
+</body>
+</html>

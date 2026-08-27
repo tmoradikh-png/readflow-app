@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none" role="img" aria-label="OCR for scanned pages">
+  <defs>
+    <linearGradient id="beam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#D95D39" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#D95D39" stop-opacity="0.18"/>
+    </linearGradient>
+  </defs>
+  <!-- scanned document -->
+  <rect x="64" y="24" width="112" height="132" rx="10" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/>
+  <!-- text: top already detected (terracotta), bottom not yet (warm gray) -->
+  <g>
+    <rect x="80" y="44" width="80" height="5" rx="2.5" fill="#D95D39"/>
+    <rect x="80" y="56" width="64" height="5" rx="2.5" fill="#D95D39"/>
+    <rect x="80" y="68" width="80" height="5" rx="2.5" fill="#D95D39"/>
+    <rect x="80" y="80" width="52" height="5" rx="2.5" fill="#D95D39"/>
+  </g>
+  <!-- scan beam -->
+  <rect x="64" y="62" width="112" height="34" fill="url(#beam)"/>
+  <rect x="64" y="94" width="112" height="3" rx="1.5" fill="#D95D39"/>
+  <g>
+    <rect x="80" y="104" width="78" height="5" rx="2.5" fill="#E3DACB"/>
+    <rect x="80" y="116" width="60" height="5" rx="2.5" fill="#E3DACB"/>
+    <rect x="80" y="128" width="74" height="5" rx="2.5" fill="#E3DACB"/>
+    <rect x="80" y="140" width="48" height="5" rx="2.5" fill="#E3DACB"/>
+  </g>
+  <!-- viewfinder corners (teal) -->
+  <g stroke="#1F7A6D" stroke-width="3.5" stroke-linecap="round">
+    <path d="M58 40v-8h8"/><path d="M182 40v-8h-8"/>
+    <path d="M58 140v8h8"/><path d="M182 140v8h-8"/>
+  </g>
+</svg>

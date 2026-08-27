@@ -180,7 +180,7 @@ Copy-Item assets\icon.png,assets\adaptive-icon.png,assets\favicon.png,assets\spl
 node gen-clean-icons.js
 ```
 
-- Source PNG: `C:\Users\Greencom\Downloads\Icon cleanup request\uploads\PDF Reader App Design (1)\app-icon-rF-clean.png`
+- Source PNG: `mobile/assets/app-icon-rF-clean.png`
 - `gen-clean-icons.js` produces:
   - `icon.png` — full‑bleed, red book‑spine flush to the **left edge** (for iOS/Play; no mask is applied there).
   - `adaptive-icon.png` — the **whole mark scaled to 0.66 and centered on transparent padding** so the
@@ -292,20 +292,17 @@ CMake task waits for `react-native-sherpa-onnx` codegen. Without that plugin, a
 clean native build can fail because
 `react-native-sherpa-onnx/android/build/generated/source/codegen/jni` does not
 exist yet. It also adds a Windows-only normalizer for generated `.so` outputs so
-Gradle can package local debug builds from a short temp path.
-
-To test a native build locally before spending EAS quota, use a short physical
-path on Windows:
+To test a native build locally before spending EAS quota, build in the project
+workspace only:
 
 ```powershell
-# example temp workflow
-$env:JAVA_HOME='C:\Users\Greencom\.cache\readflow-jdk17\jdk-17.0.19+10'
-$env:ANDROID_HOME='C:\Users\Greencom\android-sdk'
-$env:ANDROID_SDK_ROOT='C:\Users\Greencom\android-sdk'
+# project-local workflow
+$env:JAVA_HOME='C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\readflow-jdk17\jdk-17.0.19+10'
+$env:ANDROID_HOME='C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\android-sdk'
+$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
 $env:PATH="$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
 
-robocopy C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile C:\rf-mobile-test /E /XD node_modules android .expo
-cd C:\rf-mobile-test
+cd C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
 npm ci
 npx expo prebuild --platform android --clean
 

@@ -265,7 +265,7 @@ Setup completed:
 - The service account was added in Play Console Users and permissions.
 - A service account JSON was generated and uploaded to RevenueCat.
 - A later working local JSON filename was:
-  `C:\Users\Greencom\Downloads\readflow-revenuecat-979abf84a3bf.json`.
+  `local-secrets/readflow-revenuecat-979abf84a3bf.json`.
 
 Never commit, paste, or email the JSON contents. If credentials are rotated,
 upload the new JSON to RevenueCat and update this section with the date only.

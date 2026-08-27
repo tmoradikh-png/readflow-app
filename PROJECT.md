@@ -1,6 +1,6 @@
 # readFlow Developer Handoff
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
 file for the fuller map of accounts, services, release status, and operational
@@ -27,6 +27,7 @@ Current shape:
 - `mobile/`: Expo React Native app, TypeScript.
 - `backend/`: Node + Express + TypeScript backend for PDF extraction, OCR, AI,
   cloud TTS, entitlement checks, and cost-bearing API protection.
+- `website/`: Urmia Works/readFlow website source and shared assets.
 - Android is the active release target. iOS release prep now exists, but no iOS
   EAS build has been started/tested yet.
 
@@ -401,9 +402,9 @@ Changes after the latest finished build and included in source `1.0.18`:
   non-Latin voice languages fall back to Phone voice until voice QA passes; AI
   text can still answer in those languages.
 - Connected-phone test on 2026-06-29 after the multilingual fix: installed a
-  standalone local release APK on Samsung `SM_G975F` (`R58M168KTSZ`) from
-  `C:\rf-mobile-test-voice2\android\app\build\outputs\apk\release\app-release.apk`
-  (about 212 MB). It points to the local backend through
+  standalone local release APK on Samsung `SM_G975F` (`R58M168KTSZ`) from a
+  temporary staging build that was deleted during workspace consolidation on
+  2026-08-27. The APK points to the local backend through
   `EXPO_PUBLIC_API_URL=http://127.0.0.1:4000` plus
   `adb reverse tcp:4000 tcp:4000`, and launched without fatal startup logcat
   errors. This APK is for USB-connected QA only, not Play/internal distribution.
@@ -415,9 +416,8 @@ Changes after the latest finished build and included in source `1.0.18`:
   `capabilities.forceOcr=true`. A direct Persian PDF request then returned
   `forceOcr=true`, `ocrPages=4`, and pending OCR for the remaining 25 pages.
 - Latest phone install on Samsung `SM_G975F` (`R58M168KTSZ`) is the normal
-  Render-connected APK:
-  `C:\rf-mobile-test-voice2\android\app\build\outputs\apk\release\app-render.apk`.
-  The USB/local-backend test APK was preserved beside it as `app-local-backend.apk`.
+  Render-connected APK from that historical staging build. Its external build
+  folder was deleted on 2026-08-27; rebuild from the project workspace if needed.
   When testing `Fix text`, the shelf/reader must show `OCR rebuild`; if not, the
   user is still viewing an old native import or an older backend response.
 - 2026-06-29 release QA notes are in `RELEASE_QA_2026-06-29.md`. Synthetic
@@ -561,21 +561,24 @@ Primary Windows workspace used during development:
 C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow
 ```
 
-Local Android tooling installed during the 2026-06-29 phone test:
+All ReadFlow work and required local tooling must remain inside this workspace.
+Do not create project copies, build trees, or ReadFlow-specific caches elsewhere
+on `C:`.
+
+Project-local Android tooling:
 
 ```powershell
-C:\Users\Greencom\android-sdk
-C:\Users\Greencom\android-sdk\platform-tools\adb.exe
-C:\Users\Greencom\android-platform-tools\platform-tools\adb.exe
-C:\Users\Greencom\.cache\readflow-jdk17\jdk-17.0.19+10
+C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\android-sdk
+C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\android-sdk\platform-tools\adb.exe
+C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\readflow-jdk17\jdk-17.0.19+10
 ```
 
 Use these env vars for local native Android commands on this machine:
 
 ```powershell
-$env:JAVA_HOME='C:\Users\Greencom\.cache\readflow-jdk17\jdk-17.0.19+10'
-$env:ANDROID_HOME='C:\Users\Greencom\android-sdk'
-$env:ANDROID_SDK_ROOT='C:\Users\Greencom\android-sdk'
+$env:JAVA_HOME='C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\readflow-jdk17\jdk-17.0.19+10'
+$env:ANDROID_HOME='C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\android-sdk'
+$env:ANDROID_SDK_ROOT=$env:ANDROID_HOME
 $env:PATH="$env:JAVA_HOME\bin;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\platform-tools;$env:PATH"
 ```
 
@@ -584,15 +587,13 @@ Adoptium's official API because Android Gradle Plugin requires Java 17; the
 older bundled `Common Files\i4j_jres` runtime is Java 11 and will fail native
 builds.
 
-Windows path warning: native builds from the OneDrive path hit long-path/CMake
-problems. For local phone testing, use a short physical temp copy such as
-`C:\rf-mobile-test`; mapping the mobile folder itself to a `subst` drive caused
-Expo/Gradle mixed-root errors.
+Build in place under this workspace. If a Windows long-path/CMake issue returns,
+use EAS rather than creating a physical project copy outside `aiChat`.
 
 Important local design source for icons:
 
 ```powershell
-C:\Users\Greencom\Downloads\Icon cleanup request\uploads\PDF Reader App Design (1)\app-icon-rF-clean.png
+C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile\assets\app-icon-rF-clean.png
 ```
 
 The source PNG is not merely decorative. The release icon pipeline depends on
@@ -706,8 +707,7 @@ iOS/TestFlight release prep is in `IOS_RELEASE_GUIDE.md`. Short version:
    finished build to App Store Connect/TestFlight when credentials are ready.
 
 Local native smoke test without spending EAS quota:
-1. Copy `mobile/` to a short physical path such as `C:\rf-mobile-test`, excluding
-   `node_modules`, `.expo`, and generated `android/`.
+1. Work directly in this repository's `mobile/` folder.
 2. Run `npm ci`.
 3. Run `npx expo prebuild --platform android --clean`.
 4. Run `.\android\gradlew.bat :app:assembleDebug -x lint -x test` or
@@ -751,7 +751,7 @@ Read `RELEASE_GUIDE.md` first; it contains the detailed icon fix note.
 
 Important facts:
 - Use the designer clean PNG:
-  `C:\Users\Greencom\Downloads\Icon cleanup request\uploads\PDF Reader App Design (1)\app-icon-rF-clean.png`
+  `mobile/assets/app-icon-rF-clean.png`
 - Do not hand-render from SVG unless explicitly redesigning the brand.
 - `icon.png` and `splash.png` should preserve the clean PNG.
 - `adaptive-icon.png` is intentionally different: Android treats it as a

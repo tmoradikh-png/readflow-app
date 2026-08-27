@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" fill="none" role="img" aria-label="Reflowing a PDF into clean mobile text">
+  <!-- Left: dense fixed PDF page -->
+  <rect x="22" y="30" width="76" height="120" rx="10" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/>
+  <g fill="#E3DACB">
+    <rect x="34" y="44" width="52" height="4" rx="2"/>
+    <rect x="34" y="54" width="44" height="4" rx="2"/>
+    <rect x="34" y="64" width="52" height="4" rx="2"/>
+    <rect x="34" y="74" width="38" height="4" rx="2"/>
+    <rect x="34" y="84" width="52" height="4" rx="2"/>
+    <rect x="34" y="94" width="46" height="4" rx="2"/>
+    <rect x="34" y="104" width="52" height="4" rx="2"/>
+    <rect x="34" y="114" width="34" height="4" rx="2"/>
+    <rect x="34" y="124" width="50" height="4" rx="2"/>
+    <rect x="34" y="134" width="40" height="4" rx="2"/>
+  </g>
+
+  <!-- Arrow -->
+  <path d="M106 90h24" stroke="#D95D39" stroke-width="4" stroke-linecap="round"/>
+  <path d="M126 83l8 7-8 7" stroke="#D95D39" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Right: clean reflowed phone -->
+  <rect x="142" y="22" width="84" height="136" rx="16" fill="#FFFDF8" stroke="#E4DCCC" stroke-width="2"/>
+  <path d="M142 48V38a16 16 0 0 1 16-16h52a16 16 0 0 1 16 16v10Z" fill="#D95D39"/>
+  <rect x="156" y="31" width="34" height="6" rx="3" fill="#ffffff" opacity="0.92"/>
+  <g fill="#EAD7C8">
+    <rect x="154" y="62" width="60" height="6" rx="3"/>
+    <rect x="154" y="76" width="54" height="6" rx="3"/>
+  </g>
+  <!-- highlighted current line -->
+  <rect x="150" y="90" width="68" height="18" rx="6" fill="#FBE3D9"/>
+  <rect x="150" y="93" width="3.5" height="12" rx="1.75" fill="#D95D39"/>
+  <rect x="159" y="96" width="50" height="6" rx="3" fill="#D95D39"/>
+  <g fill="#EAD7C8">
+    <rect x="154" y="118" width="62" height="6" rx="3"/>
+    <rect x="154" y="132" width="44" height="6" rx="3"/>
+  </g>
+</svg>

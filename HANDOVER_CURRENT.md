@@ -1,10 +1,19 @@
 # readFlow Current Handover
 
-Updated: 2026-08-26
+Updated: 2026-08-27
 
 Start here when taking over readFlow. This file is a short operational map. It
 does not contain passwords, API keys, service-account JSON contents, signing
 keys, or recovery codes.
+
+## Workspace Rule
+
+- Keep all ReadFlow project work under
+  `C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow`.
+- The website source is in `website/`; local Android SDK/JDK tooling is in
+  ignored `tools/`; local credentials are in ignored `local-secrets/`.
+- Do not create ReadFlow copies, build trees, caches, or test folders elsewhere
+  on `C:`. Build in place or use EAS.
 
 ## Current Production State
 
