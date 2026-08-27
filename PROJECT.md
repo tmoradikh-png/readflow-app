@@ -571,6 +571,7 @@ Project-local Android tooling:
 C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\android-sdk
 C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\android-sdk\platform-tools\adb.exe
 C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\readflow-jdk17\jdk-17.0.19+10
+C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\tools\rf-audio-tools
 ```
 
 Use these env vars for local native Android commands on this machine:

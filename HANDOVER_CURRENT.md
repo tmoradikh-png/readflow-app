@@ -10,8 +10,9 @@ keys, or recovery codes.
 
 - Keep all ReadFlow project work under
   `C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow`.
-- The website source is in `website/`; local Android SDK/JDK tooling is in
-  ignored `tools/`; local credentials are in ignored `local-secrets/`.
+- The website source is in `website/`; local Android SDK/JDK and audio-analysis
+  tooling are in ignored `tools/`; local credentials are in ignored
+  `local-secrets/`.
 - Do not create ReadFlow copies, build trees, caches, or test folders elsewhere
   on `C:`. Build in place or use EAS.
 
