@@ -62,12 +62,16 @@ https://expo.dev/accounts/tohid123/projects/readflow/builds/4ece17c7-609c-4a8d-b
 Downloaded: artifacts/readflow-1.0.67-74-free-preview-b2.apk.
 SHA256: 4F1E524FD81B2C0F5BBF30D7850D893733CF7D1553E4BECE590EFCE699D15CAB.
 Not installed: no phone connected. No production AAB or Play submission yet.
+Latest-source preview build 587d01d9-847c-4aba-a51d-c51d1348a661 was submitted
+October 21 after the opt-out and lockfile fixes. Last check: IN_PROGRESS.
+https://expo.dev/accounts/tohid123/projects/readflow/builds/587d01d9-847c-4aba-a51d-c51d1348a661
 Use EAS_NO_VCS=1 and absolute EAS_PROJECT_ROOT=<ReadFlow>/mobile, with TEMP/TMP/npm cache
 under ReadFlow/tmp. The inspected archive contained 104 files, 22 OCR packs, no private
 books/backups/credentials, and no generated root android directory. Upload was 30.4 MB.
 Do not run EAS with the repository root as the upload root: owner files are untracked there.
 
-CLI account:usage reports Starter, unused included build allowance, no overage, and an
+CLI account:usage before the latest build reported Starter, 200 of 4500 build allowance
+units used (CLI units), zero overage cost, and an
 upcoming USD 19 renewal on October 27. This plan is NOT cancelled. Use only included credit;
 cancel/downgrade recurring plan after builds. No authorization to incur overage.
 
@@ -84,19 +88,37 @@ Android app: ca-app-pub-5199768562686629~3386452834.
 Library banner: ca-app-pub-5199768562686629/1338873995.
 Registration/app/banner proofs: tmp/admob-registered.png, tmp/admob-app-added.png,
 tmp/admob-banner-created.png. App requires review and app-ads.txt verification.
-website/app-ads.txt and updated privacy policy prepared but NOT deployed. Owner
-explicitly approved publishing both. Cloudflare saved login expired; a minimal
-Pages/account/user OAuth refresh initially timed out; a stale callback then failed
-state validation. Those localhost flows are stopped. Device-code authorization avoids
-the callback, but also timed out without completion. Stop further automatic auth retries
-until owner is ready. Current browser account is support@urmiaworks.com;
-website/PROJECT.md instead records tohid.moradi.kh@gmail.com/account
-490d777337f916bad4335f86dffb4f5e. Verify actual project access before publishing.
-Dashboard confirms this session only has Support@urmiaworks.com's Account,
-ID 92d2aba4f641ca3e82180d25a96308d8, not the documented website account. Owner asked
-to sign in as tohid.moradi.kh@gmail.com and report dashboard ready before another login.
-Consent messages NOT configured yet; European message editor stalled at loading in
-two attempts. Stop repeating that method; no consent message was saved or published.
+Website privacy policy and app-ads.txt published October 21 with owner's approval:
+https://urmiaworks.com/readflow/privacy and https://urmiaworks.com/app-ads.txt.
+Device-code login succeeded after owner switched to tohid.moradi.kh@gmail.com,
+account 490d777337f916bad4335f86dffb4f5e. Existing Pages project urmiaworks confirmed.
+Initial deployment: https://e2a54433.urmiaworks.pages.dev. Wrangler reported 2 new assets,
+25 reused, and successful Functions deployment. Public policy text and HTTP 200
+publisher record verified; screenshot tmp/privacy-policy-published-20261021.png.
+Staging copied previous deployment's public bytes, preserving the live readflow
+index rather than the unrelated local edit. Existing headers/signup function retained.
+Previous deployment exposed PROJECT.md, README.md and two .claude files; these were
+excluded from the new production deployment. Historical deployment URLs were not
+deleted or audited for secret contents. Staging/preservation manifest is under
+tmp/website-approved-20261021. No private books or credentials were uploaded.
+AdMob verification initially failed despite the public record matching the expected
+publisher line. Existing robots.txt blocked every crawler. A narrowly scoped
+Google-adstxt exception for /app-ads.txt was deployed and publicly verified at
+https://6cb180ca.urmiaworks.pages.dev (1 new asset, 26 reused). Other crawl restrictions
+remain unchanged. Verification still failed immediately afterward, and the detailed
+AdMob table has no crawl data/ad requests. Exact remaining cause is unconfirmed;
+do not repeatedly retry before Google has recrawled. Public Play developer website
+points to urmiaworks.com. Google notes propagation can take up to 24 hours:
+https://support.google.com/admob/answer/9776740.
+
+After refreshing AdMob, the incomplete-payment banner disappeared and both message
+editors worked. European message "readFlow European privacy choices" is Published,
+English plus 31 available translations, EEA/UK/Switzerland, refusal enabled for all
+regions. US message "readFlow US privacy choices" is Published, English plus two
+Spanish variants, all current/future supported US states. Both select the Android app;
+European policy URL is the newly published policy. Proofs:
+tmp/admob-europe-consent-published.png and tmp/admob-us-consent-published.png.
+These are console publication checks, not device consent/ads validation.
 Payments form offers the existing Urmia Holding AS organization profile. Owner instructed
 to review unchanged details and click Submit. Completion verified: AdSense (Norway)
 is linked to Urmia Holding AS. Never submit
@@ -114,10 +136,11 @@ Play target audience currently selects only 18 and over; no age-setting changes 
 2. Test representative books against originals, OCR layout/headers/footnotes/figures,
    saved positions and rF AI background playback. Preserve existing regression fixtures.
 3. Verify support purchase/cancel/pending/recovery using Play license test payments only.
-4. Resolve any remaining AdMob payment warning, public app-ads.txt, consent messages
-   and app review. Profile linkage succeeded, but another AdMob view still reports
-   incomplete payment setup; completion across AdMob is not yet confirmed.
-5. Update public privacy policy, Play Data safety, Ads declaration and free store copy.
+4. Resolve app-ads.txt verification and AdMob app review. Payment warning has cleared;
+   public files and consent messages are published. Device consent/revocation and
+   actual ad delivery remain unverified.
+5. Public privacy policy is deployed; update Play Data safety, Ads declaration and
+   free store copy.
 6. Check/retire subscriptions and paid Render/RevenueCat/OpenAI/Expo dependencies without
    silently breaking existing subscribers or claiming costs have ended prematurely.
 7. Commit/tag/push scoped changes as tmoradikh-png, then signed production AAB and submission.
@@ -130,7 +153,8 @@ Targeted npm update upgraded shell-quote 1.8.4 -> 1.12.0 and tar 7.5.16 -> 7.5.2
 the resulting npm audit summary reports 47 (12 moderate, 35 high), no critical findings.
 These dependencies are reached through development/build tooling; a full exposure
 audit of remaining findings is not complete. No forced framework upgrade was used.
-The queued preview predates these lockfile updates; final build must use committed source.
+The completed preview predates these lockfile updates; latest-source build 587d01d9
+includes them but has not yet completed.
 Advisories: https://github.com/advisories/GHSA-pqg4-j6r4-53mv and
 https://github.com/advisories/GHSA-r292-9mhp-454m.
 

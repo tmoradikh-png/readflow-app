@@ -17,7 +17,8 @@ consent behavior before updating Console. Older 1.0.66 clients/backend still
 process documents, cloud text and subscription information: do not remove those
 disclosures until that collection has actually stopped. Purchase history and
 owner-sent support emails must also be considered. Privacy policy source updated
-at website/readflow/privacy.html; not yet deployed. All Console edits pending.
+at website/readflow/privacy.html and deployed on October 21 at
+https://urmiaworks.com/readflow/privacy. All Play Console edits remain pending.
 
 ## Historical Worksheet
 

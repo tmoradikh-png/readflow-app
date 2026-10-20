@@ -9,6 +9,9 @@ Read [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md) first for the authorized
 Production remains 1.0.66 (73). No new release or service shutdown is complete.
 Candidate implementation 1c52591 and before/after tags are pushed. A signed preview
 APK built successfully; it predates the last opt-out/dependency fix and is not device-tested.
+Latest-source preview 587d01d9 is building. Public policy/app-ads.txt and European/US
+consent messages are now published. AdMob verification remains unresolved, and no
+phone is detected. Exact IDs/evidence and remaining gates are in FREE_RELEASE_STATUS.md.
 Older subscription architecture and release records below are historical context.
 
 Start here when taking over readFlow. This file is a short operational map. It

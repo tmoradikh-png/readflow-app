@@ -1,5 +1,13 @@
 # Urmia Works site — PROJECT.md
-Updated: 2026-06-28
+Updated: 2026-10-21
+
+readFlow free-release policy and app-ads.txt are live. Current deployment:
+https://6cb180ca.urmiaworks.pages.dev. The only other content change is a narrow
+robots.txt exception for Google-adstxt to read /app-ads.txt. Existing public pages
+were preserved from deployment 6e5d967b, not overwritten with unrelated local edits.
+Internal PROJECT.md, README.md and .claude files are excluded from the new public
+deployment; never deploy the entire source folder directly. Historical deployments
+have not been removed. See ../FREE_RELEASE_STATUS.md for release/AdMob status.
 
 What: Umbrella studio landing page for future apps (ReadFlow, MultiMic, etc.). Static site +
 1 Cloudflare Pages Function. Apple-style light theme, Lake Urmia line-art logo. Currently stealth.
@@ -17,7 +25,9 @@ Hosting: Cloudflare Pages. Live: https://urmiaworks.com , https://www.urmiaworks
 Local path: urmiaworks_site/
 
 Build/Run:
-- Deploy: `cd urmiaworks_site; npx wrangler pages deploy . --project-name urmiaworks --branch main --commit-dirty=true`
+- Deploy only a reviewed public staging directory, never this source folder.
+  Run `wrangler pages deploy public --project-name urmiaworks --branch main`
+  from a staging root containing public/ and the preserved functions/ directory.
 - Wrangler auth: OAuth (token at %APPDATA%\xdg.config\.wrangler\config\default.toml). Token can do
   pages:write but NOT DNS edits — manage DNS in the Cloudflare dashboard.
 

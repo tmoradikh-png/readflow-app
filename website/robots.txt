@@ -3,4 +3,9 @@
 User-agent: *
 Disallow: /
 
+# Permit the ad verification crawler to read only the authorized-seller record.
+User-agent: Google-adstxt
+Disallow: /
+Allow: /app-ads.txt
+
 # Sitemap: https://urmiaworks.com/sitemap.xml
