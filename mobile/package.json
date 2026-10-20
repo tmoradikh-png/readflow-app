@@ -9,11 +9,13 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "check:reader-regressions": "node ./scripts/check-reader-regressions.mjs",
-    "check:release": "node ./scripts/check-release-config.mjs && npm run check:reader-regressions",
+    "check:qa": "tsc --noEmit && node ./scripts/check-release-config.mjs --qa && node ./scripts/sync-offline-text.cjs --check && node ./scripts/prepare-offline-ocr.cjs --check && npm run check:reader-regressions",
+    "check:release": "node ./scripts/check-release-config.mjs && node ./scripts/sync-offline-text.cjs --check && node ./scripts/prepare-offline-ocr.cjs --check && npm run check:reader-regressions",
     "build:android:internal": "npm run check:release && eas build -p android --profile internal",
-    "build:ios:internal": "npm run check:release && eas build -p ios --profile internal"
+    "build:ios:internal": "node -e \"throw new Error('Offline import is Android-only; iOS is not ready for release')\""
   },
   "dependencies": {
+    "readflow-offline": "file:./native/readflow-offline",
     "@dr.pogodin/react-native-fs": "^2.39.1",
     "@expo-google-fonts/hanken-grotesk": "^0.4.3",
     "@expo-google-fonts/spectral": "^0.4.1",
@@ -32,10 +34,10 @@
     "expo-system-ui": "~6.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-google-mobile-ads": "15.8.3",
     "react-native-background-actions": "^4.1.0",
     "react-native-blob-util": "^0.24.10",
     "react-native-pdf": "^7.0.4",
-    "react-native-purchases": "^10.4.0",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-sherpa-onnx": "^0.4.3"
   },

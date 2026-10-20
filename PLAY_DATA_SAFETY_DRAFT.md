@@ -1,6 +1,25 @@
 # readFlow Google Play Data Safety Draft
 
-Updated: 2026-06-29
+Updated: 2026-10-20
+
+## Free Android Migration (Not Yet Submitted)
+
+See FREE_RELEASE_STATUS.md. The proposed 1.0.67 Android app imports/OCRs documents
+locally and no longer uses RevenueCat or cloud AI. Google Mobile Ads 24.6.0 (via
+react-native-google-mobile-ads 15.8.3), UMP consent and direct Play Billing remain.
+Declare that the app contains ads. Ads may collect/share IP-derived approximate
+location, device/account identifiers, interactions and diagnostic data for
+advertising, analytics and fraud prevention. See Google's current disclosure:
+https://developers.google.com/admob/android/privacy/play-data-disclosure
+
+Do not copy the old no-advertising answers below. Inspect the final artifact and
+consent behavior before updating Console. Older 1.0.66 clients/backend still
+process documents, cloud text and subscription information: do not remove those
+disclosures until that collection has actually stopped. Purchase history and
+owner-sent support emails must also be considered. Privacy policy source updated
+at website/readflow/privacy.html; not yet deployed. All Console edits pending.
+
+## Historical Worksheet
 
 This file is a draft worksheet for the Google Play Data safety form. It must be
 reviewed after the final payment SDK, analytics SDKs, crash tools, backend

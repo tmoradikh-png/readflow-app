@@ -1,0 +1,433 @@
+// Generated from the existing backend text rules by scripts/sync-offline-text.cjs.
+export type TextSource = "native" | "ocr";
+
+export interface ExtractedPage {
+  page: number;
+  text: string;
+  /** Where the text came from. Native = PDF text layer; OCR = recognized from image. */
+  source: TextSource;
+  /** OCR confidence 0–100 (only present for OCR pages). */
+  confidence?: number;
+  /** True when the source page paints one or more raster images. */
+  hasRasterImage?: boolean;
+  /** Zero-based text line where a geometrically detected footer note begins. */
+  footnoteStartLine?: number;
+}
+
+export interface ExtractedDocument {
+  pageCount: number;
+  pages: ExtractedPage[];
+}
+
+export interface RenderedPdfText {
+  text: string;
+  footnoteStartLine?: number;
+}
+
+interface PositionedTextItem {
+  str: string;
+  dir?: string;
+  fontName?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  index: number;
+}
+
+interface TextLine {
+  y: number;
+  items: PositionedTextItem[];
+}
+
+const RTL_SCRIPT_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/g;
+
+const RTL_CHAR_RE = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+
+const RTL_WORD_RUN = "\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF";
+
+const CJK_CHAR_RE = /[\u3040-\u30FF\u3400-\u9FFF\uAC00-\uD7AF]/;
+
+const NO_SPACE_BEFORE_RE = /^[,.;:!?،؛؟)\]}”’"»٪%]/;
+
+const NO_SPACE_AFTER_RE = /[(\[{“‘"«]$/;
+
+const RAISED_REFERENCE_START = "\uE000";
+
+const RAISED_REFERENCE_END = "\uE001";
+
+const STRUCTURAL_HEADING_START = "\uE100";
+
+const STRUCTURAL_HEADING_END = "\uE101";
+
+const RASTER_PAINT_OPERATORS = new Set([83, 84, 85, 86, 87, 88, 89, 90]);
+
+export function containsRasterImageOperators(
+  fnArray: unknown,
+  rasterOperators: Set<number> = RASTER_PAINT_OPERATORS
+): boolean {
+  return Array.isArray(fnArray) && fnArray.some((operator) => rasterOperators.has(Number(operator)));
+}
+
+export function renderPdfTextItems(rawItems: any[]): string {
+  return renderPdfTextItemsWithLayout(rawItems).text;
+}
+
+export function renderPdfTextItemsWithLayout(rawItems: any[]): RenderedPdfText {
+  const items = rawItems.map(toPositionedItem).filter(Boolean) as PositionedTextItem[];
+  if (items.length === 0) return { text: "" };
+
+  const lines = groupIntoLines(items);
+  const paragraphGap = paragraphGapThreshold(lines);
+  const typography = dominantPageTypography(lines);
+  const ordinaryGap = ordinaryLineGap(lines, typography.bodyHeight);
+  const footerStart = geometricFootnoteStart(lines, typography.bodyHeight);
+  const outputLines: string[] = [];
+  let footnoteStartLine: number | undefined;
+  let previous: TextLine | null = null;
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+    const line = lines[lineIndex];
+    const rendered = renderLine(line);
+    if (!rendered) continue;
+    if (outputLines.length) {
+      const gap = previous ? previous.y - line.y : 0;
+      if (gap > paragraphGap) outputLines.push("");
+    }
+    if (lineIndex === footerStart) footnoteStartLine = outputLines.length;
+    outputLines.push(isGeometricHeading(line, rendered, typography, {
+      before: lineIndex > 0 ? lines[lineIndex - 1].y - line.y : 0,
+      after: lineIndex + 1 < lines.length ? line.y - lines[lineIndex + 1].y : 0,
+      ordinary: ordinaryGap,
+    })
+      ? `${STRUCTURAL_HEADING_START}${rendered}${STRUCTURAL_HEADING_END}`
+      : rendered);
+    previous = line;
+  }
+  return {
+    text: outputLines.join("\n"),
+    ...(footnoteStartLine == null ? {} : { footnoteStartLine }),
+  };
+}
+
+function geometricFootnoteStart(lines: TextLine[], bodyHeight: number): number {
+  if (!bodyHeight || lines.length < 6) return -1;
+  const firstMarker = new Map<string, number>();
+  const rendered = lines.map((line) => renderLine(line).trim());
+  for (let index = 0; index < rendered.length; index++) {
+    const marker = standaloneReferenceNumber(rendered[index]);
+    if (marker && !firstMarker.has(marker)) firstMarker.set(marker, index);
+  }
+
+  const lowerPageStart = Math.floor(lines.length * 0.65);
+  for (let index = lowerPageStart; index < lines.length - 1; index++) {
+    const marker = standaloneReferenceNumber(rendered[index]);
+    if (!marker || firstMarker.get(marker) === index) continue;
+    const noteText = rendered[index + 1];
+    if (!/\p{L}/u.test(noteText)) continue;
+    if (dominantLineHeight(lines[index]) > bodyHeight * 0.75) continue;
+    if (dominantLineHeight(lines[index + 1]) > bodyHeight * 0.92) continue;
+    return index;
+  }
+  return -1;
+}
+
+function standaloneReferenceNumber(value: string): string | null {
+  const normalized = value
+    .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+  return /^\d{1,3}$/.test(normalized) ? normalized : null;
+}
+
+function paragraphGapThreshold(lines: TextLine[]): number {
+  if (lines.length < 2) return Number.POSITIVE_INFINITY;
+  const gaps = lines
+    .slice(1)
+    .map((line, index) => lines[index].y - line.y)
+    .filter((gap) => Number.isFinite(gap) && gap > 0)
+    .sort((a, b) => a - b);
+  if (!gaps.length) return Number.POSITIVE_INFINITY;
+
+  // The lower quartile represents ordinary line leading even on a page with
+  // several paragraph, heading, or footer gaps.
+  const ordinaryGap = gaps[Math.floor((gaps.length - 1) * 0.25)];
+  const heights = lines
+    .flatMap((line) => line.items.map((item) => item.height))
+    .filter((height) => Number.isFinite(height) && height > 0)
+    .sort((a, b) => a - b);
+  const medianHeight = heights.length ? heights[Math.floor(heights.length / 2)] : 0;
+  return Math.max(ordinaryGap * 1.35, medianHeight * 1.55, ordinaryGap + 2);
+}
+
+function ordinaryLineGap(lines: TextLine[], bodyHeight: number): number {
+  const gaps = lines
+    .slice(1)
+    .map((line, index) => lines[index].y - line.y)
+    .filter((gap) => Number.isFinite(gap) && gap > 0)
+    .sort((a, b) => a - b);
+  if (!gaps.length) return bodyHeight > 0 ? bodyHeight * 1.5 : 0;
+  const lowerQuartile = gaps[Math.floor((gaps.length - 1) * 0.25)];
+  return bodyHeight > 0 ? Math.min(lowerQuartile, bodyHeight * 1.65) : lowerQuartile;
+}
+
+function toPositionedItem(item: any, index: number): PositionedTextItem | null {
+  const str = typeof item?.str === "string" ? item.str : "";
+  if (!str) return null;
+  const transform = Array.isArray(item.transform) ? item.transform : [];
+  const x = Number(transform[4]);
+  const y = Number(transform[5]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  const width = Math.abs(Number(item.width || 0));
+  const height = Math.abs(Number(item.height || transform[3] || transform[0] || 0));
+  return {
+    str,
+    dir: typeof item.dir === "string" ? item.dir : undefined,
+    fontName: typeof item.fontName === "string" ? item.fontName : undefined,
+    x,
+    y,
+    width: Number.isFinite(width) ? width : 0,
+    height: Number.isFinite(height) ? height : 0,
+    index,
+  };
+}
+
+function groupIntoLines(items: PositionedTextItem[]): TextLine[] {
+  const tolerance = lineTolerance(items);
+  const sorted = [...items].sort((a, b) => b.y - a.y || a.x - b.x || a.index - b.index);
+  const lines: TextLine[] = [];
+
+  for (const item of sorted) {
+    const line = lines.find((candidate) => Math.abs(candidate.y - item.y) <= tolerance);
+    if (line) {
+      line.items.push(item);
+      line.y = (line.y * (line.items.length - 1) + item.y) / line.items.length;
+    } else {
+      lines.push({ y: item.y, items: [item] });
+    }
+  }
+
+  return lines.sort((a, b) => b.y - a.y);
+}
+
+function lineTolerance(items: PositionedTextItem[]): number {
+  const heights = items.map((item) => item.height).filter((n) => n > 0).sort((a, b) => a - b);
+  const median = heights.length ? heights[Math.floor(heights.length / 2)] : 0;
+  return Math.max(1.5, Math.min(4, median * 0.35 || 2.5));
+}
+
+function renderLine(line: TextLine): string {
+  const rtl = isRtlLine(line);
+  const sorted = [...line.items].sort((a, b) => {
+    const primary = rtl ? b.x - a.x : a.x - b.x;
+    return primary || a.index - b.index;
+  });
+
+  let out = "";
+  let previous: PositionedTextItem | null = null;
+  for (let index = 0; index < sorted.length; index++) {
+    const item = sorted[index];
+    const renderedItem = raisedReferenceDigits(sorted, index, rtl);
+    const itemText = renderedItem
+      ? `${RAISED_REFERENCE_START}${renderedItem}${RAISED_REFERENCE_END}`
+      : item.str;
+    if (!out) {
+      out = itemText;
+    } else {
+      if (previous && shouldInsertSpace(previous, item, rtl)) out += " ";
+      out += itemText;
+    }
+    previous = item;
+  }
+  return restoreRaisedReferences(cleanExtractedLine(out, rtl));
+}
+
+interface PageTypography {
+  bodyHeight: number;
+  bodyFontName?: string;
+}
+
+function dominantPageTypography(lines: TextLine[]): PageTypography {
+  const items = lines
+    .flatMap((line) => line.items)
+    .filter((item) => item.height > 0 && /[\p{L}\p{N}]/u.test(item.str));
+  if (!items.length) return { bodyHeight: 0 };
+
+  const heightWeights = new Map<number, number>();
+  const fontWeights = new Map<string, number>();
+  for (const item of items) {
+    const weight = Math.max(1, item.str.replace(/\s/g, "").length);
+    // PDF transforms contain tiny floating-point differences for one font size.
+    const heightKey = Math.round(item.height * 20) / 20;
+    heightWeights.set(heightKey, (heightWeights.get(heightKey) || 0) + weight);
+    if (item.fontName) {
+      fontWeights.set(item.fontName, (fontWeights.get(item.fontName) || 0) + weight);
+    }
+  }
+
+  return {
+    bodyHeight: greatestWeightKey(heightWeights) || 0,
+    bodyFontName: greatestWeightKey(fontWeights) || undefined,
+  };
+}
+
+function greatestWeightKey<T>(weights: Map<T, number>): T | undefined {
+  let best: T | undefined;
+  let bestWeight = -1;
+  for (const [key, weight] of weights) {
+    if (weight > bestWeight) {
+      best = key;
+      bestWeight = weight;
+    }
+  }
+  return best;
+}
+
+function dominantLineHeight(line: TextLine): number {
+  const visibleItems = line.items.filter((item) => item.height > 0 && item.str.trim());
+  return greatestWeightKey(
+    visibleItems.reduce((weights, item) => {
+      const key = Math.round(item.height * 20) / 20;
+      weights.set(key, (weights.get(key) || 0) + Math.max(1, item.str.replace(/\s/g, "").length));
+      return weights;
+    }, new Map<number, number>())
+  ) || 0;
+}
+
+function isGeometricHeading(
+  line: TextLine,
+  rendered: string,
+  typography: PageTypography,
+  separation: { before: number; after: number; ordinary: number }
+): boolean {
+  const value = rendered.trim();
+  if (!value || value.length > 180 || !/\p{L}/u.test(value)) return false;
+  const words = value.split(/\s+/).filter(Boolean);
+  if (words.length > 20 || !typography.bodyHeight) return false;
+
+  const visibleItems = line.items.filter((item) => item.height > 0 && item.str.trim());
+  if (!visibleItems.length) return false;
+  const lineHeight = dominantLineHeight(line);
+
+  const fontWeights = new Map<string, number>();
+  let totalFontWeight = 0;
+  for (const item of visibleItems) {
+    if (!item.fontName) continue;
+    const weight = Math.max(1, item.str.replace(/\s/g, "").length);
+    fontWeights.set(item.fontName, (fontWeights.get(item.fontName) || 0) + weight);
+    totalFontWeight += weight;
+  }
+  const lineFont = greatestWeightKey(fontWeights);
+  const lineFontWeight = lineFont ? fontWeights.get(lineFont) || 0 : 0;
+  const uniformlyStyled = totalFontWeight === 0 || lineFontWeight / totalFontWeight >= 0.8;
+  const largerThanBody = lineHeight >= typography.bodyHeight * 1.11;
+  const hasDedicatedFont = Boolean(
+    lineFont && typography.bodyFontName && lineFont !== typography.bodyFontName
+  );
+  // When a PDF omits font names, a substantially larger size still provides a
+  // usable structural signal. With font metadata, require a dedicated font.
+  const fontSupportsHeading = hasDedicatedFont ||
+    (!lineFont && lineHeight >= typography.bodyHeight * 1.25);
+  const separationThreshold = Math.max(
+    separation.ordinary * 1.25,
+    typography.bodyHeight * 1.8
+  );
+  const verticallySeparated = Math.max(separation.before, separation.after) >= separationThreshold;
+  return largerThanBody && uniformlyStyled && fontSupportsHeading && verticallySeparated;
+}
+
+function raisedReferenceDigits(
+  sorted: PositionedTextItem[],
+  index: number,
+  rtl: boolean
+): string | null {
+  const item = sorted[index];
+  const digits = item.str.trim();
+  if (!/^\d{1,3}$/.test(digits) || sorted.length < 2 || item.height <= 0) return null;
+
+  const heights = sorted
+    .map((candidate) => candidate.height)
+    .filter((height) => Number.isFinite(height) && height > 0)
+    .sort((a, b) => a - b);
+  const dominantHeight = heights[Math.floor(heights.length / 2)] || 0;
+  if (!dominantHeight || item.height > dominantHeight * 0.72) return null;
+
+  const bodyItems = sorted.filter((candidate) => candidate.height >= dominantHeight * 0.82);
+  if (!bodyItems.length) return null;
+  const bodyBaselines = bodyItems.map((candidate) => candidate.y).sort((a, b) => a - b);
+  const bodyBaseline = bodyBaselines[Math.floor(bodyBaselines.length / 2)];
+  const rise = item.y - bodyBaseline;
+  if (rise < Math.max(0.5, dominantHeight * 0.08) || rise > dominantHeight * 0.65) return null;
+
+  const previous = sorted[index - 1];
+  if (!previous) return null;
+  const gap = rtl
+    ? previous.x - (item.x + item.width)
+    : item.x - (previous.x + previous.width);
+  const adjacentLimit = Math.max(4, dominantHeight * 0.6);
+  if (!Number.isFinite(gap) || gap < -1 || gap > adjacentLimit) return null;
+  return digits;
+}
+
+function restoreRaisedReferences(value: string): string {
+  const re = new RegExp(`${RAISED_REFERENCE_START}(\\d{1,3})${RAISED_REFERENCE_END}`, "g");
+  return value.replace(re, (_match, digits: string) =>
+    digits
+      .split("")
+      .map((digit) => "⁰¹²³⁴⁵⁶⁷⁸⁹"[Number(digit)] || digit)
+      .join("")
+  );
+}
+
+function cleanExtractedLine(line: string, rtl: boolean): string {
+  let out = line
+    .normalize("NFKC")
+    // Some old Distiller Persian PDFs emit U+0467 where the visual PDF only
+    // has glyph shaping/spacing. Android renders it as odd A-like noise.
+    .replace(/[\u0466\u0467]/g, "")
+    .replace(/\(cid:\d+\)/g, "")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
+  if (rtl) {
+    out = out
+      .replace(/\u06BE/g, "ه")
+      .replace(new RegExp(`([${RTL_WORD_RUN}]{3,})\\1`, "g"), "$1");
+  }
+  return out;
+}
+
+function isRtlLine(line: TextLine): boolean {
+  const text = line.items.map((item) => item.str).join("");
+  const rtlChars = (text.match(RTL_SCRIPT_RE) || []).length;
+  if (rtlChars === 0) return false;
+  const nonSpace = text.replace(/\s/g, "").length || 1;
+  const rtlItems = line.items.filter((item) => item.dir === "rtl" || RTL_CHAR_RE.test(item.str)).length;
+  return rtlItems >= line.items.length / 2 || rtlChars / nonSpace > 0.25;
+}
+
+function shouldInsertSpace(
+  previous: PositionedTextItem,
+  next: PositionedTextItem,
+  rtl: boolean
+): boolean {
+  if (/\s$/.test(previous.str) || /^\s/.test(next.str)) return false;
+  if (NO_SPACE_BEFORE_RE.test(next.str) || NO_SPACE_AFTER_RE.test(previous.str)) return false;
+  if (CJK_CHAR_RE.test(previous.str.slice(-1)) && CJK_CHAR_RE.test(next.str.charAt(0))) {
+    return false;
+  }
+
+  const gap = rtl
+    ? previous.x - (next.x + next.width)
+    : next.x - (previous.x + previous.width);
+  if (!Number.isFinite(gap) || gap <= 0) return false;
+
+  const avgCharWidth = averageCharWidth(previous, next);
+  const threshold = Math.max(1.5, Math.min(4, avgCharWidth * 0.35 || 2.5));
+  return gap > threshold;
+}
+
+function averageCharWidth(a: PositionedTextItem, b: PositionedTextItem): number {
+  const aw = a.width > 0 ? a.width / Math.max(1, a.str.trim().length) : 0;
+  const bw = b.width > 0 ? b.width / Math.max(1, b.str.trim().length) : 0;
+  const values = [aw, bw].filter((n) => Number.isFinite(n) && n > 0);
+  return values.length ? values.reduce((sum, n) => sum + n, 0) / values.length : 0;
+}

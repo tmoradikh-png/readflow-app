@@ -54,9 +54,8 @@ interface Job {
   listeners: Set<Listener>;
 }
 
-const BATCH = 4;
+const BATCH = 1;
 const GAP_MS = 120;
-const RETRY_MS = 15000;
 
 const jobs = new Map<string, Job>();
 let appStateBound = false;
@@ -68,7 +67,7 @@ function bindAppState() {
     if (s !== "active") return;
     // Resume anything that paused while we were backgrounded/offline.
     for (const job of jobs.values()) {
-      if (job.pending.size > 0 && !job.running && !job.pausedByUser && !job.stopped) {
+      if (job.pending.size > 0 && !job.running && !job.pausedByUser && !job.stopped && !job.pausedReason) {
         job.offline = false;
         void runLoop(job);
       }
@@ -119,21 +118,11 @@ function mergePages(
   const map = new Map(job.pages.map((p) => [p.page, p] as const));
   for (const r of improved) {
     const ex = map.get(r.page);
-    if (!ex || r.text.length > (ex.text?.length ?? 0)) {
-      map.set(r.page, { page: r.page, text: r.text, source: "ocr", confidence: r.confidence });
+    if (r.text.trim()) {
+      map.set(r.page, { ...ex, page: r.page, text: r.text, source: "ocr", confidence: r.confidence, footnoteStartLine: undefined });
     }
   }
   job.pages = Array.from(map.values()).sort((a, b) => a.page - b.page);
-}
-
-function scheduleRetry(job: Job) {
-    if (job.retryTimer) return;
-  job.retryTimer = setTimeout(() => {
-    job.retryTimer = null;
-    if (job.pending.size > 0 && !job.running && !job.pausedByUser && !job.stopped) {
-      void runLoop(job);
-    }
-  }, RETRY_MS);
 }
 
 async function runLoop(job: Job) {
@@ -142,7 +131,7 @@ async function runLoop(job: Job) {
   bindAppState();
   try {
     while (job.pending.size > 0) {
-      if (job.stopped) break;
+      if (job.stopped || AppState.currentState !== "active") break;
       if (job.pausedByUser) {
         job.pausedReason = "user";
         job.message = "OCR paused. Resume when you want readFlow to continue loading scanned pages.";
@@ -158,37 +147,10 @@ async function runLoop(job: Job) {
       try {
         results = await PDFParser.ocrPages(job.token, want, job.ocrLang);
       } catch (e) {
-        // Network drops retry automatically. Quota/token pauses wait for the
-        // user to reopen later, after monthly reset, or after a fresh token.
-        if (isNetworkError(e)) {
-          job.pausedReason = "offline";
-          job.message = "Paused - you're offline. Pages will finish loading when you reconnect.";
-          job.offline = true;
-          notify(job);
-          scheduleRetry(job);
-          break;
-        }
-        if (isQuotaError(e)) {
-          job.pausedReason = "quota";
-          job.message =
-            "Monthly OCR limit reached. The remaining scanned pages are saved and can continue after your limit resets, or you can upgrade for a higher OCR limit.";
-          job.offline = false;
-          notify(job);
-          break;
-        }
-        if (isExpiredDocError(e)) {
-          job.pausedReason = "expired";
-          job.message =
-            "OCR paused. Reopen this book from your library to refresh the file token and continue.";
-          job.offline = false;
-          notify(job);
-          break;
-        }
         job.pausedReason = "error";
-        job.message = "OCR paused after a server error. readFlow will try again shortly.";
+        job.message = e instanceof Error ? e.message : "OCR could not process this page. Your completed pages are saved.";
         job.offline = false;
         notify(job);
-        scheduleRetry(job);
         break;
       }
       if (job.stopped) break;
@@ -202,7 +164,7 @@ async function runLoop(job: Job) {
         job.pausedReason = undefined;
         job.message = undefined;
       }
-      DocCache.update(job.docId, job.pages, [...job.pending]).catch(() => {});
+      await DocCache.update(job.docId, job.pages, [...job.pending]);
       notify(job);
       await new Promise((r) => setTimeout(r, GAP_MS));
     }
@@ -222,6 +184,8 @@ export const OcrLoader = {
     pending: number[];
   }): OcrProgress {
     let job = jobs.get(opts.docId);
+    if (job?.running && job.ocrLang === opts.ocrLang && job.token === opts.token) return progressOf(job);
+    if (job?.running) { job.stopped = true; jobs.delete(opts.docId); job = undefined; }
     if (!job) {
       job = {
         docId: opts.docId,
@@ -242,7 +206,7 @@ export const OcrLoader = {
       };
       jobs.set(opts.docId, job);
     } else {
-      // Reopening mints a fresh server token; keep accumulated pages/progress.
+      // The token is the private source URI, not a server session.
       job.token = opts.token;
       job.stopped = false;
       if (opts.ocrLang) job.ocrLang = opts.ocrLang;

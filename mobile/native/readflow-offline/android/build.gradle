@@ -1,0 +1,21 @@
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.urmiaworks.readflow.offline'
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    defaultConfig { minSdkVersion 24 }
+    sourceSets.main.assets.srcDirs += ['../assets']
+}
+
+repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'com.android.billingclient:billing:9.1.0'
+    implementation 'com.facebook.react:react-android'
+    implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
+    implementation 'cz.adaptech.tesseract4android:tesseract4android:4.9.0'
+}

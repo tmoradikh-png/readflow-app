@@ -18,9 +18,6 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   PDFParser,
   ParsedPdf,
-  isLocalBackendTarget,
-  isNetworkError,
-  isQuotaError,
 } from "../services/PDFParser";
 import { Library, LibraryItem } from "../services/Library";
 import { DocCache } from "../services/DocCache";
@@ -28,11 +25,6 @@ import { OcrLoader, OcrProgress } from "../services/OcrLoader";
 import { Bookmarks } from "../services/Bookmarks";
 import { EntitlementSnapshot, UsageSnapshot } from "../services/Entitlements";
 import { ThemedNotice, ThemedNoticeAction } from "../components/ThemedNotice";
-import {
-  UpgradeSheet,
-  type UpgradeBilling,
-  type UpgradePlanKey,
-} from "../components/UpgradeSheet";
 import {
   downloadLocalNeuralVoice,
   formatLocalModelSize,
@@ -56,7 +48,8 @@ import {
   useThemeController,
   useThemedStyles,
 } from "../theme";
-import { activateReviewerAccess } from "../services/ReviewerAccess";
+import { SupportPrompt } from "../components/SupportPrompt";
+import { LibraryAds } from "../components/LibraryAds";
 import { loadAppUserId } from "../services/AppIdentity";
 
 const RF_AI_FREE_OFFER_KEY = "readflow.rfAiFreeOffer.v1";
@@ -70,12 +63,6 @@ interface Props {
   onPreferencesChange: (next: ReadingPreferences) => void;
   onRefreshUsage?: () => void;
   onRefreshEntitlement?: () => Promise<void>;
-  purchasingAvailable?: boolean;
-  purchaseSetupLoading?: boolean;
-  purchasing?: boolean;
-  purchaseError?: string | null;
-  onPurchasePlan?: (planKey: UpgradePlanKey, billing: UpgradeBilling) => void;
-  onRestorePurchases?: () => void;
 }
 
 interface NoticeState {
@@ -83,11 +70,6 @@ interface NoticeState {
   body: string;
   primary?: ThemedNoticeAction;
   secondary?: ThemedNoticeAction;
-}
-
-interface UpgradeState {
-  title: string;
-  body: string;
 }
 
 /** Deterministic cover variant from the document id. */
@@ -105,12 +87,6 @@ export function LibraryScreen({
   onPreferencesChange,
   onRefreshUsage,
   onRefreshEntitlement,
-  purchasingAvailable,
-  purchaseSetupLoading,
-  purchasing,
-  purchaseError,
-  onPurchasePlan,
-  onRestorePurchases,
 }: Props) {
   const theme = useAppTheme();
   const styles = useThemedStyles(createStyles);
@@ -123,7 +99,6 @@ export function LibraryScreen({
   const [showVoice, setShowVoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [notice, setNotice] = useState<NoticeState | null>(null);
-  const [upgrade, setUpgrade] = useState<UpgradeState | null>(null);
   const [rebuildStartingIds, setRebuildStartingIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -198,7 +173,7 @@ export function LibraryScreen({
         if (cancelled || seen) return;
         setNotice({
           title: "Try rF AI free",
-          body: `Free includes 5 minutes of offline rF AI reading each day. The optional ${formatLocalModelSize(localStatus.modelSizeBytes)} voice pack downloads once, runs on this phone, and has no Cloud AI cost.`,
+          body: `rF AI reading is free, with no daily time limit. The optional ${formatLocalModelSize(localStatus.modelSizeBytes)} voice pack downloads once, runs on this phone, and has no Cloud AI cost.`,
           secondary: { label: "Not now", tone: "secondary" },
           primary: { label: "Download", onPress: installLocalVoice },
         });
@@ -242,21 +217,7 @@ export function LibraryScreen({
       await refresh();
       onOpen(doc, item);
     } catch (e: any) {
-      if (isQuotaError(e)) {
-        setUpgrade({
-          title: "Monthly document limit reached",
-          body:
-            e?.message && !/quota_exceeded/i.test(e.message)
-              ? e.message
-              : "This month's document imports are used. Removing a local book does not reset a monthly server allowance. Upgrade for a higher limit, or use the installed QA build with Reviewer access while testing.",
-        });
-        return;
-      }
-      setError(
-        isNetworkError(e)
-          ? importConnectionMessage()
-          : e?.message || "Could not read that PDF."
-      );
+      setError(e?.message || "Could not read that document on this phone.");
     } finally {
       setLoading(false);
     }
@@ -281,7 +242,7 @@ export function LibraryScreen({
         Boolean(entitlement.features.ocr);
       let doc: ParsedPdf;
 
-      if (cached && cacheMatchesLanguage && DocCache.isComplete(cached)) {
+      if (cached && cacheMatchesLanguage && !cached.truncated) {
         // Fully saved for offline — open instantly, no network needed.
         doc = DocCache.toParsed(cached);
       } else {
@@ -296,21 +257,15 @@ export function LibraryScreen({
           });
           doc = cached && cacheMatchesLanguage ? DocCache.mergeCachedOcr(fresh, cached) : fresh;
           await DocCache.save(doc);
-        } catch (netErr) {
-          if (cached && cacheMatchesLanguage && isNetworkError(netErr)) {
-            // Offline: open whatever text we already saved.
-            doc = DocCache.toParsed(cached);
-            setError(savedCopyConnectionMessage());
-          } else if (isNetworkError(netErr)) {
-            setError(reopenConnectionMessage(Boolean(cached), readingLanguage.label));
-            return;
-          } else {
-            throw netErr;
-          }
+        } catch (error) {
+          if (!cached || !cacheMatchesLanguage) throw error;
+          doc = DocCache.toParsed(cached);
+          setError("Opened the saved text. Local re-import failed; the saved reading position is preserved.");
         }
       }
 
       doc.sourceUri = item.storedUri;
+      if (doc.kind === "pdf") doc.docToken = item.storedUri;
       doc.mimeType = item.mimeType || undefined;
       const freshItem = await Library.saveOpened(
         doc,
@@ -320,17 +275,7 @@ export function LibraryScreen({
       await refresh();
       onOpen(doc, freshItem);
     } catch (e: any) {
-      if (isQuotaError(e)) {
-        setUpgrade({
-          title: "Monthly document limit reached",
-          body:
-            e?.message && !/quota_exceeded/i.test(e.message)
-              ? e.message
-              : "This month's document imports are used. Upgrade for a higher limit, or open the saved offline copy when available.",
-        });
-      } else {
-        setError(e?.message || "Could not reopen that document.");
-      }
+      setError(e?.message || "Could not reopen that document.");
     } finally {
       setBusyId(null);
     }
@@ -340,8 +285,8 @@ export function LibraryScreen({
     setItems((current) => current.filter((candidate) => candidate.id !== item.id));
     setBusyId(item.id);
     try {
+      OcrLoader.stop(item.id);
       await Library.remove(item.id);
-      await DocCache.remove(item.id);
       await Bookmarks.removeAll(item.id);
     } catch (e: any) {
       setNotice({
@@ -366,14 +311,6 @@ export function LibraryScreen({
       setNotice({
         title: "OCR rebuild",
         body: "OCR rebuild is for PDFs. Word documents already provide structured text.",
-      });
-      return;
-    }
-    if (!entitlement.features.ocr) {
-      setNotice({
-        title: "OCR rebuild",
-        body:
-          "Rebuilding a PDF from page images uses OCR and is available in AI Pro and Power. Reader Plus stays cost-safe for normal text PDFs.",
       });
       return;
     }
@@ -420,7 +357,7 @@ export function LibraryScreen({
       setNotice({
         title: "OCR rebuild started",
         body:
-          "readFlow is rebuilding this PDF from page images. The first pages open now; remaining pages continue through the paid OCR allowance.",
+          "readFlow is rebuilding this PDF from page images. The first pages open now; remaining pages are processed on this phone.",
         primary: { label: "Open", onPress: () => onOpen(doc, freshItem) },
       });
     } catch (e: any) {
@@ -462,7 +399,7 @@ export function LibraryScreen({
     setNotice({
       title: "Rebuild with OCR?",
       body:
-        "Use this when a PDF imports with wrong order, missing words, or strange characters. It rebuilds from page images and counts pages against your monthly OCR allowance.",
+        "Use this when a PDF imports with wrong order, missing words, or strange characters. It rebuilds from page images on this phone. OCR may still make mistakes; the original PDF is kept.",
       secondary: { label: "Cancel", tone: "secondary" },
       primary: {
         label: "Rebuild",
@@ -576,10 +513,8 @@ export function LibraryScreen({
 
   const recent = items[0];
   const rest = items.slice(1);
-  const isPaid = Boolean(
-    entitlement.features.ai || entitlement.features.ocr || entitlement.features.unlimitedLibrary
-  );
-  const planLabel = isPaid ? entitlement.name : "Free";
+  const isPaid = false;
+  const planLabel = "Free";
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
       <View
@@ -628,6 +563,7 @@ export function LibraryScreen({
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
+      {!loading && !busyId && !showVoice && !showHelp && !showLanguage && !notice && <SupportPrompt hasBooks={items.length > 0} />}
 
       {items.length === 0 ? (
         <Empty onAdd={importNew} loading={loading} isPaid={isPaid} />
@@ -679,6 +615,8 @@ export function LibraryScreen({
         </ScrollView>
       )}
 
+      <LibraryAds available={!loading && !busyId && !showVoice && !showHelp && !showLanguage && !notice} />
+
       <VoiceSettingsSheet
         visible={showVoice}
         entitlement={entitlement}
@@ -693,10 +631,6 @@ export function LibraryScreen({
         onChange={onPreferencesChange}
         onDownloadLocalVoice={installLocalVoice}
         onNotice={setNotice}
-        onUpgrade={(next) => {
-          setShowVoice(false);
-          setUpgrade(next);
-        }}
       />
       <LanguageSettingsSheet
         visible={showLanguage}
@@ -707,7 +641,6 @@ export function LibraryScreen({
       <HelpAboutSheet
         visible={showHelp}
         planName={entitlement.name}
-        onReviewerActivated={onRefreshEntitlement}
         onClose={() => setShowHelp(false)}
       />
       <ThemedNotice
@@ -718,81 +651,14 @@ export function LibraryScreen({
         secondary={notice?.secondary}
         onClose={() => setNotice(null)}
       />
-      <UpgradeSheet
-        activeTier={entitlement.tier}
-        visible={Boolean(upgrade)}
-        reasonTitle={upgrade?.title}
-        reasonBody={upgrade?.body}
-        onClose={() => setUpgrade(null)}
-        purchasingAvailable={purchasingAvailable}
-        purchaseSetupLoading={purchaseSetupLoading}
-        purchasing={purchasing}
-        purchaseError={purchaseError}
-        onPurchase={onPurchasePlan}
-        onRestore={onRestorePurchases}
-      />
     </SafeAreaView>
   );
 }
 
 /* ---------- pieces ---------- */
 
-const CLOUD_VOICES = [
-  "nova",
-  "alloy",
-  "ash",
-  "coral",
-  "echo",
-  "fable",
-  "onyx",
-  "sage",
-  "shimmer",
-  "ballad",
-];
-
-function formatChars(n: number): string {
-  if (n <= 0) return "0 chars";
-  if (n >= 1000) return `${Math.round(n / 1000)}k chars`;
-  return `${n} chars`;
-}
-
-function importConnectionMessage(): string {
-  if (isLocalBackendTarget()) {
-    return "This test build can't reach the readFlow backend on this computer. Keep the USB cable connected and make sure the local backend is running, then try again.";
-  }
-  return "readFlow couldn't reach the document extraction server. Your internet may be fine; please try again in a moment.";
-}
-
-function reopenConnectionMessage(hasCachedCopy: boolean, languageLabel: string): string {
-  if (isLocalBackendTarget()) {
-    return hasCachedCopy
-      ? `This test build can't reach the local backend to reopen this book with ${languageLabel} extraction. Keep USB connected and make sure the backend is running, then try again.`
-      : "This test build can't reach the readFlow backend on this computer. Keep USB connected and make sure the backend is running, then try again.";
-  }
-  return hasCachedCopy
-    ? `readFlow couldn't reach the extraction server to reopen this book with ${languageLabel} extraction. Please try again in a moment.`
-    : "readFlow couldn't reach the extraction server and this book is not saved for offline reading yet. Open it once after the server is reachable, then it will work offline.";
-}
-
-function savedCopyConnectionMessage(): string {
-  if (isLocalBackendTarget()) {
-    return "Opened the saved copy. Scanned pages will finish after the local backend is reachable again.";
-  }
-  return "Opened the saved copy. Scanned pages will finish after readFlow can reach the extraction server again.";
-}
-
-function rebuildOcrErrorMessage(e: unknown): string {
-  const message = (e as any)?.message ? String((e as any).message) : "";
-  if (isNetworkError(e)) {
-    return importConnectionMessage();
-  }
-  if (isQuotaError(e) || /quota_exceeded/i.test(message)) {
-    return "Your monthly OCR allowance is used. The saved PDF can be rebuilt after the limit resets, or on a higher OCR tier.";
-  }
-  if (/upgrade_required|ocr/i.test(message)) {
-    return "OCR rebuild is available in AI Pro and Power because it uses backend OCR pages.";
-  }
-  return message || "Could not rebuild this PDF with OCR.";
+function rebuildOcrErrorMessage(error: unknown): string {
+  return (error as any)?.message || "Could not rebuild this PDF with on-device OCR.";
 }
 
 function libraryMeta(item: LibraryItem, progressPct?: number): string {
@@ -905,8 +771,7 @@ function LanguageSettingsSheet({
       bookLanguage: language.code,
       deviceVoiceId: undefined,
       voiceEngine:
-        (preferences.voiceEngine === "local_ai" && !language.rfAi) ||
-        (preferences.voiceEngine === "cloud" && !language.cloudAiVoice)
+        (preferences.voiceEngine === "local_ai" && !language.rfAi)
           ? "device"
           : preferences.voiceEngine,
     });
@@ -928,7 +793,7 @@ function LanguageSettingsSheet({
             <View style={styles.voiceGuide}>
               <Text style={styles.voiceGuideTitle}>Improve scanned text and reading voice</Text>
               <Text style={styles.voiceGuideText}>
-                readFlow uses this for OCR, phone voices, Cloud AI, and AI answers.
+                readFlow uses this for on-device OCR and phone voices.
                 rF AI is English-only until more language packs are added.
               </Text>
             </View>
@@ -974,7 +839,6 @@ function VoiceSettingsSheet({
   onChange,
   onDownloadLocalVoice,
   onNotice,
-  onUpgrade,
 }: {
   visible: boolean;
   entitlement: EntitlementSnapshot;
@@ -989,26 +853,13 @@ function VoiceSettingsSheet({
   onChange: (next: ReadingPreferences) => void;
   onDownloadLocalVoice: () => void;
   onNotice: (notice: NoticeState) => void;
-  onUpgrade: (upgrade: UpgradeState) => void;
 }) {
   const theme = useAppTheme();
   const styles = useThemedStyles(createStyles);
-  const cloudLimit = entitlement.limits.cloudVoiceCharsPerMonth || 0;
-  const cloudRemaining = usage?.remaining.cloudVoiceChars ?? cloudLimit;
-  const planHasCloud = Boolean(entitlement.features.cloudVoice && cloudLimit > 0);
-  const canUseCloud = Boolean(planHasCloud && readingLanguage.cloudAiVoice);
-  const canUseDeviceReadAloud =
-    entitlement.tier !== "free" &&
-    (entitlement.features.unlimitedLibrary ||
-      entitlement.features.ai ||
-      entitlement.features.ocr ||
-      entitlement.features.cloudVoice);
-  const canUseRfVoice = Boolean(entitlement.features.localVoice);
-  const rfVoiceDailyLimit = entitlement.limits.localVoiceSecondsPerDay || 0;
-  const canContinueRFAiInBackground =
-    entitlement.tier === "reviewer" ||
-    entitlement.tier === "ai_pro" ||
-    entitlement.tier === "power";
+  const canUseDeviceReadAloud = true;
+  const canUseRfVoice = true;
+  const rfVoiceDailyLimit = 0;
+  const canContinueRFAiInBackground = true;
   const currentDeviceVoice = deviceVoices.find((v) => v.id === preferences.deviceVoiceId);
   const [voiceRegion, setVoiceRegion] = useState("recommended");
   const regionOptions = useMemo(() => {
@@ -1025,37 +876,6 @@ function VoiceSettingsSheet({
   }, [deviceVoices, voiceRegion]);
 
   function selectEngine(engine: VoiceEngine) {
-    if (engine === "device" && !canUseDeviceReadAloud) {
-      onUpgrade({
-        title: "Unlock read-aloud",
-        body:
-          "Listen mode starts with Reader Plus. Free keeps the reading preview manual, while Reader Plus unlocks device voice for full native-text books.",
-      });
-      return;
-    }
-    if (engine === "cloud" && !readingLanguage.cloudAiVoice) {
-      onNotice({
-        title: "Cloud AI voice QA",
-        body: `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Phone voice now; we will add it after the language passes voice testing.`,
-      });
-      return;
-    }
-    if (engine === "cloud" && !planHasCloud) {
-      onUpgrade({
-        title: "Unlock Cloud AI voice",
-        body:
-          "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Reader Plus and higher include Phone voice without cloud AI cost.",
-      });
-      return;
-    }
-    if (engine === "local_ai" && !canUseRfVoice) {
-      onUpgrade({
-        title: "Unlock rF AI voice",
-        body:
-          "rF AI voice is available on supported plans. It runs entirely on this phone and does not use Cloud AI.",
-      });
-      return;
-    }
     if (engine === "local_ai" && !readingLanguage.rfAi) {
       onNotice({
         title: "rF AI language pack",
@@ -1080,14 +900,6 @@ function VoiceSettingsSheet({
       return;
     }
     onChange({ ...preferences, voiceEngine: engine });
-  }
-
-  function buyMoreVoice() {
-    onNotice({
-      title: "AI voice packs",
-      body:
-        "The cost-safe product path is a Play Billing top-up, for example 25k AI voice characters. Purchases are not live in this build yet.",
-    });
   }
 
   return (
@@ -1149,20 +961,6 @@ function VoiceSettingsSheet({
                 stateLabel={canUseDeviceReadAloud ? undefined : "Reader+"}
                 onPress={() => selectEngine("device")}
               />
-              <VoiceChoice
-                title="Cloud AI"
-                detail={
-                  !readingLanguage.cloudAiVoice
-                    ? `${readingLanguage.label} voice QA is pending.`
-                    : canUseCloud
-                    ? `${formatChars(cloudRemaining)} left this month. Best cloud quality.`
-                    : "Included in AI Pro and Power. Best quality, monthly allowance."
-                }
-                active={preferences.voiceEngine === "cloud"}
-                locked={!canUseCloud}
-                stateLabel={!readingLanguage.cloudAiVoice ? "QA" : canUseCloud ? undefined : "AI Pro"}
-                onPress={() => selectEngine("cloud")}
-              />
             </View>
 
             {preferences.voiceEngine === "local_ai" ? (
@@ -1174,7 +972,7 @@ function VoiceSettingsSheet({
                   {localStatus.engineInstalled
                     ? `${localStatus.modelName} reads on this phone with no OpenAI cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. ${
                         canContinueRFAiInBackground
-                          ? "This plan keeps rF AI reading on when the screen locks, with lock-screen controls."
+                          ? "rF AI can continue when the screen locks, with lock-screen controls."
                           : "Reading stops when you leave readFlow."
                       }`
                     : localStatus.nativeAvailable
@@ -1300,48 +1098,6 @@ function VoiceSettingsSheet({
               </View>
             ) : null}
 
-            {preferences.voiceEngine === "cloud" ? (
-              <>
-                <View style={styles.voiceBlock}>
-                  <Text style={styles.voiceBlockTitle}>Cloud AI style</Text>
-                  <Text style={styles.voiceBlockHint}>
-                    Cloud AI uses your monthly allowance.
-                  </Text>
-                  <View style={styles.voiceList}>
-                    {CLOUD_VOICES.map((voice) => {
-                      const active = preferences.cloudVoiceId === voice;
-                      return (
-                        <Pressable
-                          key={voice}
-                          style={[styles.cloudChip, active && styles.cloudChipOn]}
-                          onPress={() =>
-                            onChange({
-                              ...preferences,
-                              voiceEngine: canUseCloud ? "cloud" : preferences.voiceEngine,
-                              cloudVoiceId: voice,
-                            })
-                          }
-                        >
-                          <Text style={[styles.cloudChipText, active && styles.cloudChipTextOn]}>
-                            {voice.charAt(0).toUpperCase() + voice.slice(1)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-
-                <View style={styles.voiceBlock}>
-                  <Text style={styles.voiceBlockTitle}>Need more Cloud AI?</Text>
-                  <Text style={styles.voiceBlockHint}>
-                    When the monthly allowance is used, readFlow should offer a paid top-up.
-                  </Text>
-                  <Pressable style={styles.voicePackBtn} onPress={buyMoreVoice}>
-                    <Text style={styles.voicePackText}>AI voice packs</Text>
-                  </Pressable>
-                </View>
-              </>
-            ) : null}
           </ScrollView>
         </View>
       </View>
@@ -1385,12 +1141,10 @@ function VoiceChoice({
 function HelpAboutSheet({
   visible,
   planName,
-  onReviewerActivated,
   onClose,
 }: {
   visible: boolean;
   planName: string;
-  onReviewerActivated?: () => Promise<void>;
   onClose: () => void;
 }) {
   const theme = useAppTheme();
@@ -1401,10 +1155,6 @@ function HelpAboutSheet({
   const code = expo?.android?.versionCode || expo?.ios?.buildNumber || "";
   const supportEmail = expo?.extra?.supportEmail || "support@urmiaworks.com";
   const website = expo?.extra?.website || "https://urmiaworks.com";
-  const [reviewCode, setReviewCode] = useState("");
-  const [reviewBusy, setReviewBusy] = useState(false);
-  const [reviewMessage, setReviewMessage] = useState("");
-
   async function contact() {
     const appUserId = await loadAppUserId();
     const subject = `readFlow support - ${version}${code ? ` (${code})` : ""}`;
@@ -1432,21 +1182,6 @@ function HelpAboutSheet({
 
   function openWebsite() {
     Linking.openURL(website).catch(() => {});
-  }
-
-  async function activateReview() {
-    setReviewBusy(true);
-    setReviewMessage("");
-    try {
-      await activateReviewerAccess(reviewCode);
-      await onReviewerActivated?.();
-      setReviewCode("");
-      setReviewMessage("Reviewer access is active on this device.");
-    } catch (error: any) {
-      setReviewMessage(error?.message || "Could not activate review access.");
-    } finally {
-      setReviewBusy(false);
-    }
   }
 
   return (
@@ -1488,54 +1223,6 @@ function HelpAboutSheet({
                   </Pressable>
                 ))}
               </View>
-            </View>
-            <Text style={styles.aboutBody}>
-              readFlow turns PDF and Word documents into phone-sized reading text, then reads with Phone voice, capped Cloud AI, or downloaded rF AI. Free includes a short daily rF AI preview.
-            </Text>
-            <View style={styles.helpRows}>
-              <HelpRow label="+" text="Add a PDF or Word document." />
-              <HelpRow label="Lang" text="Sets OCR, phone voices, Cloud AI, and AI answer language." />
-              <HelpRow label="Voice" text="Choose Phone voice, capped Cloud AI, or downloaded rF AI. Free includes 5 rF AI minutes per day." />
-              <HelpRow label="Plan" text="Shows the active subscription tier and monthly limits." />
-              <HelpRow label="Fix text" text="Rebuilds a bad PDF import with paid OCR." />
-              <HelpRow label="Follow" text="Keeps the highlighted line centered while reading aloud." />
-              <HelpRow label="Focus" text="Hides controls for a cleaner reading view." />
-              <HelpRow label="BM" text="Opens bookmarks and page navigation." />
-              <HelpRow label="AI" text="Summaries, explanations, and questions for AI Pro and Power." />
-            </View>
-            <View style={styles.reviewAccess}>
-              <Text style={styles.reviewAccessTitle}>App review access</Text>
-              <Text style={styles.reviewAccessHint}>
-                For authorized store reviewers and release testing. This enables only features that do not use paid AI services.
-              </Text>
-              <View style={styles.reviewAccessRow}>
-                <TextInput
-                  style={styles.reviewAccessInput}
-                  value={reviewCode}
-                  onChangeText={setReviewCode}
-                  placeholder="Access code"
-                  placeholderTextColor={theme.colors.textDim}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  secureTextEntry
-                  editable={!reviewBusy}
-                  onSubmitEditing={activateReview}
-                />
-                <Pressable
-                  style={[styles.reviewAccessButton, reviewBusy && styles.disabledButton]}
-                  onPress={activateReview}
-                  disabled={reviewBusy}
-                >
-                  {reviewBusy ? (
-                    <ActivityIndicator color={theme.colors.onAccent} size="small" />
-                  ) : (
-                    <Text style={styles.reviewAccessButtonText}>Activate</Text>
-                  )}
-                </Pressable>
-              </View>
-              {reviewMessage ? (
-                <Text style={styles.reviewAccessMessage}>{reviewMessage}</Text>
-              ) : null}
             </View>
             <View style={styles.aboutActions}>
               <Pressable style={styles.aboutBtn} onPress={contact}>
@@ -1583,9 +1270,7 @@ function Empty({
       </View>
       <Text style={styles.emptyTitle}>Your shelf is empty</Text>
       <Text style={styles.emptyBody}>
-        {isPaid
-          ? "Add a PDF or Word file and readFlow will turn it into a clean phone-first reading view."
-          : "Add a PDF or Word file. Free mode gives a limited reading preview; Listen, AI, OCR, and Cloud AI stay behind paid plans."}
+        Add a PDF or Word document.
       </Text>
       <Pressable style={styles.cta} onPress={onAdd} disabled={loading}>
         {loading ? (

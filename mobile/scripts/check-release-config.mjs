@@ -1,289 +1,71 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const mobileDir = path.resolve(process.cwd());
-const repoRoot = path.resolve(mobileDir, "..");
-
-const appJsonPath = path.join(mobileDir, "app.json");
-const easJsonPath = path.join(mobileDir, "eas.json");
-const androidDirPath = path.join(mobileDir, "android");
-const iosDirPath = path.join(mobileDir, "ios");
-const renderYamlPath = path.join(repoRoot, "render.yaml");
-const backendRenderYamlPath = path.join(repoRoot, "backend", "render.yaml");
-const internalRenderYamlPath = path.join(repoRoot, "render.internal.yaml");
-const backendInternalRenderYamlPath = path.join(repoRoot, "backend", "render.internal.yaml");
-const backendEntitlementsPath = path.join(repoRoot, "backend", "src", "services", "entitlements.ts");
-const appSourcePath = path.join(mobileDir, "App.tsx");
-
-function fail(message) {
-  console.error(`FAIL: ${message}`);
-  process.exitCode = 1;
+const root = process.cwd();
+const read = name => fs.readFileSync(path.join(root, name), "utf8");
+const { expo } = JSON.parse(read("app.json"));
+const eas = JSON.parse(read("eas.json"));
+const pkg = JSON.parse(read("package.json"));
+const qa = process.argv.includes("--qa");
+function check(ok, message) {
+  console.log(`${ok ? "OK" : "FAIL"}: ${message}`);
+  if (!ok) process.exitCode = 1;
+}
+function plugin(name) {
+  return expo.plugins.find(value => Array.isArray(value) && value[0] === name)?.[1];
 }
 
-function pass(message) {
-  console.log(`OK: ${message}`);
-}
+check(expo.version === "1.0.67" && expo.android.versionCode === 74, "Candidate is 1.0.67 (74)");
+check(expo.android.package === "com.urmiaworks.readflow", "Android package unchanged");
+check(expo.extra.eas.projectId === "097b0b5a-db90-46b4-b434-60836687b429", "Existing EAS project");
+check(["apiUrl", "appKey", "revenueCatAndroidApiKey", "revenueCatIosApiKey"].every(key => !(key in expo.extra)),
+  "No server or subscription configuration in the app");
+check(!pkg.dependencies["react-native-purchases"] && pkg.dependencies["readflow-offline"],
+  "Direct optional support billing and local document processing");
+check(read(".gitignore").split(/\r?\n/).includes("/android"), "Generated Android build tree is excluded from EAS/Git");
+check(!fs.existsSync(path.join(root, ".easignore")), "No separate EAS ignore file overrides source exclusions");
 
-function readUtf8(filePath) {
-  return fs.readFileSync(filePath, "utf8");
+const permissions = expo.android.permissions;
+check(new Set(permissions).size === permissions.length, "No duplicate Android permissions");
+for (const name of ["android.permission.FOREGROUND_SERVICE", "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
+  "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK", "com.android.vending.BILLING"]) {
+  check(permissions.includes(name), `Required permission: ${name}`);
 }
+for (const name of ["android.permission.RECORD_AUDIO", "android.permission.FOREGROUND_SERVICE_MICROPHONE"]) {
+  check(!permissions.includes(name) && expo.android.blockedPermissions.includes(name), `Unused permission blocked: ${name}`);
+}
+const audio = plugin("expo-audio");
+check(audio?.recordAudioAndroid === false && audio?.microphonePermission === false, "No microphone access");
+check(expo.plugins.includes("./plugins/withAndroidReleaseManifestCleanup"), "Release manifest cleanup enabled");
+check(expo.plugins.includes("./plugins/withSherpaCodegenGradleFix"), "Existing rF AI native build fix retained");
 
-const appJson = JSON.parse(readUtf8(appJsonPath));
-const expo = appJson.expo || {};
-const android = expo.android || {};
-const ios = expo.ios || {};
-const extra = expo.extra || {};
-const easJson = JSON.parse(readUtf8(easJsonPath));
-const EXPECTED_VERSION = "1.0.66";
-const EXPECTED_ANDROID_VERSION_CODE = 73;
-const EXPECTED_IOS_BUILD_NUMBER = "50";
-const EXPECTED_API_URL = "https://readflow-backend-internal.onrender.com";
+const ads = plugin("react-native-google-mobile-ads");
+check(ads?.androidAppId === "ca-app-pub-5199768562686629~3386452834", "Registered AdMob Android app");
+check(ads?.delayAppMeasurementInit === true, "Ad measurement delayed until consent");
+check(expo.extra.admobBannerId === "ca-app-pub-5199768562686629/1338873995", "Registered library banner");
+check(qa || expo.extra.adsTestMode === false, "Production requires deliberate live-ad configuration after QA");
+check(!qa || expo.extra.adsTestMode === true, "QA must use test ads");
+const adSource = read("src/components/LibraryAds.tsx");
+check(/AdsConsent\.requestInfoUpdate/.test(adSource) && /info\.canRequestAds/.test(adSource)
+  && /showPrivacyOptionsForm/.test(adSource), "Consent and privacy choices are wired");
+check(!/Interstitial|AppOpenAd|RewardedAd/.test(adSource), "No interrupting ad formats");
+check(!/LibraryAds|BannerAd|mobileAds/.test(read("src/components/Reader.tsx")), "No ads in the reader");
 
-// 0) This repo releases as a managed Expo app. A local generated android/
-// directory makes EAS ignore android.package/versionCode from app.json and can
-// reintroduce stale permissions such as RECORD_AUDIO.
-if (fs.existsSync(androidDirPath)) {
-  fail("mobile/android exists. Move or remove the generated native directory before EAS release builds.");
-} else {
-  pass("No local Android native directory will override app.json");
+for (const name of ["internal", "production"]) {
+  const profile = eas.build[name];
+  check(profile.distribution === "store" && profile.android.buildType === "app-bundle", `${name} produces an AAB`);
+  check(profile.autoIncrement === false, `${name} keeps the reviewed version code`);
 }
-if (fs.existsSync(iosDirPath)) {
-  fail("mobile/ios exists. Move or remove the generated native directory before EAS iOS release builds.");
-} else {
-  pass("No local iOS native directory will override app.json");
-}
+const importer = read("src/services/PDFParser.ts");
+check(/NativeModules\.ReadFlowOffline/.test(importer) && !/fetch\(|XMLHttpRequest|axios/.test(importer),
+  "Document import uses the on-device engine");
+const app = read("App.tsx");
+check(/const entitlement = FREE_ENTITLEMENT/.test(app) && !/RevenueCat|purchaseTier|restorePurchases|fetch\(/.test(app),
+  "Reading does not depend on subscriptions or a backend");
+const billing = read("native/readflow-offline/android/src/main/java/com/urmiaworks/readflow/offline/ReadFlowSupportModule.java");
+check(/readflow_support_1/.test(billing) && !/ProductType\.SUBS/.test(billing)
+  && /consumeAsync/.test(billing), "Optional support uses a consumable one-time product");
+check(!/sk-[a-zA-Z0-9]{16,}/.test(JSON.stringify(expo)), "No OpenAI secret in the app configuration");
 
-// 1) applicationId
-if (android.package === "com.urmiaworks.readflow") {
-  pass("applicationId is com.urmiaworks.readflow");
-} else {
-  fail(`applicationId expected com.urmiaworks.readflow but got ${android.package || "(missing)"}`);
-}
-
-// 2) Android/iOS store identifiers and build numbers
-if (android.versionCode === EXPECTED_ANDROID_VERSION_CODE) {
-  pass(`Android versionCode is ${EXPECTED_ANDROID_VERSION_CODE}`);
-} else {
-  fail(`Android versionCode expected ${EXPECTED_ANDROID_VERSION_CODE} but got ${String(android.versionCode)}`);
-}
-
-if (ios.bundleIdentifier === "com.urmiaworks.readflow") {
-  pass("iOS bundleIdentifier is com.urmiaworks.readflow");
-} else {
-  fail(`iOS bundleIdentifier expected com.urmiaworks.readflow but got ${ios.bundleIdentifier || "(missing)"}`);
-}
-
-if (String(ios.buildNumber || "") === EXPECTED_IOS_BUILD_NUMBER) {
-  pass(`iOS buildNumber is ${EXPECTED_IOS_BUILD_NUMBER}`);
-} else {
-  fail(`iOS buildNumber expected ${EXPECTED_IOS_BUILD_NUMBER} but got ${String(ios.buildNumber || "(missing)")}`);
-}
-
-// 3) versionName
-if (expo.version === EXPECTED_VERSION) {
-  pass(`versionName is ${EXPECTED_VERSION}`);
-} else {
-  fail(`versionName expected ${EXPECTED_VERSION} but got ${expo.version || "(missing)"}`);
-}
-
-// 4) apiUrl points to the converted production Render service.
-// Render kept the original onrender.com subdomain after the service was renamed
-// from readflow-backend-internal to readflow-backend. Do not point public builds
-// at readflow-backend.onrender.com unless that suspended legacy service is
-// recovered or replaced.
-const apiUrl = String(process.env.EXPO_PUBLIC_API_URL || extra.apiUrl || "").trim();
-if (/^https:\/\/.+\.onrender\.com\/?$/i.test(apiUrl)) {
-  pass("apiUrl points to Render HTTPS URL");
-} else {
-  fail("apiUrl must be a non-empty Render HTTPS URL like https://<service>.onrender.com");
-}
-if (apiUrl.replace(/\/$/, "") === EXPECTED_API_URL) {
-  pass("apiUrl points to the converted production Render service");
-} else {
-  fail(`apiUrl expected ${EXPECTED_API_URL}; do not use the suspended readflow-backend.onrender.com URL`);
-}
-
-// 5) appKey present (must match Render APP_KEY manually)
-const appKey = String(process.env.EXPO_PUBLIC_APP_KEY || extra.appKey || "").trim();
-if (appKey.length >= 16) {
-  pass("appKey is set (verify it matches Render APP_KEY)");
-} else {
-  fail("appKey is missing/too short. Set expo.extra.appKey to the same APP_KEY used in Render");
-}
-
-// 6) Android permissions stay review-friendly for a reader app.
-const permissions = Array.isArray(android.permissions) ? android.permissions : [];
-const duplicatePermissions = permissions.filter((p, i) => permissions.indexOf(p) !== i);
-if (duplicatePermissions.length === 0) {
-  pass("Android permissions are not duplicated");
-} else {
-  fail(`Duplicate Android permissions: ${duplicatePermissions.join(", ")}`);
-}
-if (permissions.includes("android.permission.RECORD_AUDIO")) {
-  fail("RECORD_AUDIO is present but readFlow does not record audio. Remove it before Play release.");
-} else {
-  pass("No Android microphone permission requested");
-}
-if (permissions.includes("com.android.vending.BILLING")) {
-  pass("Google Play Billing permission is present for subscription builds");
-} else {
-  fail("Google Play Billing permission is missing. Subscription builds need com.android.vending.BILLING.");
-}
-
-const blockedPermissions = Array.isArray(android.blockedPermissions) ? android.blockedPermissions : [];
-const requiredForegroundPermissions = [
-  "android.permission.FOREGROUND_SERVICE",
-  "android.permission.FOREGROUND_SERVICE_DATA_SYNC",
-  "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-];
-const missingForegroundPermissions = requiredForegroundPermissions.filter(
-  (permission) => !permissions.includes(permission)
-);
-if (missingForegroundPermissions.length === 0) {
-  pass("Foreground-service permissions are present for media controls and model downloads");
-} else {
-  fail(`Required foreground-service permissions are missing: ${missingForegroundPermissions.join(", ")}`);
-}
-const requiredBlockedPermissions = [
-  "android.permission.FOREGROUND_SERVICE_MICROPHONE",
-  "android.permission.RECORD_AUDIO",
-];
-const missingBlockedPermissions = requiredBlockedPermissions.filter(
-  (permission) => !blockedPermissions.includes(permission)
-);
-if (missingBlockedPermissions.length === 0) {
-  pass("Microphone and recording permissions are blocked");
-} else {
-  fail(`Block microphone/recording permissions before Play release: ${missingBlockedPermissions.join(", ")}`);
-}
-
-function pluginConfig(name) {
-  const plugins = Array.isArray(expo.plugins) ? expo.plugins : [];
-  for (const plugin of plugins) {
-    if (plugin === name) return {};
-    if (Array.isArray(plugin) && plugin[0] === name) return plugin[1] || {};
-  }
-  return null;
-}
-
-const audioPlugin = pluginConfig("expo-audio");
-if (audioPlugin && audioPlugin.recordAudioAndroid === false && audioPlugin.microphonePermission === false) {
-  pass("expo-audio is configured without microphone access");
-} else {
-  fail("expo-audio must set recordAudioAndroid:false and microphonePermission:false for Play release");
-}
-
-if (pluginConfig("./plugins/withAndroidReleaseManifestCleanup")) {
-  pass("Android release manifest cleanup plugin is enabled");
-} else {
-  fail("Android release manifest cleanup plugin must strip unused microphone and foreground service declarations");
-}
-
-const backgroundModes = ios.infoPlist?.UIBackgroundModes;
-if (Array.isArray(backgroundModes) && backgroundModes.includes("audio")) {
-  fail("iOS background audio mode is enabled before the separate iOS lifecycle QA pass");
-} else {
-  pass("iOS background-audio mode remains disabled pending separate iOS QA");
-}
-if (ios.infoPlist?.NSMicrophoneUsageDescription) {
-  fail("iOS microphone usage description is present but readFlow does not record audio");
-} else {
-  pass("No iOS microphone usage description declared");
-}
-if (ios.infoPlist?.ITSAppUsesNonExemptEncryption === false) {
-  pass("iOS export compliance declares no non-exempt encryption");
-} else {
-  fail("iOS infoPlist must set ITSAppUsesNonExemptEncryption:false for App Store export compliance");
-}
-
-// 7) EAS profiles should be explicit for both stores.
-const internalProfile = easJson.build?.internal || {};
-const productionProfile = easJson.build?.production || {};
-if (internalProfile.distribution === "store" && internalProfile.ios?.simulator === false) {
-  pass("EAS internal profile is configured for an iOS device App Store/TestFlight archive");
-} else {
-  fail("EAS internal profile must set distribution:store and ios.simulator:false for iOS TestFlight builds");
-}
-if (productionProfile.distribution === "store" && productionProfile.ios?.simulator === false) {
-  pass("EAS production profile is configured for an iOS device App Store archive");
-} else {
-  fail("EAS production profile must set distribution:store and ios.simulator:false for iOS App Store builds");
-}
-
-// 8) OpenAI key not inside mobile app
-const mobileSource = readUtf8(path.join(mobileDir, "src", "config.ts"));
-if (/OPENAI_API_KEY|sk-[A-Za-z0-9]/.test(mobileSource)) {
-  fail("Possible OpenAI key reference found in mobile source");
-} else {
-  pass("No OpenAI key reference in mobile config source");
-}
-
-// 9) Mobile sends an app-user id so public users do not share one anonymous quota bucket.
-const identitySource = readUtf8(path.join(mobileDir, "src", "services", "AppIdentity.ts"));
-if (/readflow:appUserId/.test(identitySource) && /x-app-user-id/.test(mobileSource)) {
-  pass("Mobile sends a stable app-user id header for backend quotas");
-} else {
-  fail("Mobile must send x-app-user-id from a stable install identity before public release");
-}
-
-// 10) Public release config has ENTITLEMENTS_DEV_OVERRIDE=false
-function hasDevOverrideFalse(content) {
-  return /-\s*key:\s*ENTITLEMENTS_DEV_OVERRIDE[\s\S]{0,120}?value:\s*"?false"?/m.test(content);
-}
-
-const renderYaml = readUtf8(renderYamlPath);
-const backendRenderYaml = readUtf8(backendRenderYamlPath);
-
-if (hasDevOverrideFalse(renderYaml) && hasDevOverrideFalse(backendRenderYaml)) {
-  pass("Public release blueprints set ENTITLEMENTS_DEV_OVERRIDE=false");
-} else {
-  fail("Public release blueprint must set ENTITLEMENTS_DEV_OVERRIDE=false in render.yaml and backend/render.yaml");
-}
-
-// 11) QA reviewer access must be explicit, cost-free, and impossible to turn
-// on from the tracked production app configuration.
-const internalRenderYaml = readUtf8(internalRenderYamlPath);
-const backendInternalRenderYaml = readUtf8(backendInternalRenderYamlPath);
-const entitlementSource = readUtf8(backendEntitlementsPath);
-const qaHeaderIsGuarded =
-  /REVIEWER_QA_MODE\) h\["x-readflow-qa-reviewer"\] = "1"/.test(mobileSource) &&
-  /DEV_OVERRIDE\s*&&[\s\S]{0,160}?x-readflow-qa-reviewer/.test(entitlementSource) &&
-  /tierByKey\("reviewer"\)/.test(entitlementSource);
-if (extra.qaReviewerMode !== true && qaHeaderIsGuarded) {
-  pass("Production config cannot request the internal QA Reviewer override");
-} else {
-  fail("QA Reviewer override must require REVIEWER_QA_MODE plus backend DEV_OVERRIDE and stay off in app.json");
-}
-
-function hasCostFreeReviewerDefault(content) {
-  return /-\s*key:\s*ENTITLEMENTS_DEV_OVERRIDE[\s\S]{0,120}?value:\s*"?true"?[\s\S]{0,180}?-\s*key:\s*DEV_DEFAULT_TIER[\s\S]{0,120}?value:\s*reviewer/m.test(content);
-}
-if (
-  hasCostFreeReviewerDefault(internalRenderYaml) &&
-  hasCostFreeReviewerDefault(backendInternalRenderYaml)
-) {
-  pass("Internal QA blueprints default to the no-vendor-cost Reviewer tier");
-} else {
-  fail("Internal QA blueprints must use DEV_DEFAULT_TIER=reviewer");
-}
-
-// 12) RevenueCat must handle both upgrades and inactive/expired entitlements.
-// Ignoring an empty CustomerInfo leaves a paid tier visible until restart.
-const appSource = readUtf8(appSourcePath);
-const clearsInactiveRevenueCatTier =
-  /if\s*\(!purchasedTier\)\s*\{[\s\S]{0,240}?revenueCatTierRef\.current\s*=\s*null;[\s\S]{0,240}?refreshEntitlementAndUsage\(true\)/.test(
-    appSource
-  );
-const ignoresInactiveCustomerInfo =
-  /if\s*\(!active\s*\|\|\s*!activeRevenueCatTier\(customerInfo\)\)\s*return/.test(appSource);
-if (clearsInactiveRevenueCatTier && !ignoresInactiveCustomerInfo) {
-  pass("RevenueCat inactive and expired entitlement updates force a backend refresh");
-} else {
-  fail("RevenueCat CustomerInfo updates must clear inactive tiers and refresh backend entitlements");
-}
-
-if (process.exitCode) {
-  console.error("\nRelease config check failed. Fix the items above before running EAS build.");
-} else {
-  console.log("\nRelease config check passed. Safe to proceed with build.");
-}
+if (process.exitCode) console.error("Configuration checks failed. Do not submit.");
+else console.log("Configuration checks passed. Native/device QA and store/account checks are still required.");

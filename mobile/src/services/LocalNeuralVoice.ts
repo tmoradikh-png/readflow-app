@@ -49,7 +49,7 @@ export function getLocalNeuralVoiceStatus(): LocalNeuralVoiceStatus {
     title: supportedDevice ? "Checking rF AI" : "Phone may be too old",
     detail: supportedDevice
       ? "Checking whether the native rF AI engine and voice model are ready on this phone."
-      : "rF AI needs a newer phone. Phone voice still works on Reader Plus and higher without cloud AI cost.",
+      : "rF AI needs a newer phone. Phone voice remains free.",
   };
 }
 
@@ -155,7 +155,7 @@ function buildStatus({
   if (!supportedDevice) {
     title = "Phone may be too old";
     detail =
-      "rF AI needs Android 7 or newer, or iOS 13 or newer. Phone voice still works on Reader Plus and higher without cloud AI cost.";
+      "rF AI needs Android 7 or newer, or iOS 13 or newer. Phone voice remains free.";
   } else if (!nativeAvailable) {
     title = "Needs the new app build";
     detail =

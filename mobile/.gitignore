@@ -3,3 +3,9 @@ node_modules/
 dist/
 *.log
 .env
+/android
+/ios
+.env.*
+*.jks
+*.keystore
+credentials.json

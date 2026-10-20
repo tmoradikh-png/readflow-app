@@ -1,5 +1,45 @@
 # readFlow Android Release Guide (Play Store)
 
+## Free Offline Candidate - 2026-10-21
+
+Current work is candidate 1.0.67 (74), not a released app. Read
+`FREE_RELEASE_STATUS.md` first. Historical paid-release instructions below do
+not apply to this candidate. Production remains 1.0.66 (73), last checked
+October 20. No service cancellation or new Play submission is complete.
+
+Run `npm run check:qa` in `mobile` for test-ad builds. Production
+`npm run check:release` deliberately rejects `extra.adsTestMode: true`.
+Do not enable live ads or submit production before real-device import, OCR,
+audio, support billing and consent QA, public privacy/app-ads.txt deployment,
+and Play Ads/Data safety updates. Existing regression passes are not evidence
+that the new native importer preserves every document correctly.
+
+For the owner-authorized Expo upload, use the mobile folder as the explicit
+archive root. Only source and bundled OCR models are approved for upload;
+private books, backups and credentials must remain excluded. Included credit
+only: check the account allowance and never authorize overage.
+
+```powershell
+Set-Location C:\Users\Greencom\OneDrive\Documents\aiChat\ReadFlow\mobile
+$env:TEMP = "$PWD\..\tmp"
+$env:TMP = $env:TEMP
+$env:npm_config_cache = "$env:TEMP\npm-cache"
+$env:EAS_NO_VCS = '1'
+$env:EAS_PROJECT_ROOT = "$PWD"
+npx --yes eas-cli build --platform android --profile preview --non-interactive --no-wait
+```
+
+Keep `.gitignore` patterns `/android` and `/ios` root-anchored, without trailing
+slashes: generated app folders must be excluded while the native module's
+Android source stays included. EAS_NO_VCS alone does not prevent repository-root
+discovery. Inspect the upload archive after any scope/ignore change.
+
+After QA, commit scoped source/version/docs, tag before/after and push using
+GitHub account tmoradikh-png. Preserve unrelated website/readflow/index.html,
+backup.ab, pic/ and owner tester files. Retire legacy paid services only after
+checking subscribers and validating the replacement. Expo Starter still has
+an upcoming renewal; cancellation remains outstanding.
+
 App: **readFlow** · Package: **com.urmiaworks.readflow**
 Org: Urmia Works · Android package is permanent after first Play upload
 

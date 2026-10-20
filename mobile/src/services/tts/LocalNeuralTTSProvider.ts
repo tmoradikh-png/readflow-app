@@ -251,7 +251,7 @@ export class LocalNeuralTTSProvider implements TTSProvider {
       if (mySeq !== this.seq || error instanceof GenerationCancelledError) return;
       opts.onFallback?.({
         reason: "local_unavailable",
-        message: "rF AI could not play on this phone. Use Phone voice or Cloud AI on an eligible plan for now.",
+        message: "rF AI could not play on this phone. Use the free Phone voice for now.",
       });
       opts.onError?.(error);
     };

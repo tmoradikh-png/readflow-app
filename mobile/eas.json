@@ -34,7 +34,7 @@
       }
     },
     "production": {
-      "autoIncrement": true,
+      "autoIncrement": false,
       "distribution": "store",
       "android": {
         "buildType": "app-bundle"

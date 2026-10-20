@@ -24,10 +24,8 @@ import { Sentence, TextReflow } from "../services/TextReflow";
 import { Bookmark, Bookmarks } from "../services/Bookmarks";
 import { createTTSProvider, TTSProvider } from "../services/tts";
 import { Controls, ReadingSettings } from "./Controls";
-import { AIPanel } from "./AIPanel";
 import { BookmarkPanel } from "./BookmarkPanel";
 import { ThemedNotice, type ThemedNoticeAction } from "./ThemedNotice";
-import { UpgradeSheet, type UpgradeBilling, type UpgradePlanKey } from "./UpgradeSheet";
 import { EntitlementSnapshot } from "../services/Entitlements";
 import { ReadingPreferences, VoiceEngine } from "../services/Preferences";
 import { getReadingLanguage } from "../services/ReadingLanguages";
@@ -71,12 +69,6 @@ interface Props {
   startPosition?: Partial<ReadingPosition>;
   /** Reports the latest reading position so the Library can persist it. */
   onProgress?: (position: ReadingPosition, totalPages: number) => void | Promise<void>;
-  purchasingAvailable?: boolean;
-  purchaseSetupLoading?: boolean;
-  purchasing?: boolean;
-  purchaseError?: string | null;
-  onPurchasePlan?: (planKey: UpgradePlanKey, billing: UpgradeBilling) => void;
-  onRestorePurchases?: () => void;
   onBack: () => void;
 }
 
@@ -117,7 +109,7 @@ const LONG_TEXT_TAP_CHUNK_WORDS = 24;
 const TITLE_PAUSE_MS = 220;
 const PAGE_DIVIDER_ESTIMATED_HEIGHT = 38;
 
-type RuntimeVoiceMode = "natural" | "device" | "local";
+type RuntimeVoiceMode = "device" | "local";
 
 function preferredVoiceMode(
   preferences: ReadingPreferences,
@@ -125,45 +117,20 @@ function preferredVoiceMode(
   localVoiceReady?: boolean
 ): RuntimeVoiceMode {
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
-  if (
-    entitlement.tier === "free" &&
-    entitlement.features.localVoice &&
-    readingLanguage.rfAi &&
-    localVoiceReady === true
-  ) {
-    return "local";
-  }
-  if (
-    preferences.voiceEngine === "local_ai" &&
-    entitlement.features.localVoice &&
-    readingLanguage.rfAi &&
-    localVoiceReady !== false
-  ) {
-    return "local";
-  }
-  if (
-    preferences.voiceEngine === "cloud" &&
-    readingLanguage.cloudAiVoice &&
-    entitlement.features.cloudVoice &&
-    entitlement.limits.cloudVoiceCharsPerMonth > 0
-  ) {
-    return "natural";
-  }
+  if (preferences.voiceEngine === "local_ai" && readingLanguage.rfAi && localVoiceReady !== false) return "local";
   return "device";
 }
 
-function providerKindFor(mode: RuntimeVoiceMode): "device" | "cloud" | "local" {
-  return mode === "natural" ? "cloud" : mode;
+function providerKindFor(mode: RuntimeVoiceMode): "device" | "local" {
+  return mode;
 }
 
 function voiceIdFor(mode: RuntimeVoiceMode, preferences: ReadingPreferences): string | undefined {
-  if (mode === "natural") return preferences.cloudVoiceId;
   if (mode === "device") return preferences.deviceVoiceId;
   return undefined;
 }
 
 function voiceLabelFor(mode: RuntimeVoiceMode): string {
-  if (mode === "natural") return "Cloud AI";
   if (mode === "local") return "rF AI";
   return "Device voice";
 }
@@ -192,7 +159,6 @@ async function speechForChunk(
 }
 
 function voiceEngineForMode(mode: RuntimeVoiceMode): VoiceEngine {
-  if (mode === "natural") return "cloud";
   if (mode === "local") return "local_ai";
   return "device";
 }
@@ -206,12 +172,6 @@ export function Reader({
   freePageLimit = 100,
   startPosition,
   onProgress,
-  purchasingAvailable,
-  purchaseSetupLoading,
-  purchasing,
-  purchaseError,
-  onPurchasePlan,
-  onRestorePurchases,
   onBack,
 }: Props) {
   const theme = useAppTheme();
@@ -268,7 +228,6 @@ export function Reader({
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoFollow, setAutoFollow] = useState(true);
   const [immersive, setImmersive] = useState(false);
-  const [showAI, setShowAI] = useState(false);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
@@ -283,10 +242,6 @@ export function Reader({
   const [voiceMode, setVoiceMode] = useState<RuntimeVoiceMode>(
     preferredVoiceMode(preferences, entitlement)
   );
-  const [paywallTitle, setPaywallTitle] = useState("Paid feature");
-  const [paywallBody, setPaywallBody] = useState(
-    "This feature is available on paid plans. Free users can continue with the limited manual reading preview."
-  );
   const [controlsOpen, setControlsOpen] = useState(false);
   // Sound master switch. OFF (default) = pure reading: tapping text won't start
   // the voice, and the control bar collapses/hides with the rest of the chrome
@@ -297,20 +252,9 @@ export function Reader({
   // Header + page-nav + (when sound off) the control bar. Tap the page to toggle.
   const [chromeVisible, setChromeVisible] = useState(true);
 
-  const canUseAI = Boolean(entitlement.features.ai);
   const canUseOcr = Boolean(entitlement.features.ocr);
-  const canUseDeviceReadAloud =
-    entitlement.tier !== "free" &&
-    (entitlement.features.unlimitedLibrary ||
-      entitlement.features.ai ||
-      entitlement.features.ocr ||
-      entitlement.features.cloudVoice);
+  const canUseDeviceReadAloud = true;
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
-  const canUseCloudVoice = Boolean(
-    readingLanguage.cloudAiVoice &&
-      entitlement.features.cloudVoice &&
-      entitlement.limits.cloudVoiceCharsPerMonth > 0
-  );
   const localVoiceReady = localVoiceStatus?.engineInstalled;
   const canUseRfVoicePlan = Boolean(entitlement.features.localVoice && readingLanguage.rfAi);
   const canUseRfVoice = Boolean(canUseRfVoicePlan && localVoiceReady);
@@ -325,15 +269,13 @@ export function Reader({
       {
         engine: "device" as const,
         label: "Device",
-        detail: canUseDeviceReadAloud ? "Included" : "Reader+",
+        detail: "Free",
         locked: !canUseDeviceReadAloud,
       },
       {
         engine: "local_ai" as const,
         label: "rF AI",
-        detail: !canUseRfVoicePlan
-          ? "AI Pro"
-          : !readingLanguage.rfAi
+        detail: !readingLanguage.rfAi
           ? "English"
           : localVoiceStatus == null
             ? "Checking"
@@ -342,15 +284,8 @@ export function Reader({
               : "Download",
         locked: !canUseRfVoice,
       },
-      {
-        engine: "cloud" as const,
-        label: "Cloud AI",
-        detail: readingLanguage.cloudAiVoice ? (canUseCloudVoice ? "Premium" : "Locked") : "QA",
-        locked: !canUseCloudVoice,
-      },
     ],
     [
-      canUseCloudVoice,
       canUseRfVoice,
       canUseDeviceReadAloud,
       canUseRfVoicePlan,
@@ -437,11 +372,7 @@ export function Reader({
   const flatRef = useRef<Sentence[]>([]);
   const docRef = useRef(doc); // current doc for stable callbacks
   docRef.current = doc;
-  const backgroundPlaybackAllowed =
-    (entitlement.tier === "reviewer" ||
-      entitlement.tier === "ai_pro" ||
-      entitlement.tier === "power") &&
-    (voiceMode === "local" || voiceMode === "natural");
+  const backgroundPlaybackAllowed = voiceMode === "local";
   backgroundPlaybackAllowedRef.current = backgroundPlaybackAllowed;
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [loadingPageMsg, setLoadingPageMsg] = useState<string | null>(null);
@@ -536,15 +467,6 @@ export function Reader({
     ttsRef.current = createTTSProvider(providerKindFor(desiredVoiceMode));
     setVoiceMode(desiredVoiceMode);
   }, [desiredVoiceMode, voiceMode]);
-  useEffect(() => {
-    if (canUseCloudVoice || voiceMode !== "natural") return;
-    epochRef.current++;
-    const previousProvider = ttsRef.current;
-    if (previousProvider.dispose) void previousProvider.dispose();
-    else void previousProvider.stop();
-    ttsRef.current = createTTSProvider("device");
-    setVoiceMode("device");
-  }, [canUseCloudVoice, voiceMode]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
@@ -571,8 +493,7 @@ export function Reader({
       flushLocalVoiceUsage();
       if (!playingRef.current) return;
 
-      // AI Pro and Power can continue generated audio with lock-screen controls.
-      // Free and Reader Plus remain foreground-only, as does Android device TTS.
+      // Local generated audio uses the existing foreground playback service.
       if (backgroundPlaybackAllowedRef.current) return;
       epochRef.current++;
       playingRef.current = false;
@@ -583,24 +504,10 @@ export function Reader({
   }, []);
 
   function openFeatureLock(title: string, body: string) {
-    setPaywallTitle(title);
-    setPaywallBody(body);
-    setShowPaywall(true);
+    setReaderNotice({ title, body });
   }
 
-  function openReadAloudOffer() {
-    if (entitlement.features.localVoice && readingLanguage.rfAi) {
-      openFeatureLock(
-        "Try rF AI free",
-        "Free includes 5 minutes of rF AI reading each day. Return to the shelf, open Voice, choose rF AI, and download the optional offline voice pack."
-      );
-      return;
-    }
-    openFeatureLock(
-      "Unlock read-aloud",
-      "Listen mode starts with Reader Plus. Free keeps the reading preview manual, while Reader Plus unlocks device voice for full native-text books."
-    );
-  }
+  function openReadAloudOffer() {}
 
   function openLocalVoiceSetupNotice(body?: string) {
     setReaderNotice({
@@ -619,21 +526,8 @@ export function Reader({
     return true;
   }
 
-  function localVoiceQuotaExhausted(): boolean {
-    return (
-      localVoiceDailyLimit > 0 &&
-      localVoiceSecondsRef.current + localVoicePendingSecondsRef.current >= localVoiceDailyLimit
-    );
-  }
-
-  function openLocalVoiceLimitOffer() {
-    openFeatureLock(
-      "Daily rF AI allowance finished",
-      entitlement.tier === "reader_plus"
-        ? "Reader Plus includes 30 minutes of rF AI each day. AI Pro includes unlimited downloaded rF AI, OCR, AI questions, and a Cloud AI allowance."
-        : "Free includes 5 minutes of rF AI each day. Reader Plus increases this to 30 minutes each day, while AI Pro includes unlimited downloaded rF AI."
-    );
-  }
+  function localVoiceQuotaExhausted(): boolean { return false; }
+  function openLocalVoiceLimitOffer() {}
 
   function flushLocalVoiceUsage() {
     const seconds = Math.floor(localVoicePendingSecondsRef.current);
@@ -665,17 +559,6 @@ export function Reader({
   }
 
   function selectVoiceEngine(engine: VoiceEngine) {
-    if (engine === "device" && !canUseDeviceReadAloud) {
-      openReadAloudOffer();
-      return;
-    }
-    if (engine === "local_ai" && !entitlement.features.localVoice) {
-      openFeatureLock(
-        "Unlock rF AI voice",
-        "rF AI voice is included in Reader Plus, AI Pro, and Power. Free includes a 5-minute daily preview when rF AI is available for the book language."
-      );
-      return;
-    }
     if (engine === "local_ai" && !readingLanguage.rfAi) {
       openFeatureLock(
         "rF AI language pack",
@@ -693,20 +576,6 @@ export function Reader({
       openLocalVoiceLimitOffer();
       return;
     }
-    if (engine === "cloud" && !readingLanguage.cloudAiVoice) {
-      openFeatureLock(
-        "Cloud AI voice QA",
-        `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Phone voice now; we will add this language after voice quality passes testing.`
-      );
-      return;
-    }
-    if (engine === "cloud" && !canUseCloudVoice) {
-      openFeatureLock(
-        "Cloud AI voice",
-        "Cloud AI is our highest-quality voice and is included in AI Pro and Power. Phone voice and rF AI stay available on eligible plans without OpenAI cost."
-      );
-      return;
-    }
     if (engine === preferences.voiceEngine) return;
     epochRef.current++;
     playingRef.current = false;
@@ -716,27 +585,11 @@ export function Reader({
   }
 
   function voiceAccessBlocked(): boolean {
-    if (preferences.voiceEngine === "cloud" && !canUseCloudVoice) {
-      openFeatureLock(
-        "Unlock Cloud AI voice",
-        readingLanguage.cloudAiVoice
-          ? "Cloud AI voice is included in AI Pro and Power with a monthly allowance. Upgrade to use our highest-quality AI voice."
-          : `Cloud AI voice is not release-ready for ${readingLanguage.label} yet. Use Phone voice on eligible plans while we add this language after quality testing.`
-      );
-      return true;
-    }
     if (preferences.voiceEngine !== "local_ai") return false;
-    if (!entitlement.features.localVoice) {
-      openFeatureLock(
-        "Unlock rF AI voice",
-        "rF AI voice is included in Reader Plus, AI Pro, and Power. Free includes a 5-minute daily preview when rF AI is available for the book language."
-      );
-      return true;
-    }
     if (!readingLanguage.rfAi) {
       openFeatureLock(
         "rF AI language pack",
-        `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} on eligible plans until we add this language pack.`
+        `rF AI is available for English right now. Use Phone voice for ${readingLanguage.label} until we add this language pack.`
       );
       return true;
     }
@@ -763,11 +616,7 @@ export function Reader({
   }
 
   function openOcrLimitOffer() {
-    const body =
-      entitlement.tier === "ai_pro"
-          ? "AI Pro includes 750 OCR pages each month. The remaining scanned pages are saved and can continue after your monthly limit resets. Power raises OCR to 2,500 pages/month."
-          : "Scanned pages use OCR. AI Pro includes 750 OCR pages/month, and Power includes 2,500.";
-    openFeatureLock("More OCR pages", body);
+    setReaderNotice({ title: "OCR paused", body: ocrProgress?.message || "Resume OCR from the library." });
   }
 
   function toggleOcrPause() {
@@ -810,10 +659,6 @@ export function Reader({
         setReaderNotice(null);
         return true;
       }
-      if (showAI) {
-        setShowAI(false);
-        return true;
-      }
       if (showBookmarks) {
         setShowBookmarks(false);
         return true;
@@ -831,7 +676,7 @@ export function Reader({
     });
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [immersive, readerNotice, showAI, showBookmarks, showOriginal, showPaywall]);
+  }, [immersive, readerNotice, showBookmarks, showOriginal, showPaywall]);
 
   // Resume at the stable page-relative position from the Library.
   useEffect(() => {
@@ -933,10 +778,7 @@ export function Reader({
     const target = onPage[Math.min(a.within, onPage.length - 1)];
     return target ? target.id : indexRef.current;
   }
-  function planPageCap(): number {
-    const cap = Number(entitlement.limits.perDocPageCap ?? freePageLimit);
-    return Number.isFinite(cap) && cap > 0 ? cap : 0;
-  }
+  function planPageCap(): number { return 0; }
   function freeCap(): number {
     if (doc.truncated && doc.pageCap) return Math.min(totalPages, doc.pageCap);
     const cap = planPageCap();
@@ -946,10 +788,7 @@ export function Reader({
     return Boolean(doc.truncated && doc.pageCap && page > doc.pageCap);
   }
   function openPageLimitOffer() {
-    openFeatureLock(
-      "Page limit reached",
-      `This plan includes the first ${doc.pageCap || planPageCap() || freePageLimit} pages of this document. Upgrade to Reader Plus for full native-text books.`
-    );
+    setReaderNotice({ title: "Incomplete saved copy", body: "Reopen this book from the shelf to import the remaining pages." });
   }
 
   function pageWithinIndex(sentence: Sentence, list = flatRef.current): number {
@@ -1535,22 +1374,7 @@ export function Reader({
       lockScreenAlbum: "readFlow",
       allowBackgroundPlayback: backgroundPlaybackAllowedRef.current,
       onFallback: (info) => {
-        if (info.reason === "quota" && !cloudVoiceLimitWarnedRef.current) {
-          cloudVoiceLimitWarnedRef.current = true;
-            openFeatureLock(
-              "AI voice allowance used",
-            "Your Cloud AI allowance is used for this month. Phone voice can keep reading on Reader Plus and higher without cloud AI cost. You can renew next month, upgrade to Power, or buy an AI voice pack when purchases are live."
-          );
-        } else if (info.reason === "local_unavailable" && !localVoiceWarnedRef.current) {
-          localVoiceWarnedRef.current = true;
-        } else if (info.reason === "language_unsupported" && !cloudVoiceLanguageWarnedRef.current) {
-          cloudVoiceLanguageWarnedRef.current = true;
-          openFeatureLock(
-            "Cloud AI voice QA",
-            info.message ||
-              "Cloud AI voice is not release-ready for this language yet. Phone voice can keep reading on eligible plans."
-          );
-        }
+        if (info.reason === "local_unavailable") localVoiceWarnedRef.current = true;
       },
       onStart: () => {
         if (myEpoch !== epochRef.current) return;
@@ -1699,7 +1523,6 @@ export function Reader({
       Math.min(totalPages, requestedPage ?? reflowPosition?.page ?? currentPageRef.current)
     );
     stop();
-    setShowAI(false);
     setShowBookmarks(false);
     showOriginalRef.current = true;
     originalPageRef.current = target;
@@ -1798,18 +1621,18 @@ export function Reader({
     if (!canUseOcr) {
       openFeatureLock(
         "Scanned page",
-        `Page ${p} is a scanned page. Reading it needs OCR, available in AI Pro and Power with an internet connection.`
+        `Page ${p} is a scanned page. Reading it needs on-device OCR.`
       );
       return;
     }
     if (!doc.docToken || ocrOfflineRef.current) {
       openFeatureLock(
-        "Not saved for offline yet",
-        `Page ${p} hasn't been saved for offline reading. Reconnect to the internet to load it — then it'll be available in airplane mode.`
+        "OCR paused",
+        `Page ${p} has no extracted text yet. Resume OCR from the library, or re-import the saved PDF.`
       );
       return;
     }
-    // Online + paid: prioritise OCR for this page and jump as soon as it loads.
+    // Prioritise local OCR for this page and jump as soon as it loads.
     OcrLoader.setPriority(doc.docId, p);
     pendingJumpRef.current = p;
     setLoadingPageMsg(`Loading page ${p}…`);
@@ -1909,15 +1732,15 @@ export function Reader({
             <Text style={styles.dim}>No readable text found.</Text>
             {doc.needsPaidOcr ? (
               <Text style={styles.dim}>
-                This document needs OCR, available on paid plans with an internet connection.
+                This document needs on-device OCR.
               </Text>
             ) : doc.scanned && ocrOfflineRef.current ? (
               <Text style={styles.dim}>
-                You're offline. Reconnect to the internet to load this scanned document.
+                OCR is paused. Resume it from the library to process this scanned document.
               </Text>
             ) : doc.scanned ? (
               <Text style={styles.dim}>
-                This looks like a scanned PDF. OCR requires a paid plan and an internet connection.
+                This looks like a scanned PDF. Reopen it from the library to start on-device OCR.
               </Text>
             ) : null}
           </>
@@ -2004,22 +1827,6 @@ export function Reader({
             <Pressable onPress={() => navigatePage(currentPage - 1)} hitSlop={8} disabled={currentPage <= 1}>
               <Text style={[styles.pageNavBtn, currentPage <= 1 && styles.disabled]}>Prev</Text>
             </Pressable>
-            <Pressable
-              hitSlop={8}
-              style={styles.pageNavAi}
-              onPress={() => {
-                if (canUseAI) {
-                  setShowAI(true);
-                  return;
-                }
-                openFeatureLock(
-                  "Unlock AI",
-                  "Summaries, explanations, Q&A, and capped Cloud AI are part of AI Pro. Reader Plus keeps Phone voice available without cloud voice cost."
-                );
-              }}
-            >
-              <Text style={styles.pageNavAiText}>{canUseAI ? "AI" : "AI Pro"}</Text>
-            </Pressable>
             {doc.kind === "pdf" && doc.sourceUri ? (
               <Pressable hitSlop={8} style={styles.pageNavAi} onPress={toggleOriginalView}>
                 <Text style={styles.pageNavAiText}>{showOriginal ? "Reflow" : "Original"}</Text>
@@ -2035,13 +1842,6 @@ export function Reader({
               </Text>
             </Pressable>
           </View>
-          {doc.needsPaidOcr && !canUseOcr ? (
-            <View style={styles.lockBanner}>
-              <Text style={styles.lockBannerText}>
-                This scanned PDF needs OCR. Upgrade to AI Pro or Power to read it.
-              </Text>
-            </View>
-          ) : null}
           {loadingPageMsg ? (
             <View style={styles.loadingBanner}>
               <ActivityIndicator color={theme.colors.accent} size="small" />
@@ -2051,25 +1851,8 @@ export function Reader({
             <View style={styles.progressWrap}>
               <Text style={styles.progressLabel}>{ocrProgressLabel()}</Text>
               <View style={styles.progressTrack}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${Math.max(2, ocrProgress.percent)}%` },
-                    (ocrProgress.offline || ocrProgress.pausedReason) && styles.progressFillOffline,
-                  ]}
-                />
+                <View style={[styles.progressFill, { width: `${Math.max(2, ocrProgress.percent)}%` }]} />
               </View>
-              {ocrProgress.pausedReason === "quota" ? (
-                <View style={styles.progressActions}>
-                  <Text style={styles.progressHint}>
-                    {ocrProgress.pending} scanned pages remain. Continue after reset, or upgrade for a
-                    higher monthly OCR limit.
-                  </Text>
-                  <Pressable style={styles.progressButton} onPress={openOcrLimitOffer}>
-                    <Text style={styles.progressButtonText}>See options</Text>
-                  </Pressable>
-                </View>
-              ) : null}
               <View style={styles.progressActionRow}>
                 {ocrProgress.pausedReason === "user" || !ocrProgress.pausedReason ? (
                   <Pressable
@@ -2225,18 +2008,6 @@ export function Reader({
         />
       )}
 
-      {/* AI panel */}
-      {showAI && (
-        <AIPanel
-          contextText={flat
-            .filter((s) => Math.abs(s.page - currentPage) <= 2)
-            .map((s) => s.text)
-            .join(" ")}
-          language={readingLanguage.aiLanguage || langCode}
-          onClose={() => setShowAI(false)}
-        />
-      )}
-
       {/* bookmarks & go-to-page panel */}
       {showBookmarks && (
         <BookmarkPanel
@@ -2259,20 +2030,6 @@ export function Reader({
         onClose={() => setReaderNotice(null)}
       />
 
-      {/* upgrade notice / paywall */}
-      <UpgradeSheet
-        activeTier={entitlement.tier}
-        visible={showPaywall}
-        reasonTitle={paywallTitle}
-        reasonBody={paywallBody}
-        onClose={() => setShowPaywall(false)}
-        purchasingAvailable={purchasingAvailable}
-        purchaseSetupLoading={purchaseSetupLoading}
-        purchasing={purchasing}
-        purchaseError={purchaseError}
-        onPurchase={onPurchasePlan}
-        onRestore={onRestorePurchases}
-      />
     </View>
   );
 }

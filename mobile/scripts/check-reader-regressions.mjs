@@ -52,9 +52,7 @@ const hybridTextModule = loadTypeScript(
   }
 );
 const planModule = loadTypeScript("../backend/src/config/plans.ts");
-const pdfExtractionModule = loadTypeScript("../backend/src/services/pdfExtract.ts", {
-  "pdf-parse/lib/pdf-parse.js": async () => ({ numpages: 0 }),
-});
+const pdfExtractionModule = loadTypeScript("src/services/offline/PdfLayout.ts");
 const { TextReflow, classifyVisualPage } = textModule;
 const { buildSpeechChunk, resumeSpeechOffset } = speechModule;
 const {
@@ -1224,7 +1222,7 @@ const documentIdentitySource = fs.readFileSync(
 assert.match(documentIdentitySource, /getInfoAsync\(uri, \{ md5: true \}\)/);
 assert.match(documentIdentitySource, /`rf2:\$\{fingerprint\}:\$\{fileName\}:\$\{pageCount\}`/);
 const pdfParserSource = fs.readFileSync(path.join(root, "src/services/PDFParser.ts"), "utf8");
-assert.match(pdfParserSource, /contentDocumentId\(fileName, data\.pageCount, sourceFingerprint\)/);
+assert.match(pdfParserSource, /contentDocumentId\(args\.fileName, pages\.length, sourceFingerprint\)/);
 const docCacheSource = fs.readFileSync(path.join(root, "src/services/DocCache.ts"), "utf8");
 assert.match(docCacheSource, /cached\.docId !== fresh\.docId/);
 
@@ -1418,8 +1416,8 @@ assert.match(
 
 assert.match(
   pdfParserSource,
-  /Object\.assign\(new Error\(msg\),[\s\S]*code,[\s\S]*status: xhr\.status,[\s\S]*feature/,
-  "multipart import errors must retain quota code/status/feature"
+  /finally \{[\s\S]*await native\.releaseDocument\(\)/,
+  "failed local imports must release the native document"
 );
 const librarySource = fs.readFileSync(path.join(root, "src/screens/LibraryScreen.tsx"), "utf8");
 const themeSource = fs.readFileSync(path.join(root, "src/theme.ts"), "utf8");
@@ -1431,14 +1429,36 @@ const backgroundPlaybackSource = fs.readFileSync(
 assert.match(themeSource, /type ThemeMode = "system" \| "light" \| "dark"/);
 assert.match(themeSource, /AsyncStorage\.setItem\(STORAGE_KEY, next\)/);
 assert.match(librarySource, /\["system", "light", "dark"\]/);
-assert.match(appSource, /entitlementForRevenueCatTier\(purchasedTier\)/);
+assert.match(appSource, /const entitlement = FREE_ENTITLEMENT/);
+assert.doesNotMatch(appSource, /RevenueCat|purchaseRevenueCatPlan|fetchEntitlement/);
+assert.match(readerSource, /const backgroundPlaybackAllowed = voiceMode === "local"/);
 assert.match(readerSource, /setBackgroundPlaybackActive\(isPlaying && backgroundPlaybackAllowed\)/);
 assert.match(backgroundPlaybackSource, /foregroundServiceType: \["mediaPlayback"\]/);
 assert.match(backgroundPlaybackSource, /while \(BackgroundService\.isRunning\(\)\)/);
-assert.match(
-  librarySource,
-  /if \(isQuotaError\(e\)\) \{[\s\S]*Monthly document limit reached[\s\S]*setUpgrade/,
-  "document quota failures must open the plan sheet instead of ending at an error string"
-);
+assert.doesNotMatch(librarySource, /setUpgrade|UpgradeSheet|activateReviewerAccess/);
+assert.doesNotMatch(pdfParserSource, /fetch\(|XMLHttpRequest|API_BASE/);
+const { FREE_ENTITLEMENT } = loadTypeScript("src/services/Entitlements.ts");
+assert.equal(FREE_ENTITLEMENT.features.ocr, true);
+assert.equal(FREE_ENTITLEMENT.features.export, true);
+assert.equal(FREE_ENTITLEMENT.features.localVoice, true);
+assert.equal(FREE_ENTITLEMENT.features.unlimitedLibrary, true);
+assert.equal(FREE_ENTITLEMENT.features.ai, false);
+assert.equal(FREE_ENTITLEMENT.features.cloudVoice, false);
+assert.equal(FREE_ENTITLEMENT.limits.localVoiceSecondsPerDay, 0);
+assert.equal(FREE_ENTITLEMENT.limits.perDocPageCap, 0);
+const { visitSupport, shouldOfferSupport, dismissSupport, DAY_MS } = loadTypeScript("src/services/SupportPolicy.ts");
+const firstVisit = visitSupport(null, DAY_MS);
+assert.equal(shouldOfferSupport(firstVisit, DAY_MS, 0), false);
+assert.equal(visitSupport(firstVisit, DAY_MS + 1000).visits, 1);
+const laterVisit = visitSupport(visitSupport(firstVisit, 2 * DAY_MS), 8 * DAY_MS);
+assert.equal(shouldOfferSupport(laterVisit, 8 * DAY_MS, 0), true);
+assert.equal(shouldOfferSupport({ ...laterVisit, neverAsk: true }, 800 * DAY_MS, 0), false);
+assert.equal(shouldOfferSupport(laterVisit, 10 * DAY_MS, 9 * DAY_MS), false);
+assert.equal(shouldOfferSupport({ ...laterVisit, nextPrompt: 40 * DAY_MS }, 10 * DAY_MS, 0), false);
+const optedOut = dismissSupport(laterVisit, 10 * DAY_MS, true);
+const dismissedManually = dismissSupport(optedOut, 50 * DAY_MS);
+assert.equal(dismissedManually.neverAsk, true, "A manual support visit must not clear automatic-prompt opt-out");
+assert.equal(shouldOfferSupport(dismissedManually, 800 * DAY_MS, 0), false);
+assert.equal(dismissSupport(null, DAY_MS).nextPrompt, 31 * DAY_MS);
 
 console.log("Reader regression checks passed.");

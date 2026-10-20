@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { normalizeReadingLanguageCode } from "./ReadingLanguages";
 
-export type VoiceEngine = "device" | "cloud" | "local_ai";
+export type VoiceEngine = "device" | "local_ai";
 
 export interface ReadingPreferences {
   voiceEngine: VoiceEngine;
@@ -37,7 +37,7 @@ export function normalizePreferences(
   value: Partial<ReadingPreferences> | null | undefined
 ): ReadingPreferences {
   const voiceEngine =
-    value?.voiceEngine === "cloud" || value?.voiceEngine === "local_ai"
+    value?.voiceEngine === "local_ai"
       ? value.voiceEngine
       : "device";
   const cloudVoiceId =

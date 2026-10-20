@@ -1,6 +1,12 @@
 # readFlow Payment Setup
 
-Updated: 2026-08-05
+Updated: 2026-10-20
+
+Current migration: see [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md).
+Play support product readflow_support_1 is active (one-time, no entitlement).
+AdMob registration and library banner exist; payment-profile completion, consent,
+website verification and app approval remain unverified/incomplete. Existing paid
+services and subscriptions have NOT yet been retired. Below is the legacy setup.
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer

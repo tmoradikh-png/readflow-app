@@ -103,6 +103,7 @@ export const Library = {
       }
     }
 
+    if (storedUri && doc.kind === "pdf") doc.docToken = storedUri;
     const now = Date.now();
     const item: LibraryItem = {
       id: doc.docId,

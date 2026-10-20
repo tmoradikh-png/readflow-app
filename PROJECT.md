@@ -1,6 +1,10 @@
 # readFlow Developer Handoff
 
-Updated: 2026-08-27
+Updated: 2026-10-20
+
+Active work: [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md), Android 1.0.67 (74)
+free/offline migration with library ads and optional one-time support. Production
+remains 1.0.66 (73); legacy services have not been retired.
 
 Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
 file for the fuller map of accounts, services, release status, and operational

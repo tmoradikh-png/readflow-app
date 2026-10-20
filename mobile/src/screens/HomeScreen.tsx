@@ -91,7 +91,7 @@ export function HomeScreen({ onParsed }: Props) {
           <Feature icon="AI" text="Paid plans unlock summaries, Q&A, and capped AI voice" />
         </View>
 
-        <Text style={styles.note}>First pages free - Reader Plus unlocks full native-text reading</Text>
+        <Text style={styles.note}>Read and listen on this phone.</Text>
       </View>
     </SafeAreaView>
   );

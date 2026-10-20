@@ -1,6 +1,11 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-08-26
+Updated: 2026-10-20
+
+Current work: FREE_RELEASE_STATUS.md. Play production verified active 1.0.66 (73).
+Candidate 1.0.67 (74) is not submitted. Support product readflow_support_1 is
+active; legacy subscriptions remain unchanged. Ads/Data safety/free listing
+changes and native device QA are pending.
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,

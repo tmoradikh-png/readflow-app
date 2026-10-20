@@ -1,6 +1,11 @@
 # readFlow Privacy Policy Draft
 
-Draft updated: 2026-06-29
+Draft updated: 2026-10-20
+
+Current publication candidate is website/readflow/privacy.html for Android 1.0.67,
+covering local documents, AdMob/consent, one-time support, and older server-based
+versions. See FREE_RELEASE_STATUS.md for deployment gates. The text below is the
+historical server/subscription draft and must not replace that newer candidate.
 
 Publication URL planned: `https://urmiaworks.com/readflow/privacy`
 

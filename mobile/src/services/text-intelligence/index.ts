@@ -10,7 +10,6 @@ export const textIntelligence = new HybridTextIntelligence(
   new CompactMultilingualModel()
 );
 
-export { BackendTextIntelligenceFallback } from "./BackendTextIntelligenceFallback";
 export { CompactMultilingualModel } from "./CompactMultilingualModel";
 export { HybridTextIntelligence } from "./HybridTextIntelligence";
 export * from "./types";

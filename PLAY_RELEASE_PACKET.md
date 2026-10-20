@@ -1,6 +1,16 @@
 # readFlow Play Release Packet
 
-Updated: 2026-08-26
+Updated: 2026-10-20
+
+## Pending Free Release
+
+Candidate 1.0.67 (74), not submitted. FREE_RELEASE_STATUS.md is the current gate
+record. Planned release notes: Free on-device document import and OCR, unlimited
+rF AI listening, optional one-time support and library-only ads. No cloud AI or
+subscriptions in the new app. Do not submit these notes until native/device QA,
+consent, privacy/Data safety and legacy subscriber handling are complete.
+
+## Historical Release Packet
 
 This packet gathers the launch text and review checklist for Google Play. Keep
 it in sync with `PAYMENT_SETUP.md`, `PRIVACY_POLICY_DRAFT.md`,
