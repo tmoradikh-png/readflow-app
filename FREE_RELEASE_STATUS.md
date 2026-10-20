@@ -129,6 +129,14 @@ full subscriber audit. Historic September audit found only test orders. Check ac
 subscriptions before retiring RevenueCat/Render or disabling old purchase options.
 Play target audience currently selects only 18 and over; no age-setting changes made.
 
+Fresh Play Subscriptions overview on October 21 shows all six products, April 17 to
+October 17: total subscriptions 0, new subscriptions 0 and gross revenue NOK 0.00.
+The page explicitly says data is only through October 17 UTC. This is a dated report,
+not proof of no new purchases since then. Evidence: tmp/play-subscriptions-20261017.png.
+Website/consent evidence and crawler fix committed/pushed as 853c057 using tmoradikh-png.
+Tags: readflow-before-admob-crawler-20261021 and
+readflow-after-free-website-consent-20261021. Owner's unrelated files remain untouched.
+
 ## Remaining Gates
 
 1. Rebuild from committed source after the final opt-out/dependency fixes, then test
