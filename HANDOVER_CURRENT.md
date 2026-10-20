@@ -1,12 +1,14 @@
 # readFlow Current Handover
 
-Updated: 2026-10-20
+Updated: 2026-10-21
 
 ## Active Free-Release Migration
 
 Read [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md) first for the authorized
 1.0.67 (74) free/offline migration, support product, AdMob account and build gates.
 Production remains 1.0.66 (73). No new release or service shutdown is complete.
+Candidate implementation 1c52591 and before/after tags are pushed. A signed preview
+APK built successfully; it predates the last opt-out/dependency fix and is not device-tested.
 Older subscription architecture and release records below are historical context.
 
 Start here when taking over readFlow. This file is a short operational map. It

@@ -19,6 +19,9 @@ This is work in progress, not a published release or a claim of zero current bil
 ## Source and Checks
 
 Before tag: readflow-before-free-offline-20261020, starting main HEAD cfba971.
+Implementation commit 1c52591 and after tag
+readflow-after-free-offline-candidate-1.0.67-20261021 pushed to origin/main using
+GitHub account tmoradikh-png. Private owner files and unrelated website index excluded.
 Mobile removes RevenueCat/server bootstrap and uses constant free entitlements.
 Native module readflow-offline uses PDFBox-Android 2.0.27.0, Tesseract4Android 4.9.0,
 and Play Billing 9.1.0. Existing layout/OCR cleanup rules are generated into mobile
@@ -34,10 +37,11 @@ Test ads remain enabled in app.json. Production configuration check intentionall
 until live-ad configuration is deliberately enabled after QA.
 
 Obtained: TypeScript, QA configuration, OCR asset hashes and reader regression checks PASS.
-Cloud build has passed readflow-offline:compileReleaseJavaWithJavac, but the full
-Android artifact is still pending. Support opt-out now survives later manual dismissal;
-the new regression passes. That small JS fix is newer than the queued preview build.
-Not obtained: full APK build completion, real-device import fidelity, OCR quality, audio playback,
+Cloud preview build FINISHED; APK signature verification passed (v2), and aapt confirms
+com.urmiaworks.readflow, version 1.0.67/code74, minSdk24/targetSdk36.
+Support opt-out now survives later manual dismissal; the new regression passes.
+That JS fix is newer than this preview APK and requires the next build.
+Not obtained: real-device import fidelity, OCR quality, audio playback,
 billing cancel/pending/recovery, consent geography/revocation and banner-layout QA.
 No phone detected by adb on October 21. Do not claim text is 100% correct.
 
@@ -53,9 +57,11 @@ Owner approved upload of mobile source and bundled OCR models to existing tohid1
 Preview APK build submitted: 93d90195-9482-4b1f-8a1e-959169653971.
 https://expo.dev/accounts/tohid123/projects/readflow/builds/93d90195-9482-4b1f-8a1e-959169653971
 Status: ERRORED at react-native-google-mobile-ads:compileReleaseKotlin (see above).
-Corrected preview build 4ece17c7-609c-4a8d-b71f-53c7e461b629 is IN_PROGRESS:
+Corrected preview build 4ece17c7-609c-4a8d-b71f-53c7e461b629 FINISHED:
 https://expo.dev/accounts/tohid123/projects/readflow/builds/4ece17c7-609c-4a8d-b71f-53c7e461b629
-No artifact obtained or installed yet.
+Downloaded: artifacts/readflow-1.0.67-74-free-preview-b2.apk.
+SHA256: 4F1E524FD81B2C0F5BBF30D7850D893733CF7D1553E4BECE590EFCE699D15CAB.
+Not installed: no phone connected. No production AAB or Play submission yet.
 Use EAS_NO_VCS=1 and absolute EAS_PROJECT_ROOT=<ReadFlow>/mobile, with TEMP/TMP/npm cache
 under ReadFlow/tmp. The inspected archive contained 104 files, 22 OCR packs, no private
 books/backups/credentials, and no generated root android directory. Upload was 30.4 MB.
@@ -86,6 +92,9 @@ the callback, but also timed out without completion. Stop further automatic auth
 until owner is ready. Current browser account is support@urmiaworks.com;
 website/PROJECT.md instead records tohid.moradi.kh@gmail.com/account
 490d777337f916bad4335f86dffb4f5e. Verify actual project access before publishing.
+Dashboard confirms this session only has Support@urmiaworks.com's Account,
+ID 92d2aba4f641ca3e82180d25a96308d8, not the documented website account. Owner asked
+to sign in as tohid.moradi.kh@gmail.com and report dashboard ready before another login.
 Consent messages NOT configured yet; European message editor stalled at loading in
 two attempts. Stop repeating that method; no consent message was saved or published.
 Payments form offers the existing Urmia Holding AS organization profile. Owner instructed
@@ -100,7 +109,8 @@ Play target audience currently selects only 18 and over; no age-setting changes 
 
 ## Remaining Gates
 
-1. Obtain build logs/artifact, resolve real compile issues, and test installed Android app.
+1. Rebuild from committed source after the final opt-out/dependency fixes, then test
+   installed Android app. The successful preview can test native import/audio meanwhile.
 2. Test representative books against originals, OCR layout/headers/footnotes/figures,
    saved positions and rF AI background playback. Preserve existing regression fixtures.
 3. Verify support purchase/cancel/pending/recovery using Play license test payments only.
