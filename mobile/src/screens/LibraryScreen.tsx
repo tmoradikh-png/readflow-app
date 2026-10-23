@@ -93,6 +93,7 @@ export function LibraryScreen({
   const insets = useSafeAreaInsets();
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [importProgress, setImportProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showLanguage, setShowLanguage] = useState(false);
@@ -206,9 +207,13 @@ export function LibraryScreen({
 
   async function importNew() {
     setError(null);
+    setImportProgress(null);
     setLoading(true);
     try {
-      const doc = await PDFParser.pickAndParse({ ocrLang: readingLanguage.ocrLang });
+      const doc = await PDFParser.pickAndParse({
+        ocrLang: readingLanguage.ocrLang,
+        onProgress: (loaded, total) => setImportProgress({ loaded, total }),
+      });
       if (!doc) return; // cancelled
       const item = await Library.saveOpened(doc, doc.sourceUri, doc.mimeType);
       doc.sourceUri = item.storedUri || doc.sourceUri;
@@ -563,6 +568,13 @@ export function LibraryScreen({
       </View>
 
       {error && <Text style={styles.error}>{error}</Text>}
+      {loading && importProgress && (
+        <Text accessibilityLiveRegion="polite" style={{ color: theme.colors.text, paddingHorizontal: 24, paddingBottom: 12 }}>
+          {importProgress.loaded < importProgress.total
+            ? `Importing pages ${importProgress.loaded} of ${importProgress.total}`
+            : "Saving document..."}
+        </Text>
+      )}
       {!loading && !busyId && !showVoice && !showHelp && !showLanguage && !notice && <SupportPrompt hasBooks={items.length > 0} />}
 
       {items.length === 0 ? (
