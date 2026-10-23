@@ -7,10 +7,13 @@ This is work in progress, not a published release or a claim of zero current bil
 
 - Current candidate: 1.0.69 (76), source dadf46f, live ad unit configuration.
   TypeScript and check:release pass. EAS production-profile AAB build
-  08016c8e-5781-4b67-8451-07654dc2f8b8 queued using approved included credit;
+  08016c8e-5781-4b67-8451-07654dc2f8b8 FINISHED October23 23:55:19 UTC;
   upload was mobile-only, 30.4 MB. Install through the internal track first;
   do not promote until final phone checks. Expo usage before build500/4500,
   estimated overage0; Starter USD19 October27 renewal still active.
+- Final AAB: artifacts/readflow-1.0.69-76-free-production.aab, SHA256
+  68DAAD0956CEA0CBE8759E3A84BFEB81016F4B190B87268ED4CE8D0953ACC8EA.
+  Uploaded to internal release26; Google Play processing, not yet rolled out.
 - Internal75 release25 became Available October24 01:25 and was installed through
   Google Play on SM-S918B. Startup now succeeds, six original books preserved,
   ad SDK initialization/request observed without the previous fatal exception.
@@ -38,12 +41,20 @@ This is work in progress, not a published release or a claim of zero current bil
 - Owner explicitly approved registering phone advertising ID with AdMob. Added
   readFlow QA Samsung Android test device; confirmed saved. Identifier stays out
   of source/docs. Proof tmp/admob-test-phone-20261024.png. No ad clicked.
-- Ten-minute background-only scrcpy audio capture is running for Principles rF AI.
-  Follow toggled off/on without stopping playback, active highlight observed;
-  background Settings use tested. Phone screen switched off for lock playback
-  check; recording/transcription review and wake/unlock still pending. No complete
-  listening-quality or whole-book exactness claim. Local turbo model cache was
-  incomplete; explicitly selected intact cached Whisper-small on CUDA, no download.
+- Ten-minute capture completed: tmp/native75-rfai-ten-min.opus (599.685 seconds).
+  Follow off/on, background Settings and screen-off/Dozing playback continued;
+  no pause warning or fatal crash observed. Secure-lock behavior not established.
+  Pause/restart controls worked afterward. Local cached Whisper-large-v3 on CUDA
+  produced tmp/native75-rfai-ten-min-transcript.json. Source pages4-5 broadly match,
+  but END/E-and-D, TWO/tiduo, honours/owners and fourth/forced are unresolved
+  pronunciation-or-ASR discrepancies. This is not a perfect audio fidelity pass.
+  Incomplete turbo cache was not retried; no model download/cloud transcription.
+- Extreme Ownership imported288 pages. Page15 photo/caption visually preserved;
+  Original/Reflow retained page15 and next reached16. Page16 has a stray reference
+  number in "convoy of 1 Humvees". This is a remaining import-quality defect,
+  not fixed by the unique running-footer patch. Evidence tmp/native75-extreme-page15.png.
+- Free listing text saved as a Play draft; not submitted. Old cloud-AI screenshots
+  still need replacement using generated sample text, not private owner books.
 - The older bullets below retain earlier milestones; this block supersedes their
   pending75-build/import/payment statements. No production submission yet.
 

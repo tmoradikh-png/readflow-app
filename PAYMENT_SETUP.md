@@ -9,7 +9,11 @@ are published. App status Review in progress / Getting ready; device consent and
 delivery remain unverified. October24 Play audit read all103 orders (five pages),
 all marked Test, latest August11; query through October23. All-product subscription
 report shows0 through October20 UTC. No real paid order found in this audit.
-Support payment device test is pending. Existing paid services and base plans have
+Owner completed a support purchase on October24; app displayed Thank you and Play
+Order Management confirms Test: Support readFlow, Processed, October23 23:39 UTC.
+No real charge; cancellation/pending device paths remain untested. Phone registered
+as an AdMob test device with explicit approval; identifier excluded from docs.
+Existing paid services and base plans have
 NOT yet been retired. Below is the legacy setup.
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the

@@ -4,8 +4,9 @@ Updated: 2026-10-24
 
 ## Pending Free Android Listing
 
-Use this copy only with the verified free/offline production release. It is a draft,
-not yet saved in Play. The older paid-plan copy below is historical and must not be
+Use this copy only with the verified free/offline production release. Saved as a Play
+draft October24, not submitted; obsolete cloud-AI screenshots still need replacing.
+The older paid-plan copy below is historical and must not be
 used for the free release. Release gates are in FREE_RELEASE_STATUS.md.
 
 Title: readFlow: AI PDF Reader & OCR

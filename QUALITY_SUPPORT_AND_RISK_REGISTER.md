@@ -1,6 +1,20 @@
 # readFlow Quality, Support, and Risk Register
 
-Updated: 2026-08-11
+Updated: 2026-10-24
+
+## Free Candidate QA Update
+
+Current release state is authoritative in FREE_RELEASE_STATUS.md. The historical
+paid-plan sections below do not describe the new free/offline candidate1.0.69(76).
+Native75 ten-minute recording, Follow toggles, background/screen-off playback and
+restart passed on Samsung SM-S918B. This does not prove every phone/secure-lock state.
+Local ASR found possible pronunciation issues (END, TWO, honours, fourth); ASR alone
+does not establish their cause. Recording/transcript paths are in the release status.
+Extreme Ownership page15 photo/caption is preserved in the reader. Page16 still
+includes a superscript reference as ordinary text in "convoy of 1 Humvees". General
+reference-marker cleanup remains imperfect; do not claim100% imported-text fidelity.
+Unique isolated running-footer cleanup is fixed in76 but awaits native fresh-import
+confirmation. Large-file import succeeds; new progress display also awaits76 QA.
 
 Owner: Urmia Works  
 Support: `support@urmiaworks.com`
