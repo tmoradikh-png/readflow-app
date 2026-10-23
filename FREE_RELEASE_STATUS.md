@@ -15,7 +15,20 @@ This is work in progress, not a published release or a claim of zero current bil
   muting and before rendering the banner. Added executable mocked-SDK regressions
   for pending initialization, concurrent calls and failure/recovery. npm run check:qa
   passed (TypeScript, config, generated text, 22 OCR hashes, reader/ad regressions).
-  This proves JS ordering, not yet the native-device fix. New internal build needed.
+  This proves JS ordering, not yet the native-device fix. Commit98cfbb0 and tags
+  readflow-before-device-qa-20261024 / readflow-after-ad-startup-fix-1.0.68-20261024
+  pushed to tmoradikh-png/readflow-app. Replacement internal AAB build:
+  https://expo.dev/accounts/tohid123/projects/readflow/builds/e4b4d091-be04-4419-9bea-edac74f5065b
+  Last observed IN_PROGRESS. Expo usage before build400/4500, overage zero.
+- Fresh Play financial audit: all103 orders across five pages marked Test; latest
+  August11. Query range January1 2008 to October23 2026; no real paid order found.
+  All-six-product subscription report shows total/new/canceled subscriptions0 and
+  gross revenue0 for April20-October20; data explicitly only through October20 UTC.
+  Evidence: tmp/play-subscriptions-20261024.png. This is not a future/no-lag guarantee.
+  Legacy base plans/services remain active pending the free production transition.
+- Prepared free listing draft in MARKETING_PLAY_STORE.md; not saved/published in Play.
+  Three owner-provided books plus English scan fixture staged on phone under
+  Download/readflow-qa. Staging is not a successful import or OCR result.
 - Latest-source preview 587d01d9-847c-4aba-a51d-c51d1348a661 FINISHED.
   Downloaded artifacts/readflow-1.0.67-74-free-preview-b3.apk (300697987 bytes).
   SHA256 E1381EA71AA5AF11FB84F1D11F51B103013EA9C9A4FCDEA5897B949C57498022.

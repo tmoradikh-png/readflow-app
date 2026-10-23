@@ -1,12 +1,16 @@
 # readFlow Payment Setup
 
-Updated: 2026-10-20
+Updated: 2026-10-24
 
 Current migration: see [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md).
 Play support product readflow_support_1 is active (one-time, no entitlement).
-AdMob registration and library banner exist; payment-profile completion, consent,
-website verification and app approval remain unverified/incomplete. Existing paid
-services and subscriptions have NOT yet been retired. Below is the legacy setup.
+AdMob payment-profile warning cleared, European/US messages and public policy/app-ads
+are published. App status Review in progress / Getting ready; device consent and ad
+delivery remain unverified. October24 Play audit read all103 orders (five pages),
+all marked Test, latest August11; query through October23. All-product subscription
+report shows0 through October20 UTC. No real paid order found in this audit.
+Support payment device test is pending. Existing paid services and base plans have
+NOT yet been retired. Below is the legacy setup.
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer

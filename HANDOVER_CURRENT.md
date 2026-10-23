@@ -1,17 +1,18 @@
 # readFlow Current Handover
 
-Updated: 2026-10-21
+Updated: 2026-10-24
 
 ## Active Free-Release Migration
 
 Read [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md) first for the authorized
-1.0.67 (74) free/offline migration, support product, AdMob account and build gates.
-Production remains 1.0.66 (73). No new release or service shutdown is complete.
-Candidate implementation 1c52591 and before/after tags are pushed. A signed preview
-APK built successfully; it predates the last opt-out/dependency fix and is not device-tested.
-Latest-source preview 587d01d9 is building. Public policy/app-ads.txt and European/US
-consent messages are now published. AdMob verification remains unresolved, and no
-phone is detected. Exact IDs/evidence and remaining gates are in FREE_RELEASE_STATUS.md.
+1.0.68 (75) free/offline migration, support product, AdMob account and build gates.
+Production remains1.0.66 (73). Internal74 was published and Play-installed on Samsung
+SM-S918B without removing books. Launch exposed a confirmed ad SDK ordering crash;
+fixed and regression-tested in98cfbb0, pushed with tags. Replacement internal AAB75
+e4b4d091 is building; native fix/import/audio/billing QA remains pending.
+Public policy/app-ads.txt and European/US consent messages are published. AdMob review
+is in progress. All103 Play orders audited October24 are Test; no real paid order found.
+Legacy services/base plans remain active. Exact evidence/gates in FREE_RELEASE_STATUS.md.
 Older subscription architecture and release records below are historical context.
 
 Start here when taking over readFlow. This file is a short operational map. It

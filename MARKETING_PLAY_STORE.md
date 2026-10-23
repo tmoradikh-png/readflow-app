@@ -1,6 +1,63 @@
 # readFlow Marketing and Store Copy
 
-Updated: 2026-07-01
+Updated: 2026-10-24
+
+## Pending Free Android Listing
+
+Use this copy only with the verified free/offline production release. It is a draft,
+not yet saved in Play. The older paid-plan copy below is historical and must not be
+used for the free release. Release gates are in FREE_RELEASE_STATUS.md.
+
+Title: readFlow: AI PDF Reader & OCR
+
+Short description:
+
+Read PDFs & DOCX aloud. Free offline OCR, bookmarks and downloaded rF AI voice.
+
+Full description:
+
+Read and listen to your PDFs and text-based Word documents on your phone.
+readFlow brings supported document text into a mobile reading view, with adjustable
+text, bookmarks and saved reading position.
+
+FREE READING AND LISTENING
+
+- Import PDFs and text-based DOCX files directly on your Android phone.
+- Use on-device OCR for scanned PDF pages, with progress and pause/resume controls.
+- Listen with installed phone voices or download the English rF AI voice for
+  on-device listening, including background playback.
+- Change between the reading view and original PDF pages. Use the original pages
+  to inspect pictures, charts, tables and source formatting.
+- Choose light, dark or system appearance, and return to your saved position.
+
+ON-DEVICE DOCUMENT PROCESSING
+
+Import, text extraction and OCR run on your phone. Your document text and files are
+not sent to our servers or advertising providers. Reading and downloaded rF AI
+listening work without an internet connection. Initial voice downloads, ads and
+optional support payments need internet access.
+
+NO READING SUBSCRIPTION
+
+The free version has no subscription or monthly import, OCR or rF AI listening
+allowance. Device storage, memory and processing capacity still apply. Library ads
+help support development; there are no ads inside the reader. You can optionally
+make a small one-time support payment. It does not renew, unlock features or remove
+ads. The price is shown by Google Play in your local currency.
+
+DOCUMENT AND LANGUAGE LIMITS
+
+Extraction, OCR and speech can make mistakes, especially with complex layouts,
+low-quality scans and unusual fonts. Compare important passages with the original
+PDF. Downloaded rF AI is English-only; phone voices depend on the languages installed
+on your device. Legacy DOC files and image-only Word documents are not supported.
+Word images and complex Word formatting are not preserved. This version does not
+include cloud AI answers or cloud voices.
+
+Privacy: https://urmiaworks.com/readflow/privacy
+Support: support@urmiaworks.com
+
+## Historical Paid-Plan Copy
 
 This file is for the marketing/web/Play Store team. It describes what readFlow
 does, how to present each tier, and how to word claims carefully while the app,
