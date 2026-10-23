@@ -1,7 +1,40 @@
 # Free Android Release Status
 
-Updated: 2026-10-21. Owner authorized implementation, builds and Google Play submission.
+Updated: 2026-10-24. Owner authorized implementation, builds and Google Play submission.
 This is work in progress, not a published release or a claim of zero current bills.
+
+## October 24 Device and Build Progress
+
+- Latest-source preview 587d01d9-847c-4aba-a51d-c51d1348a661 FINISHED.
+  Downloaded artifacts/readflow-1.0.67-74-free-preview-b3.apk (300697987 bytes).
+  SHA256 E1381EA71AA5AF11FB84F1D11F51B103013EA9C9A4FCDEA5897B949C57498022.
+  apksigner verification passed; aapt confirms 1.0.67 (74), minSdk24/targetSdk36.
+- Samsung SM-S918B is USB-authorized. Existing Play app is 1.0.66 (73).
+  Non-destructive adb install -r failed INSTALL_FAILED_UPDATE_INCOMPATIBLE:
+  Play's installed signing certificate differs from the Expo/upload-key APK.
+  No uninstall or data clear performed. Device QA of the new version is NOT complete.
+- Internal-track AAB build from unchanged committed source submitted with included
+  Expo credit: 0ec61a94-f90a-4e2f-80fd-f747cee487cf. Build link:
+  https://expo.dev/accounts/tohid123/projects/readflow/builds/0ec61a94-f90a-4e2f-80fd-f747cee487cf
+  Install via Play-signed internal testing to preserve the library; not production.
+  app.json still enables test ads. A final live-ad production build remains necessary.
+- Expo usage before this build: 300/4500 allowance units, total overage cost zero.
+  Starter USD19 renewal October27 remains active. No new paid service authorized.
+- AdMob All apps now says Getting ready / Limited ad serving / Review in progress.
+  app-ads.txt detail still says no ad requests/no data. Do not claim full approval.
+- Play Ads, Advertising ID and Data safety changes saved, ready for review, not
+  submitted. Added ads SDK sharing/approximate location and retained old-client
+  document/purchase disclosures. Details/evidence in PLAY_DATA_SAFETY_DRAFT.md.
+  Actual b3 APK confirms Advertising ID permissions, no RECORD_AUDIO permission.
+- Local scrcpy 5.0.1 downloaded from Genymobile official release into tools/;
+  vendor SHA256 matched. Phone mirror opened as readFlow-QA. Windows activation
+  failed GetCursorPos Access denied twice; stopped that method and asked owner to
+  keep PC unlocked/open the mirror. Exact desktop access cause is unconfirmed.
+- Phone stay_on_while_plugged_in was 0; temporarily enabled USB stay-awake.
+  Restore to 0 at the end of QA. Preserve owner library and unrelated files.
+
+The dated October21 sections below retain history; this section supersedes their
+no-phone/in-progress preview statements. Production submission is still pending.
 
 ## Scope
 

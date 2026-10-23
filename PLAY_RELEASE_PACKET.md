@@ -1,6 +1,6 @@
 # readFlow Play Release Packet
 
-Updated: 2026-10-20
+Updated: 2026-10-24
 
 ## Pending Free Release
 
@@ -9,6 +9,15 @@ record. Planned release notes: Free on-device document import and OCR, unlimited
 rF AI listening, optional one-time support and library-only ads. No cloud AI or
 subscriptions in the new app. Do not submit these notes until native/device QA,
 consent, privacy/Data safety and legacy subscriber handling are complete.
+
+October24: Ads/Advertising ID/Data safety are saved as pending Console changes.
+Internal AAB74 build 0ec61a94-f90a-4e2f-80fd-f747cee487cf retains test ads and is for
+device QA only. Do not promote it directly to production. A direct APK update failed
+the Play-signing check; do not uninstall or erase the owner's books to bypass this.
+
+Internal release name: 1.0.67 (74) free offline QA
+Internal notes: Free on-device PDF and text DOCX import, local OCR, downloaded rF AI,
+library test ads and optional one-time support. Internal validation build only.
 
 ## Historical Release Packet
 

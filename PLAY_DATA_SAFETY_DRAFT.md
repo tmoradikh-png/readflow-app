@@ -1,6 +1,6 @@
 # readFlow Google Play Data Safety Draft
 
-Updated: 2026-10-20
+Updated: 2026-10-24
 
 ## Free Android Migration (Not Yet Submitted)
 
@@ -18,7 +18,25 @@ process documents, cloud text and subscription information: do not remove those
 disclosures until that collection has actually stopped. Purchase history and
 owner-sent support emails must also be considered. Privacy policy source updated
 at website/readflow/privacy.html and deployed on October 21 at
-https://urmiaworks.com/readflow/privacy. All Play Console edits remain pending.
+https://urmiaworks.com/readflow/privacy.
+
+October24 Console changes saved, ready to send for review (not submitted):
+- Contains ads: Yes. Advertising ID: Yes; advertising, analytics and fraud prevention.
+  Actual b3 APK declares AD_ID and ACCESS_ADSERVICES_AD_ID.
+- Added approximate location, collected/shared, non-ephemeral, required; purposes
+  advertising, analytics and fraud prevention for both collection and sharing.
+- Diagnostics, App interactions and Device or other IDs now also disclose SDK
+  sharing for those three purposes. Existing legacy collection purposes preserved.
+- Purchase history, Files/docs, Other user-generated content and Other actions
+  remain declared while old clients/backend still operate. No account creation;
+  encrypted transit and existing privacy/deletion URL retained.
+- Conservative required-data classification: declining personalized ads does not
+  establish that all SDK data collection is optional. Device behavior is untested.
+- Sources: actual LibraryAds.tsx and APK manifest plus Google's disclosure page
+  above, read October24 (page states latest SDK25.5; installed SDK24.6 is older).
+  No claim of a network traffic audit. Verify UMP before public submission.
+- Evidence: tmp/play-ads-draft-20261024.png, tmp/play-ad-id-draft-20261024.png,
+  tmp/play-data-safety-draft-20261024.png.
 
 ## Historical Worksheet
 

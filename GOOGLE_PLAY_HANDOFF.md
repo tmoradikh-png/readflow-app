@@ -1,11 +1,14 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-10-20
+Updated: 2026-10-24
 
 Current work: FREE_RELEASE_STATUS.md. Play production verified active 1.0.66 (73).
 Candidate 1.0.67 (74) is not submitted. Support product readflow_support_1 is
-active; legacy subscriptions remain unchanged. Ads/Data safety/free listing
-changes and native device QA are pending.
+active; legacy subscriptions remain unchanged. Ads, Advertising ID and Data safety
+changes are saved and ready for review, not submitted. Free store copy/native QA
+are pending. APK b3 cannot update the connected Play-installed app because the
+signing certificates differ. Internal AAB 0ec61a94 is building; preserve the library
+by installing through Play. Do not promote this test-ad build to production.
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
