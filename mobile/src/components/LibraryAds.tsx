@@ -10,12 +10,14 @@ import { useAppTheme } from "../theme";
 let initialized: Promise<unknown> | null = null;
 let consentUpdated = false;
 
-async function initializeAds() {
+export async function initializeAds() {
   if (!initialized) {
     initialized = (async () => {
       await mobileAds().setRequestConfiguration({ maxAdContentRating: MaxAdContentRating.PG });
+      // Android's mute setter throws natively until SDK initialization completes.
+      const status = await mobileAds().initialize();
       mobileAds().setAppMuted(true);
-      return mobileAds().initialize();
+      return status;
     })().catch(error => { initialized = null; throw error; });
   }
   return initialized;

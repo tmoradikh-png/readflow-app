@@ -3,12 +3,14 @@
 Updated: 2026-10-24
 
 Current work: FREE_RELEASE_STATUS.md. Play production verified active 1.0.66 (73).
-Candidate 1.0.67 (74) is not submitted. Support product readflow_support_1 is
+Candidate 1.0.67 (74) is Available to internal testers as of October24 01:01,
+not submitted to production. Support product readflow_support_1 is
 active; legacy subscriptions remain unchanged. Ads, Advertising ID and Data safety
 changes are saved and ready for review, not submitted. Free store copy/native QA
-are pending. APK b3 cannot update the connected Play-installed app because the
-signing certificates differ. Internal AAB 0ec61a94 is building; preserve the library
-by installing through Play. Do not promote this test-ad build to production.
+are pending. AAB 0ec61a94 finished; Play-signed APK74 installed without clearing data.
+Play acquisition completed, preserving books. Build74 crashes during ad initialization;
+do not promote it. The ordering fix and regression tests pass in source1.0.68 (75),
+still test ads. Rebuild/upload/install75 and repeat native QA before production.
 
 This file records the Android release setup, accounts, services, and review
 answers used for the first public Google Play release. Do not add passwords,
@@ -36,7 +38,7 @@ API keys, private JSON contents, signing keys, or recovery codes to this file.
   phone/tablet device coverage. It estimated about 34 MB for a new install and
   5.01 MB for an update. The only release warning was the non-blocking absence
   of an R8/ProGuard deobfuscation file.
-- Android version code `73` is consumed. Use `74` or higher next, after checking
+- Android version code `74` is consumed. Use `75` or higher next, after checking
   both EAS and Play.
 - Google Play production release `1.0.27` / version code `33` was submitted for
   review on 2026-07-01 and approved/released by 2026-07-14.

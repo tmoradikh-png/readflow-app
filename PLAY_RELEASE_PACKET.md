@@ -4,16 +4,21 @@ Updated: 2026-10-24
 
 ## Pending Free Release
 
-Candidate 1.0.67 (74), not submitted. FREE_RELEASE_STATUS.md is the current gate
+Candidate 1.0.68 (75), not yet built/submitted. Build74 was released to internal
+testing and crashed during ad initialization. Its fix and JS regressions pass;
+native confirmation remains pending. FREE_RELEASE_STATUS.md is the current gate
 record. Planned release notes: Free on-device document import and OCR, unlimited
 rF AI listening, optional one-time support and library-only ads. No cloud AI or
 subscriptions in the new app. Do not submit these notes until native/device QA,
 consent, privacy/Data safety and legacy subscriber handling are complete.
 
 October24: Ads/Advertising ID/Data safety are saved as pending Console changes.
-Internal AAB74 build 0ec61a94-f90a-4e2f-80fd-f747cee487cf retains test ads and is for
+Internal AAB74 build 0ec61a94-f90a-4e2f-80fd-f747cee487cf FINISHED, retains test ads and is for
 device QA only. Do not promote it directly to production. A direct APK update failed
-the Play-signing check; do not uninstall or erase the owner's books to bypass this.
+the Play-signing check. Google-signed APK74 installed successfully without data loss;
+Play acquisition completed and exposed the confirmed startup crash. Internal release24
+is Available to internal testers (October24 01:01). Next versionCode75 or higher.
+Do not uninstall or erase the owner's books to bypass installation/protection issues.
 
 Internal release name: 1.0.67 (74) free offline QA
 Internal notes: Free on-device PDF and text DOCX import, local OCR, downloaded rF AI,

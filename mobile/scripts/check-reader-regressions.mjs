@@ -14,6 +14,7 @@ function loadTypeScript(relativePath, modules = {}) {
       target: ts.ScriptTarget.ES2020,
       module: ts.ModuleKind.CommonJS,
       esModuleInterop: true,
+      jsx: ts.JsxEmit.React,
     },
     fileName: filename,
   }).outputText;
@@ -1461,4 +1462,59 @@ assert.equal(dismissedManually.neverAsk, true, "A manual support visit must not 
 assert.equal(shouldOfferSupport(dismissedManually, 800 * DAY_MS, 0), false);
 assert.equal(dismissSupport(null, DAY_MS).nextPrompt, 31 * DAY_MS);
 
-console.log("Reader regression checks passed.");
+function loadAdsInitializer(sdk) {
+  return loadTypeScript("src/components/LibraryAds.tsx", {
+    react: {},
+    "react-native": {},
+    "expo-constants": {},
+    "../theme": {},
+    "react-native-google-mobile-ads": {
+      __esModule: true,
+      default: () => sdk,
+      MaxAdContentRating: { PG: "PG" },
+    },
+  }).initializeAds;
+}
+
+const adCalls = [];
+let finishAdInitialization;
+const adInitialization = new Promise(resolve => { finishAdInitialization = resolve; });
+let nativeAdsReady = false;
+const initializeTestAds = loadAdsInitializer({
+  setRequestConfiguration: async config => {
+    assert.deepEqual(config, { maxAdContentRating: "PG" });
+    adCalls.push("configure");
+  },
+  initialize: () => { adCalls.push("initialize"); return adInitialization; },
+  setAppMuted: muted => {
+    assert.equal(nativeAdsReady, true, "Never mute before native SDK initialization resolves");
+    assert.equal(muted, true);
+    adCalls.push("mute");
+  },
+});
+const firstAdInitialization = initializeTestAds();
+const concurrentAdInitialization = initializeTestAds();
+await Promise.resolve();
+assert.deepEqual(adCalls, ["configure", "initialize"]);
+nativeAdsReady = true;
+finishAdInitialization("ready");
+assert.deepEqual(await Promise.all([firstAdInitialization, concurrentAdInitialization]), ["ready", "ready"]);
+assert.equal(await initializeTestAds(), "ready");
+assert.deepEqual(adCalls, ["configure", "initialize", "mute"], "Concurrent mounts share one initialization");
+
+let adInitializationAttempts = 0;
+let recoveredMuteCalls = 0;
+const initializeRecoveringAds = loadAdsInitializer({
+  setRequestConfiguration: async () => {},
+  initialize: async () => {
+    if (++adInitializationAttempts === 1) throw new Error("initialization unavailable");
+    return "recovered";
+  },
+  setAppMuted: () => { recoveredMuteCalls++; },
+});
+await assert.rejects(initializeRecoveringAds, /initialization unavailable/);
+assert.equal(recoveredMuteCalls, 0, "Failed SDK initialization must never call the native mute setter");
+assert.equal(await initializeRecoveringAds(), "recovered");
+assert.equal(recoveredMuteCalls, 1);
+
+console.log("Reader and ad-initialization regression checks passed.");

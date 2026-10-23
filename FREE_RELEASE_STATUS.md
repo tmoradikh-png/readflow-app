@@ -5,18 +5,40 @@ This is work in progress, not a published release or a claim of zero current bil
 
 ## October 24 Device and Build Progress
 
+- Release blocker found on Play-installed 1.0.67 (74), October24 01:06:
+  AndroidRuntime fatal exception in com.urmiaworks.readflow, PID465:
+  IllegalStateException: MobileAds.initialize() must be called prior to setting
+  app muted state. LibraryAds.tsx called setAppMuted before initialize; a JS catch
+  cannot catch that asynchronous native fatal exception. This was an implementation
+  error not caught by the earlier static checks. No book tests claimed on build74.
+- Candidate is now 1.0.68 (75), still test ads. Initialization is awaited before
+  muting and before rendering the banner. Added executable mocked-SDK regressions
+  for pending initialization, concurrent calls and failure/recovery. npm run check:qa
+  passed (TypeScript, config, generated text, 22 OCR hashes, reader/ad regressions).
+  This proves JS ordering, not yet the native-device fix. New internal build needed.
 - Latest-source preview 587d01d9-847c-4aba-a51d-c51d1348a661 FINISHED.
   Downloaded artifacts/readflow-1.0.67-74-free-preview-b3.apk (300697987 bytes).
   SHA256 E1381EA71AA5AF11FB84F1D11F51B103013EA9C9A4FCDEA5897B949C57498022.
   apksigner verification passed; aapt confirms 1.0.67 (74), minSdk24/targetSdk36.
-- Samsung SM-S918B is USB-authorized. Existing Play app is 1.0.66 (73).
-  Non-destructive adb install -r failed INSTALL_FAILED_UPDATE_INCOMPATIBLE:
+- Samsung SM-S918B is USB-authorized. Originally installed Play app was 1.0.66 (73).
+  Preview APK adb install -r failed INSTALL_FAILED_UPDATE_INCOMPATIBLE:
   Play's installed signing certificate differs from the Expo/upload-key APK.
-  No uninstall or data clear performed. Device QA of the new version is NOT complete.
-- Internal-track AAB build from unchanged committed source submitted with included
+  No uninstall or data clear performed. Google Play-signed APK74 then installed
+  successfully; package manager confirms 1.0.67 (74), and the existing shelf appeared.
+  Automatic Play protection was satisfied by Update from Play; package manager
+  confirms code74 and installerPackageName=com.android.vending. Launch then hit the
+  confirmed ad initialization crash above. Device QA is NOT complete.
+- Internal-track AAB build from unchanged committed source FINISHED using included
   Expo credit: 0ec61a94-f90a-4e2f-80fd-f747cee487cf. Build link:
   https://expo.dev/accounts/tohid123/projects/readflow/builds/0ec61a94-f90a-4e2f-80fd-f747cee487cf
-  Install via Play-signed internal testing to preserve the library; not production.
+  AAB: artifacts/readflow-1.0.67-74-free-internal.aab, 204595041 bytes.
+  SHA256 9A4D201F77A58665EDBC4AFA8E561584EDEFEB5DC002AAD1A655DE7F226B7444.
+  Google-signed APK: artifacts/readflow-1.0.67-74-play-signed.apk.
+  SHA256 9D60B27E854D8F1B8E8B90F28C4CFCA5ED2C623D820841318491C70E8B1C93AA.
+  Internal release24 is Available to internal testers, released October24 01:01.
+  Evidence: tmp/play-internal-published-20261024.png. Code74 is consumed; next75+.
+  Play lists AD_ID in artifact74. Its old-active-artifact warning was ignored for
+  this internal release only; no app permission or protection was disabled.
   app.json still enables test ads. A final live-ad production build remains necessary.
 - Expo usage before this build: 300/4500 allowance units, total overage cost zero.
   Starter USD19 renewal October27 remains active. No new paid service authorized.
@@ -27,9 +49,9 @@ This is work in progress, not a published release or a claim of zero current bil
   document/purchase disclosures. Details/evidence in PLAY_DATA_SAFETY_DRAFT.md.
   Actual b3 APK confirms Advertising ID permissions, no RECORD_AUDIO permission.
 - Local scrcpy 5.0.1 downloaded from Genymobile official release into tools/;
-  vendor SHA256 matched. Phone mirror opened as readFlow-QA. Windows activation
-  failed GetCursorPos Access denied twice; stopped that method and asked owner to
-  keep PC unlocked/open the mirror. Exact desktop access cause is unconfirmed.
+  vendor SHA256 matched. Owner unlocked desktop; activation now works. A black
+  hardware-decoded mirror was resolved by --hwdec=disabled --render-driver=software.
+  readFlow-QA is usable; --no-audio is set, so no listening test is claimed.
 - Phone stay_on_while_plugged_in was 0; temporarily enabled USB stay-awake.
   Restore to 0 at the end of QA. Preserve owner library and unrelated files.
 
@@ -38,7 +60,7 @@ no-phone/in-progress preview statements. Production submission is still pending.
 
 ## Scope
 
-- Candidate 1.0.67 (74); production verified active at 1.0.66 (73).
+- Candidate 1.0.68 (75); production last verified active at 1.0.66 (73).
 - Free local PDF/DOCX import, local OCR, pictures/original pages, bookmarks, themes,
   device speech and unlimited downloaded rF AI. Preserve existing library data.
 - Remove subscriptions, paid gates, cloud voice and remote AI actions from the new app.
