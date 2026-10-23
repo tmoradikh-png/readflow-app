@@ -4,6 +4,12 @@ Updated: 2026-10-24
 
 ## Pending Free Release
 
+Latest candidate1.0.69(76), dadf46f; EAS08016c8e building. Internal75 is installed,
+startup passes,43/712-page imports and support test purchase observed. Final76 adds
+"with no cost" wording, unique-footer geometry and import page progress. Live-ad
+config; phone registered as AdMob test device. Final artifact must pass phone QA
+before production. FREE_RELEASE_STATUS.md has exact evidence. Prior milestones below.
+
 Candidate 1.0.68 (75), not yet built/submitted. Build74 was released to internal
 testing and crashed during ad initialization. Its fix and JS regressions pass;
 native confirmation remains pending. FREE_RELEASE_STATUS.md is the current gate

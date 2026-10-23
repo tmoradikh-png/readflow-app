@@ -3,6 +3,11 @@
 Updated: 2026-10-24
 
 Current work: FREE_RELEASE_STATUS.md. Play production verified active 1.0.66 (73).
+October24 latest: internal75 release25 is available and phone-installed; startup
+fix confirmed. Native imports43/712 pages succeeded, support test purchase is
+Processed. Final1.0.69(76) EAS08016c8e is building from dadf46f, with live ad config;
+owner-authorized phone is registered as AdMob test device. Internal final-artifact
+validation and production submission remain pending. The paragraph below is history.
 Candidate 1.0.67 (74) is Available to internal testers as of October24 01:01,
 not submitted to production. Support product readflow_support_1 is
 active; legacy subscriptions remain unchanged. Ads, Advertising ID and Data safety

@@ -5,10 +5,52 @@ This is work in progress, not a published release or a claim of zero current bil
 
 ## October 24 Device and Build Progress
 
+- Current candidate: 1.0.69 (76), source dadf46f, live ad unit configuration.
+  TypeScript and check:release pass. EAS production-profile AAB build
+  08016c8e-5781-4b67-8451-07654dc2f8b8 queued using approved included credit;
+  upload was mobile-only, 30.4 MB. Install through the internal track first;
+  do not promote until final phone checks. Expo usage before build500/4500,
+  estimated overage0; Starter USD19 October27 renewal still active.
+- Internal75 release25 became Available October24 01:25 and was installed through
+  Google Play on SM-S918B. Startup now succeeds, six original books preserved,
+  ad SDK initialization/request observed without the previous fatal exception.
+  AAB artifacts/readflow-1.0.68-75-free-internal.aab SHA256:
+  9E7F06EC2B59A200FDC037B1BE32057A723E6DEFD5174C19D288905A2029C14D.
+- Native75 QA: fresh Principles PDF imports43 pages; Original/Reflow keeps page3;
+  Confessions35,584,044 bytes imports712 pages, no20 MB paywall. English image-only
+  fixture processed, library says Fixed, rF AI playback captured. Short local
+  Whisper-small CUDA transcript contains the expected repeated body paragraphs;
+  `breathes` transcribed as `braze`, cause unconfirmed, not an exact fidelity pass.
+  Evidence under tmp/native75-ocr-* and tmp/native75-principles-import.png.
+- Device QA found unique running footer still in Principles page3. Existing filter
+  requires repetition, so added conservative footer geometry (bottom margin,
+  isolated baseline, widely separated label/folio) with body/heading safeguards.
+  Commit a2bcfc2 and before/after tags pushed; full QA passed. Native confirmation
+  requires76 and a fresh import. Import progress was only a spinner for the large
+  book: wired existing page callbacks into shelf status,3f3a478; TypeScript passed.
+- Copy correction b065ebc replaces all three "no OpenAI cost" strings with "with
+  no cost". Both fixes and copy are included in76, not installed75.
+- Owner completed Play purchase terms/payment flow on phone. App displayed Thank
+  you; Play Order Management confirms October23 23:39 UTC Test: Support readFlow,
+  readflow_support_1, Processed. No real charge claimed or initiated by agent.
+  Evidence tmp/play-support-test-20261024.png and native75-support-completed.png.
+  Cancellation/pending-path device tests not yet performed.
+- Owner explicitly approved registering phone advertising ID with AdMob. Added
+  readFlow QA Samsung Android test device; confirmed saved. Identifier stays out
+  of source/docs. Proof tmp/admob-test-phone-20261024.png. No ad clicked.
+- Ten-minute background-only scrcpy audio capture is running for Principles rF AI.
+  Follow toggled off/on without stopping playback, active highlight observed;
+  background Settings use tested. Phone screen switched off for lock playback
+  check; recording/transcription review and wake/unlock still pending. No complete
+  listening-quality or whole-book exactness claim. Local turbo model cache was
+  incomplete; explicitly selected intact cached Whisper-small on CUDA, no download.
+- The older bullets below retain earlier milestones; this block supersedes their
+  pending75-build/import/payment statements. No production submission yet.
+
 - Owner now requires background-only PC work and explicitly authorized ADB to
   operate only the connected phone. No mouse/keyboard takeover or
-  foreground windows. Stopped the agent's scrcpy mirror and restored temporary
-  stay_on_while_plugged_in to original0. Continue CLI builds/install/logs and hidden
+  foreground windows. Stopped the agent's scrcpy mirror. USB stay-awake is temporarily
+  enabled for QA; restore original0 afterwards. Continue CLI builds/install/logs and hidden
   browser work and background ADB phone tests;
   do not silently substitute static checks for native visual or listening tests.
 - Owner corrected download wording: replace "no OpenAI cost" with "with no cost".

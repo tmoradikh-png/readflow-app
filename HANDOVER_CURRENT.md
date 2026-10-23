@@ -5,13 +5,14 @@ Updated: 2026-10-24
 ## Active Free-Release Migration
 
 Read [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md) first for the authorized
-1.0.68 (75) free/offline migration, support product, AdMob account and build gates.
-Production remains1.0.66 (73). Internal74 was published and Play-installed on Samsung
-SM-S918B without removing books. Launch exposed a confirmed ad SDK ordering crash;
-fixed and regression-tested in98cfbb0, pushed with tags. Replacement internal AAB75
-e4b4d091 is building; native fix/import/audio/billing QA remains pending.
+1.0.69 (76) free/offline migration, support product, AdMob account and build gates.
+Production remains1.0.66 (73). Internal75 now opens on Samsung SM-S918B without the
+ad SDK crash, preserving books. Fresh43-page and35 MB/712-page imports succeed.
+Owner completed support test purchase; Play confirms Test/Processed. Final76 build
+08016c8e is underway with corrected free wording, footer geometry and import progress;
+native final-build QA/audio review remains pending. ADB phone/background-only work.
 Public policy/app-ads.txt and European/US consent messages are published. AdMob review
-is in progress. All103 Play orders audited October24 are Test; no real paid order found.
+is in progress. Earlier103 orders and the new support order are Test; no real paid order found.
 Legacy services/base plans remain active. Exact evidence/gates in FREE_RELEASE_STATUS.md.
 Older subscription architecture and release records below are historical context.
 
