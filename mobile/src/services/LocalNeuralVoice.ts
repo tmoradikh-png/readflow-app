@@ -162,7 +162,7 @@ function buildStatus({
       "Install the next native build to enable rF AI. Phone voice still works on eligible plans.";
   } else if (!modelDownloaded) {
     title = "Download rF AI";
-    detail = `Download ${LOCAL_NEURAL_MODEL_NAME} once (about ${modelSize}). It then reads on this phone with no OpenAI cost.`;
+    detail = `Download ${LOCAL_NEURAL_MODEL_NAME} once (about ${modelSize}). It then reads on this phone with no cost.`;
   } else {
     title = "Ready on this phone";
     detail = `${LOCAL_NEURAL_MODEL_NAME} is downloaded. It reads locally, uses battery and CPU, and has no cloud voice cost.`;

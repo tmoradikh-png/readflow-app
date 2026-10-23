@@ -5,6 +5,15 @@ This is work in progress, not a published release or a claim of zero current bil
 
 ## October 24 Device and Build Progress
 
+- Owner now requires background-only PC work and explicitly authorized ADB to
+  operate only the connected phone. No mouse/keyboard takeover or
+  foreground windows. Stopped the agent's scrcpy mirror and restored temporary
+  stay_on_while_plugged_in to original0. Continue CLI builds/install/logs and hidden
+  browser work and background ADB phone tests;
+  do not silently substitute static checks for native visual or listening tests.
+- Owner corrected download wording: replace "no OpenAI cost" with "with no cost".
+  Updated all three user-facing occurrences in LibraryScreen/LocalNeuralVoice.
+  This copy change is newer than internal build75 and belongs in final76+.
 - Release blocker found on Play-installed 1.0.67 (74), October24 01:06:
   AndroidRuntime fatal exception in com.urmiaworks.readflow, PID465:
   IllegalStateException: MobileAds.initialize() must be called prior to setting
@@ -19,7 +28,7 @@ This is work in progress, not a published release or a claim of zero current bil
   readflow-before-device-qa-20261024 / readflow-after-ad-startup-fix-1.0.68-20261024
   pushed to tmoradikh-png/readflow-app. Replacement internal AAB build:
   https://expo.dev/accounts/tohid123/projects/readflow/builds/e4b4d091-be04-4419-9bea-edac74f5065b
-  Last observed IN_PROGRESS. Expo usage before build400/4500, overage zero.
+  FINISHED October23 23:20:17 UTC. Expo usage before build400/4500, overage zero.
 - Fresh Play financial audit: all103 orders across five pages marked Test; latest
   August11. Query range January1 2008 to October23 2026; no real paid order found.
   All-six-product subscription report shows total/new/canceled subscriptions0 and

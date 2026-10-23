@@ -930,7 +930,7 @@ function VoiceSettingsSheet({
                     ? `${Math.max(1, Math.floor(rfVoiceDailyLimit / 60))}-minute daily allowance. Downloads once and runs on this phone.`
                     : localStatus.engineInstalled
                     ? readingLanguage.rfAi
-                      ? "Natural offline reading. No OpenAI cost. Uses this phone's battery."
+                      ? "Natural offline reading with no cost. Uses this phone's battery."
                       : "English voice pack only for now. More rF AI languages can be added later."
                     : localStatus.detail
                 }
@@ -970,7 +970,7 @@ function VoiceSettingsSheet({
                 </Text>
                 <Text style={styles.voiceBlockHint}>
                   {localStatus.engineInstalled
-                    ? `${localStatus.modelName} reads on this phone with no OpenAI cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. ${
+                    ? `${localStatus.modelName} reads on this phone with no cost. It uses battery and about ${formatLocalModelSize(localStatus.modelSizeBytes)} of storage. ${
                         canContinueRFAiInBackground
                           ? "rF AI can continue when the screen locks, with lock-screen controls."
                           : "Reading stops when you leave readFlow."
