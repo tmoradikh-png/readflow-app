@@ -73,6 +73,33 @@ const { HybridTextIntelligence } = hybridTextModule;
 assert.equal(containsRasterImageOperators([1, 10, 85]), true);
 assert.equal(containsRasterImageOperators([1, 10, 42]), false);
 
+const footerItem = (str, x, y, width = str.length * 5, height = 11) => ({
+  str, width, height, transform: [height, 0, 0, height, x, y],
+});
+const footerBody = [
+  footerItem("A genuine chapter title", 50, 730, 220, 17),
+  footerItem("First complete body line.", 50, 600),
+  footerItem("Second complete body line.", 50, 580),
+  footerItem("The final body line stays intact.", 50, 80),
+];
+for (const footer of [
+  [footerItem("A unique section label", 0, 0), footerItem("1", 580, 0)],
+  [footerItem("xviii", 0, 0), footerItem("Preface", 450, 0)],
+]) {
+  const rendered = renderPdfTextItemsWithLayout([...footerBody, ...footer], 792);
+  assert.doesNotMatch(rendered.text, /A unique section label|xviii|Preface/);
+  assert.match(rendered.text, /A genuine chapter title/);
+  assert.match(rendered.text, /The final body line stays intact/);
+}
+for (const [lastLine, height] of [
+  [[footerItem("A real body sentence ending in 2024", 50, 0)], 792],
+  [[footerItem("A genuine section", 50, 350), footerItem("3", 580, 350)], 792],
+  [[footerItem("An unmeasured edge label", 0, 0), footerItem("1", 580, 0)], undefined],
+]) {
+  assert.match(renderPdfTextItemsWithLayout([...footerBody, ...lastLine], height).text,
+    /A real body sentence ending in 2024|A genuine section|An unmeasured edge label/);
+}
+
 const visualCaptionPage = {
   page: 15,
   source: "native",

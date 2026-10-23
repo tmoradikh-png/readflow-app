@@ -172,7 +172,7 @@ export function renderPdfTextItems(rawItems: any[]): string {
   return renderPdfTextItemsWithLayout(rawItems).text;
 }
 
-export function renderPdfTextItemsWithLayout(rawItems: any[]): RenderedPdfText {
+export function renderPdfTextItemsWithLayout(rawItems: any[], pageHeight?: number): RenderedPdfText {
   const items = rawItems.map(toPositionedItem).filter(Boolean) as PositionedTextItem[];
   if (items.length === 0) return { text: "" };
 
@@ -186,6 +186,7 @@ export function renderPdfTextItemsWithLayout(rawItems: any[]): RenderedPdfText {
   let previous: TextLine | null = null;
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     const line = lines[lineIndex];
+    if (isSeparatedPageFooter(lines, lineIndex, typography.bodyHeight, pageHeight)) continue;
     const rendered = renderLine(line);
     if (!rendered) continue;
     if (outputLines.length) {
@@ -206,6 +207,27 @@ export function renderPdfTextItemsWithLayout(rawItems: any[]): RenderedPdfText {
     text: outputLines.join("\n"),
     ...(footnoteStartLine == null ? {} : { footnoteStartLine }),
   };
+}
+
+/** A one-off running footer needs geometry, not repetition, to identify it. */
+function isSeparatedPageFooter(
+  lines: TextLine[], index: number, bodyHeight: number, pageHeight?: number
+): boolean {
+  if (!pageHeight || !bodyHeight || index !== lines.length - 1 || index < 3) return false;
+  const line = lines[index];
+  if (line.y < -bodyHeight || line.y > pageHeight * 0.06) return false;
+  if (lines[index - 1].y - line.y < bodyHeight * 1.8) return false;
+  const items = [...line.items].sort((a, b) => a.x - b.x);
+  const folio = /^(?:\d{1,5}|[ivxlcdm]{1,8})$/i;
+  for (let split = 1; split < items.length; split++) {
+    const gap = items[split].x - (items[split - 1].x + items[split - 1].width);
+    if (gap < bodyHeight * 6) continue;
+    const left = renderLine({ y: line.y, items: items.slice(0, split) }).normalize("NFKC").trim();
+    const right = renderLine({ y: line.y, items: items.slice(split) }).normalize("NFKC").trim();
+    const label = folio.test(left) ? right : folio.test(right) ? left : "";
+    if (label.length >= 4 && label.length <= 90 && /\p{L}/u.test(label) && !/[.!?]$/.test(label)) return true;
+  }
+  return false;
 }
 
 /**

@@ -42,7 +42,7 @@ export interface ImportProgressHooks {
 
 interface OfflineEngine {
   pageCount(uri: string): Promise<number>;
-  extractPage(uri: string, page: number): Promise<{ items: unknown[]; hasRasterImage: boolean }>;
+  extractPage(uri: string, page: number): Promise<{ items: unknown[]; hasRasterImage: boolean; pageHeight: number }>;
   extractDocx(uri: string): Promise<string>;
   ocrPage(uri: string, page: number, language: string): Promise<{ page: number; text: string; confidence: number }>;
   releaseDocument(): Promise<void>;
@@ -107,7 +107,7 @@ export const PDFParser = {
             pendingOcr.push(page);
           } else {
             const raw = await native.extractPage(args.uri, page);
-            const layout = renderPdfTextItemsWithLayout(raw.items);
+            const layout = renderPdfTextItemsWithLayout(raw.items, raw.pageHeight);
             const text = layout.text.trim();
             pages.push({ page, text, source: "native", hasRasterImage: raw.hasRasterImage || !text,
               ...(layout.footnoteStartLine == null ? {} : { footnoteStartLine: layout.footnoteStartLine }) });

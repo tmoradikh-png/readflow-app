@@ -138,6 +138,7 @@ public final class ReadFlowOfflineModule extends ReactContextBaseJavaModule {
             stripper.getText(pdf);
             WritableMap result = Arguments.createMap();
             result.putArray("items", items);
+            result.putDouble("pageHeight", height);
             result.putBoolean("hasRasterImage", hasImage(pdf.getPage(page - 1).getResources(), new HashSet<>(), 0));
             return result;
         });
