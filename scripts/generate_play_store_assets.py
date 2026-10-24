@@ -291,6 +291,25 @@ def mini_reader(draw, x, y, w, h, ai=True):
         center_text(draw, (x + w - 136, y + h - 112, x + w - 34, y + h - 34), "AI", F["h3"], "white")
 
 
+def free_feature_graphic():
+    """Free-release banner using a real reader capture, not the legacy AI mockup."""
+    OUT.mkdir(parents=True, exist_ok=True)
+    im = Image.new("RGB", (1024, 500), "#f4f6f4")
+    draw = ImageDraw.Draw(im)
+    draw.rectangle((0, 0, 16, 500), fill=ACCENT)
+    mark = icon(72)
+    im.paste(mark, (52, 42), mark)
+    draw.text((146, 47), "readFlow", font=F["logo"], fill=INK)
+    text(draw, (52, 148), "Free PDF reading", F["h1"], INK, max_width=640)
+    text(draw, (56, 245), "Read. Listen. Offline OCR.", F["h3"], GREEN_DARK)
+    text(draw, (56, 308), "PDFs and Word documents.\nNo reading subscription.", F["body"], MUTED)
+    text(draw, (56, 425), "Library ads. Optional one-time support.", F["small"], MUTED)
+    screen = Image.open(ROOT / "artifacts" / "store-free-reader-dark.png").convert("RGB")
+    screen.thumbnail((260, 462), Image.Resampling.LANCZOS)
+    im.paste(screen, (732, 19))
+    im.save(OUT / "feature-graphic-free-1024x500.png")
+
+
 def feature_graphic():
     im = Image.new("RGB", (1024, 500), CREAM)
     draw = ImageDraw.Draw(im)
