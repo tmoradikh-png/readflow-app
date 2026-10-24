@@ -1,7 +1,22 @@
 # Free Android Release Status
 
 Updated: 2026-10-24. Owner authorized implementation, builds and Google Play submission.
-This is work in progress, not a published release or a claim of zero current bills.
+Free release1.0.69(76) is published. Paid-service retirement remains unfinished;
+this is not a claim of zero current bills.
+
+## October 24 Publication Confirmed
+
+- Refreshed Play Console notification: App update published, October24.
+  Publishing overview: Last published October24,2026; no unpublished changes.
+  Latest production release:1.0.69(76) Free offline reader; rollout100%.
+  Evidence: tmp/play-free76-published-20261024.png. This supersedes all earlier
+  in-review/current73 statements in handover documents. Google notes that
+  visibility of the update may take longer for some users.
+- Read-only status check; no new release, app changes or service shutdown performed.
+  Follow-up remains subscriber/base-plan/backend cost transition and AdMob delivery.
+- Console also flags next-release DEX obfuscation2%, fix by February2027, and
+  deprecated edge-to-edge APIs. Recorded for later engineering work, not fixed or
+  treated as a blocker to this already-published version.
 
 ## October 24 Review Submission and Final QA
 
