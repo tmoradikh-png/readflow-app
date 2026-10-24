@@ -4,7 +4,7 @@ Updated: 2026-10-24
 
 Active work: [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md), Android 1.0.69 (76)
 free/offline migration with library ads and optional one-time support. Production
-last verified 1.0.66 (73);76 is submitted for review with automated checks running.
+last verified 1.0.66 (73);76 is in review after automated checks cleared.
 Source dadf46f built/Play-installed and targeted QA completed with documented limits.
 Expo renewal canceled and Free scheduled; legacy backend/base plans not yet retired.
 See the status file for exact artifacts, evidence and next transition actions.

@@ -5,7 +5,7 @@ Updated: 2026-10-24
 ## Pending Free Release
 
 Submitted1.0.69(76), dadf46f/EAS08016c8e, October24 for full production rollout.
-Google Play shows Changes in review and automated checks running; managed publishing
+Google Play confirms Changes in review after automated checks cleared; managed publishing
 off. Final76 Play installation and targeted startup/fresh-import/footer/copy checks
 passed. Earlier75 ten-minute audio/support sandbox/photo checks have documented
 limitations, not a perfect-fidelity pass. Free listing assets and Ads/Data safety

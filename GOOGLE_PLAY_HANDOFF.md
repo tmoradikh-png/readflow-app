@@ -6,7 +6,7 @@ Current work: FREE_RELEASE_STATUS.md. Play production verified active 1.0.66 (73
 October24 latest: final1.0.69(76), source dadf46f/EAS08016c8e finished and internal
 release26 available. Play-installed76 passed targeted startup/import/footer/copy QA.
 Production full rollout and eight listing/content changes submitted; Console shows
-Changes in review with quick checks running. Managed publishing off. It is not yet
+Changes in review after quick checks cleared. Managed publishing off. It is not yet
 verified live. Expo renewal canceled/Free scheduled; legacy services/base plans still
 active. Native/audio/consent limitations and exact hashes are in FREE_RELEASE_STATUS.md.
 The paragraphs below are historical, not the current submission state.

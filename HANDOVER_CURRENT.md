@@ -7,7 +7,7 @@ Updated: 2026-10-24
 Read [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md) first for the authorized
 1.0.69 (76) free/offline migration, support product, AdMob account and build gates.
 Final76 from dadf46f is built, installed through Play and submitted for full production
-rollout. Console shows Changes in review, automated checks running; managed publishing
+rollout. Automated checks cleared; Console confirms Changes in review; managed publishing
 off. Last verified live production remains1.0.66(73). Native76 startup/fresh import,
 footer cleanup and free wording passed. Earlier ten-minute audio and test support
 purchase completed, with text/pronunciation/control limitations recorded in status.

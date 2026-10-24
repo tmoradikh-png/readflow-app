@@ -9,7 +9,7 @@ This section supersedes pending/building statements in the historical milestones
 
 - Submitted nine changes to Google Play: production1.0.69(76), full rollout,
   free store copy, screenshots/feature graphic, Ads declaration and Data safety.
-  Console confirms Changes in review; automated quick checks are still running.
+  Automated quick checks cleared; Console confirms Your changes are now in review.
   Managed publishing is off. Approval publishes automatically; public availability
   is NOT yet verified. Last verified live production remains1.0.66(73).
   Proof: tmp/play-free76-review-20261024.png.
