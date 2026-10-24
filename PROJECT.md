@@ -1,12 +1,13 @@
 # readFlow Developer Handoff
 
-Updated: 2026-10-21
+Updated: 2026-10-24
 
-Active work: [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md), Android 1.0.67 (74)
+Active work: [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md), Android 1.0.69 (76)
 free/offline migration with library ads and optional one-time support. Production
-remains 1.0.66 (73); legacy services have not been retired.
-Implementation 1c52591 is pushed. Preview APK built; latest small follow-up changes
-need the next build and device QA. See the status file for exact artifact/hash and gates.
+last verified 1.0.66 (73);76 is submitted for review with automated checks running.
+Source dadf46f built/Play-installed and targeted QA completed with documented limits.
+Expo renewal canceled and Free scheduled; legacy backend/base plans not yet retired.
+See the status file for exact artifacts, evidence and next transition actions.
 
 Read `HANDOVER_CURRENT.md` first when taking over the project, then read this
 file for the fuller map of accounts, services, release status, and operational

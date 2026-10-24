@@ -4,8 +4,10 @@ Updated: 2026-10-24
 
 ## Pending Free Android Listing
 
-Use this copy only with the verified free/offline production release. Saved as a Play
-draft October24, not submitted; obsolete cloud-AI screenshots still need replacing.
+Submitted with1.0.69(76) October24; in review, not yet verified publicly available.
+Obsolete cloud/paid screenshots replaced by three actual native phone screenshots
+of generated sample text. Old tablet screenshots removed; new free feature graphic
+submitted. Public assets committed6aaa555; private book screenshots not uploaded.
 The older paid-plan copy below is historical and must not be
 used for the free release. Release gates are in FREE_RELEASE_STATUS.md.
 

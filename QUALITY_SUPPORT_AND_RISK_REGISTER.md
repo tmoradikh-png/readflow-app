@@ -13,8 +13,14 @@ does not establish their cause. Recording/transcript paths are in the release st
 Extreme Ownership page15 photo/caption is preserved in the reader. Page16 still
 includes a superscript reference as ordinary text in "convoy of 1 Humvees". General
 reference-marker cleanup remains imperfect; do not claim100% imported-text fidelity.
-Unique isolated running-footer cleanup is fixed in76 but awaits native fresh-import
-confirmation. Large-file import succeeds; new progress display also awaits76 QA.
+Native76 fresh Principles import confirms isolated footer removed and headings kept.
+Large-file import succeeds; new progress display was not visually observed in flight.
+Native76 playback/highlight and locked/Dozing PLAYING state observed, not a second
+audio recording. ADB media-pause127 did not stop playback; exact cause unestablished.
+App-only force-stop ended QA; do not claim final-build notification controls passed.
+Live ad request returned no fill/error3; no ad displayed. Regional consent/revocation
+and support cancellation/pending paths remain untested. Production76 submitted for
+review; these limitations are not a claim that every historical bug is fixed.
 
 Owner: Urmia Works  
 Support: `support@urmiaworks.com`

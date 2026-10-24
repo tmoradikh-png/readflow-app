@@ -3,6 +3,61 @@
 Updated: 2026-10-24. Owner authorized implementation, builds and Google Play submission.
 This is work in progress, not a published release or a claim of zero current bills.
 
+## October 24 Review Submission and Final QA
+
+This section supersedes pending/building statements in the historical milestones below.
+
+- Submitted nine changes to Google Play: production1.0.69(76), full rollout,
+  free store copy, screenshots/feature graphic, Ads declaration and Data safety.
+  Console confirms Changes in review; automated quick checks are still running.
+  Managed publishing is off. Approval publishes automatically; public availability
+  is NOT yet verified. Last verified live production remains1.0.66(73).
+  Proof: tmp/play-free76-review-20261024.png.
+- Final source dadf46f; EAS08016c8e-5781-4b67-8451-07654dc2f8b8 finished.
+  AAB artifacts/readflow-1.0.69-76-free-production.aab, SHA256
+  68DAAD0956CEA0CBE8759E3A84BFEB81016F4B190B87268ED4CE8D0953ACC8EA.
+  Internal release26 became available October24 01:59. Google-signed universal APK
+  artifacts/readflow-1.0.69-76-google-signed.apk, SHA256
+  F348DBCF9DEA9D9D0DE098E1BCDDC508EC6FE80D5B4D5D142E5627127A3B1ADA.
+  Signature verified; Play acquisition/update completed, installer com.android.vending,
+  version1.0.69/code76 on Samsung SM-S918B. No uninstall/data clear; books preserved.
+  Next Android code must be77 or higher.
+- Native76 startup and fresh43-page Principles import passed. Fresh page3 no longer
+  includes the isolated running footer; genuine headings remain. Evidence:
+  tmp/native76-footer-boundary.xml. Both inspected voice-panel strings say
+  "with no cost". New import-progress display was not caught during processing;
+  its source wiring is checked, visual progress behavior remains unverified.
+- Native76 rF AI playback and active highlight observed; screen-off/Dozing showed
+  PLAYING, and waking showed Device locked. This is media-state evidence, not a
+  new audio recording. tmp/native76-follow-playback.png. ADB media-pause key127
+  did not stop playback; exact cause (dispatch versus app control) is unknown.
+  Earlier claim that playback was paused was corrected: app-only force-stop ended
+  QA and pidof confirmed exit. UI pause/restart passed on75, not separately on76.
+  Original USB stay-awake0 and physical1080x2316 resolution restored and read back.
+- Native75 ten-minute audio/photo/payment results below remain valid within their
+  stated scope. Known stray reference "convoy of 1 Humvees", typographic/punctuation
+  extraction issues and possible speech/ASR discrepancies remain. No perfect-text,
+  all-book or comprehensive audio/consent/control pass is claimed.
+- Final live-ad request returned Ad failed to load:3; library remained usable.
+  No ad shown/clicked, so ad delivery/revenue not proven. Current device reported
+  privacy form not required; regional consent/revocation paths remain unverified.
+  AdMob last known Review in progress / Getting ready / Limited ad serving.
+- Replaced obsolete paid/cloud phone screenshots with three actual native reader
+  screenshots from generated sample text; removed obsolete tablet screenshots.
+  New free feature graphic and assets are in artifacts/store-free-reader-*.png
+  and artifacts/play-store/feature-graphic-free-1024x500.png, committed6aaa555.
+  No private book imagery uploaded. Existing icon/feature graphic marked AI-assisted
+  in Play's asset declaration; actual phone screenshots not marked AI-generated.
+- Expo paid renewal canceled. Stripe shows service ends October27,2026 and next
+  estimate USD0; Expo shows Canceled-active until October28 and plan change Free
+  USD0/month. Date discrepancy is recorded without assuming its cause. Screenshot:
+  tmp/expo-free-plan-20261024.png. This cancels renewal, not any existing balance.
+- Legacy six subscription base plans, Render backend and remaining RC/OpenAI
+  services have not been retired. Keep the old-client transition explicit; after
+  approval, recheck subscribers, stop new subscription sales and retire paid
+  dependencies without deleting data or silently breaking the still-live old app.
+  No monitoring automation was created. Review/AdMob approval is external work.
+
 ## October 24 Device and Build Progress
 
 - Current candidate: 1.0.69 (76), source dadf46f, live ad unit configuration.

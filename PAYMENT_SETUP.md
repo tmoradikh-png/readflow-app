@@ -13,8 +13,14 @@ Owner completed a support purchase on October24; app displayed Thank you and Pla
 Order Management confirms Test: Support readFlow, Processed, October23 23:39 UTC.
 No real charge; cancellation/pending device paths remain untested. Phone registered
 as an AdMob test device with explicit approval; identifier excluded from docs.
-Existing paid services and base plans have
-NOT yet been retired. Below is the legacy setup.
+Expo paid renewal canceled: Stripe service end October27 and next estimate USD0;
+Expo says active until October28 and scheduled Free USD0/month. Date discrepancy
+unexplained; proof tmp/expo-free-plan-20261024.png. Existing balance not waived.
+Legacy backend/services and six subscription base plans have NOT yet been retired;
+production76 is submitted, not yet live. Recheck subscriber state and transition
+before shutting down old-client dependencies. New client no longer sells subscriptions.
+Final76 live-ad request returned error3/no fill; no delivered ad/revenue verified.
+Below is the legacy setup.
 
 This is the payment handoff for Google Play, Apple App Store, RevenueCat, the
 backend, and the mobile app. It is intentionally operational: another developer
