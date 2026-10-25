@@ -4,6 +4,10 @@ Updated: 2026-10-24. Owner authorized implementation, builds and Google Play sub
 Free release1.0.69(76) is published. Paid-service retirement remains unfinished;
 this is not a claim of zero current bills.
 
+October25 local cleanup: superseded binaries and regenerable caches removed; current76
+and prior73 artifacts, Git/source history, notes, books and QA evidence retained.
+See docs/WORKSPACE_CLEANUP_2026-10-25.md for the deletion record and historical-path caveat.
+
 ## October 24 Publication Confirmed
 
 - Refreshed Play Console notification: App update published, October24.
