@@ -1,22 +1,21 @@
 # Free Android Release Status
 
-## October 27 Quality Candidate Needs Picker Correction
+## October 27 Optimized Internal Candidate
 
-Do not promote internal1.0.70(77): actual phone QA found a document-picker
-record-conversion NullPointerException before import. Candidate1.0.71(78) backports
-merged Expo PR51206's narrow Field annotation keep rule. Source checks pass;
-replacement native build and phone retest are required. Production76 is unchanged.
+Production1.0.69(76) remains unchanged. Internal release28,1.0.71(78), is available
+to testers on the Active track. Source db12868, source checks, native test/build and
+artifact inspection passed. Play reports High DEX optimization and92% obfuscation.
+Both reported bitmap methods are absent from the optimized output; image-presence
+inspection no longer decodes images. Reader landscape safe-area padding was added.
 
-Production1.0.69(76) remains active. Candidate1.0.70(77) enables R8 release
-optimization, avoids image decoding during PDF image detection and adds reader
-landscape safe-area padding. Source checks, native metadata tests and EAS release
-build pass. Artifact DEX size is72.38% smaller. Play now reports High DEX optimization
-and92% obfuscation (R8 metadata separately gives84.75%). The two flagged bitmap sites
-are absent in optimized output. Internal release27 is available but failed picker QA.
-Phone access must be coordinated with Assess ad-supported Sonos casting; it was
-released back after the failure without changing its casting session/audio settings.
-Upstream deprecated edge-to-edge API recommendation is not yet cleared.
-See [quality follow-up](docs/PLAY_QUALITY_2026-10-26.md). No production submission.
+Do not promote failed77: device QA found a document-picker record-conversion NPE.
+78 backports merged Expo PR51206's narrow Field annotation keep rule; the annotation
+is confirmed unchanged in the artifact. Phone retest is still required: the connected
+phone has77 and its Play listing has not offered78. Coordinate all phone use with
+Assess ad-supported Sonos casting and preserve its casting/audio settings.
+Upstream deprecated edge-to-edge API recommendation remains unresolved; Android15+
+layout QA is also outstanding. See [quality follow-up](docs/PLAY_QUALITY_2026-10-26.md)
+for artifacts, hashes and exact evidence. No production submission.
 
 Updated: 2026-10-24. Owner authorized implementation, builds and Google Play submission.
 Free release1.0.69(76) is published. Paid-service retirement remains unfinished;

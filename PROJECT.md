@@ -2,10 +2,11 @@
 
 Updated: 2026-10-27
 
-Current override: production1.0.69(76) is published. Internal1.0.70(77) improves
-DEX optimization to Play High/92% but fails document-picker record conversion.
-Do not promote77. Candidate1.0.71(78) backports Expo PR51206's Field annotation
-keep rule; native rebuild/retest pending. Upstream edge API warning is unresolved.
+Current override: production1.0.69(76) is published. Internal1.0.70(77) fails
+document-picker record conversion; do not promote. Replacement1.0.71(78) backports
+Expo PR51206's Field annotation keep rule. Build/artifact checks passed; internal28
+is Active with Play High/92% obfuscation. Phone78 installation/retest remains pending.
+Upstream edge API warning is unresolved.
 See docs/PLAY_QUALITY_2026-10-26.md.
 The historical migration paragraph below is superseded by FREE_RELEASE_STATUS.md.
 

@@ -5,9 +5,10 @@ Updated: 2026-10-27
 Active: docs/PLAY_QUALITY_2026-10-26.md tracks the DEX2%/February2027 issue,
 PDFBox bitmap sites and upstream edge-to-edge APIs. Internal1.0.70(77) reaches Play
 High/92% obfuscation, but phone QA found a blocking document-picker NPE. Do not
-promote77. Candidate1.0.71(78) adds upstream Expo PR51206's keep rule and requires
-native rebuild/retest. Flagged bitmap sites were absent in77; upstream edge API
-warning remains unresolved. Published production version is76.
+promote77. Replacement1.0.71(78) adds upstream Expo PR51206's keep rule; native
+build/artifact checks passed and internal28 is Active, also High/92% in Play.
+Phone78 installation/retest remains required. Both flagged bitmap methods are absent
+in78; upstream edge API warning remains unresolved. Published production version is76.
 
 ## Free Candidate QA Update
 

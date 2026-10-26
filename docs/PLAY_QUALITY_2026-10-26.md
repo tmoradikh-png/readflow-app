@@ -4,6 +4,25 @@ Candidate: 1.0.71 (78). Internal1.0.70(77) failed picker QA; do not promote.
 Production remains 1.0.69 (76). No production submission.
 Before tag: readflow-before-play-quality-1.0.70-20261026 (9e1a026).
 
+Replacement78 source db12868 is committed/pushed. EAS build
+300660f8-4e6b-4b5f-99d8-c6731a72859d FINISHED using existing included credit.
+Fresh billing still showed USD6/USD45 included, renewal canceled/Free scheduled.
+Internal release28 (1.0.71/78) is available to testers and the track is Active,
+released October27 at00:40 Console time. It supersedes failed77; production76
+is unchanged. Proof: tmp/play-quality78-internal-20261027.png.
+
+Replacement AAB: artifacts/readflow-1.0.71-78-quality.aab, SHA256
+F177D14954E1AAA1DEB9F5C92DBB7B51DED6AF68801150B14BD0650C00835912.
+One DEX,10,793,288 uncompressed bytes; r8 noObfuscationPercentage15.26.
+Mapping and DEX confirm Field and key retain original names, Tesseract nine-int
+callback and boxed sherpa callbacks remain. SampledImageReader remains absent.
+Derived files: tmp/quality78-mapping.txt and tmp/quality78-dex.xml. DEX inspection
+also confirms JPXFilter (z7.h) has only decode helpers, with no encode method.
+Play reports High DEX optimization,92% obfuscation, Full Mode and resource shrinking
+for78. Proof: tmp/play-quality78-dex-20261027.png. Optimization/shrinking percentage
+fields are dashes, not measured values. Phone retest remains pending; no production
+promotion. The phone Play listing still shows Open for installed77, not Update.
+
 ## October 27 Device Blocker and Correction
 
 Internal77 was successfully acquired through Play on SM-G975F/Android12; package
@@ -19,13 +38,23 @@ R8 8.11.18: preserving the Field annotation fixes the same record-conversion fai
 The exact runtime null mechanism is not established locally or in the upstream PR;
 do not claim annotation defaults were stripped. Backported the narrow upstream keep
 rule, retained all other optimization, and added a configuration regression check.
-Candidate78 needs a fresh native build, unchanged-Field artifact audit and real picker,
-text import, OCR and rF AI checks before promotion. No speculative framework upgrade.
+Candidate78 native build and unchanged-Field artifact audit passed. Real picker,
+text import, OCR and rF AI checks remain required before promotion. No speculative
+framework upgrade.
 
 Owner authorized coordination with Assess ad-supported Sonos casting, chat
 01a1759b-3601-72e3-bc6d-caa4f7436b84. That chat granted an exclusive QA window and
-required the active casting session/audio settings remain untouched. Input is now
-stopped and phone released back while rebuilding. USB stay-awake restored to0.
+required the active casting session/audio settings remain untouched. The first
+window ended with USB stay-awake restored to0. A second window was explicitly
+granted after78 finished: Sonos demo captured/casting restored/commands stopped.
+That second window is now released: USB stay-awake restored/read back0, phone
+commands stopped and coordination chat notified. Casting/routing/volume untouched.
+Play detail reopening and a fresh Play process did not offer78; its Updates list
+also lacked readFlow. Installed package remains1.0.70(77), installercom.android.vending.
+No update/uninstall/data clearing occurred during this window. Waiting for Play
+delivery or owner approval of a one-time browser Downloads exception for Google's
+signed APK, to be immediately moved into ReadFlow/artifacts. Request a fresh exclusive
+phone window before installation/retest. No78 device pass is claimed.
 
 ## Evidence and Changes
 
