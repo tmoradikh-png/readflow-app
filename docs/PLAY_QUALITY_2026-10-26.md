@@ -1,7 +1,31 @@
 # Android Play Quality Follow-Up
 
-Candidate: 1.0.70 (77). Production remains 1.0.69 (76). No production submission.
+Candidate: 1.0.71 (78). Internal1.0.70(77) failed picker QA; do not promote.
+Production remains 1.0.69 (76). No production submission.
 Before tag: readflow-before-play-quality-1.0.70-20261026 (9e1a026).
+
+## October 27 Device Blocker and Correction
+
+Internal77 was successfully acquired through Play on SM-G975F/Android12; package
+manager confirms version77 and com.android.vending installer. Startup/free shelf
+passed. Add document failed before opening the picker: ExpoDocumentPicker options
+could not be converted to DocumentPickerOptions, caused by NullPointerException.
+Evidence: tmp/quality77-picker-failure.xml and .png. No import, OCR or voice pass.
+The phone's library was empty before the update; no uninstall/data clearing occurred.
+
+Record fields/getters are retained in the DEX, but Field is renamed to H8.b. This
+matches [merged Expo PR51206](https://github.com/expo/expo/pull/51206) for SDK54 with
+R8 8.11.18: preserving the Field annotation fixes the same record-conversion failure.
+The exact runtime null mechanism is not established locally or in the upstream PR;
+do not claim annotation defaults were stripped. Backported the narrow upstream keep
+rule, retained all other optimization, and added a configuration regression check.
+Candidate78 needs a fresh native build, unchanged-Field artifact audit and real picker,
+text import, OCR and rF AI checks before promotion. No speculative framework upgrade.
+
+Owner authorized coordination with Assess ad-supported Sonos casting, chat
+01a1759b-3601-72e3-bc6d-caa4f7436b84. That chat granted an exclusive QA window and
+required the active casting session/audio settings remain untouched. Input is now
+stopped and phone released back while rebuilding. USB stay-awake restored to0.
 
 ## Evidence and Changes
 

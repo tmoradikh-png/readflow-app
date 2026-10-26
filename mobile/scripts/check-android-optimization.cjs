@@ -22,6 +22,7 @@ assert.throws(() => optimizeBuildGradle('getDefaultProguardFile("proguard-androi
 const rules = fs.readFileSync("native/readflow-release.pro", "utf8");
 assert.match(rules, /com\.k2fsa\.sherpa\.onnx/);
 assert.match(rules, /java\.lang\.Integer invoke\(float\[\]\)/);
+assert.match(rules, /-keep\s+@interface\s+expo\.modules\.kotlin\.records\.Field\s*\{\s*\*;\s*\}/);
 assert.doesNotMatch(rules, /-dont(?:obfuscate|shrink|optimize)\b/);
 const importer = fs.readFileSync("native/readflow-offline/android/src/main/java/com/urmiaworks/readflow/offline/ReadFlowOfflineModule.java", "utf8");
 assert.doesNotMatch(importer, /resources\.getXObject\(|new PDImageXObject/);

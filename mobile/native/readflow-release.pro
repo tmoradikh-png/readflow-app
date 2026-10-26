@@ -7,6 +7,9 @@
     public java.lang.Integer invoke(float[]);
 }
 
+# Backport Expo PR51206: record options can fail when this annotation is renamed.
+-keep @interface expo.modules.kotlin.records.Field { *; }
+
 # Optional PDFBox JPX integration is not shipped or used by readFlow.
 # PDF rendering/OCR uses Android PdfRenderer; original-page display uses PDFium.
 -dontwarn com.gemalto.jp2.**

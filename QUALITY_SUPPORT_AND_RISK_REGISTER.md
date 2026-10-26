@@ -3,11 +3,11 @@
 Updated: 2026-10-27
 
 Active: docs/PLAY_QUALITY_2026-10-26.md tracks the DEX2%/February2027 issue,
-PDFBox bitmap sites and upstream edge-to-edge APIs. Candidate1.0.70(77) is not
-release-ready until device QA passes. Optimized native build/tests pass; flagged
-bitmap sites are absent in compiled output. Play confirms High DEX optimization/92%
-obfuscation. Upstream edge API warning and device QA remain outstanding; internal27
-is available. Published production version is76.
+PDFBox bitmap sites and upstream edge-to-edge APIs. Internal1.0.70(77) reaches Play
+High/92% obfuscation, but phone QA found a blocking document-picker NPE. Do not
+promote77. Candidate1.0.71(78) adds upstream Expo PR51206's keep rule and requires
+native rebuild/retest. Flagged bitmap sites were absent in77; upstream edge API
+warning remains unresolved. Published production version is76.
 
 ## Free Candidate QA Update
 

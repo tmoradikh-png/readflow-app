@@ -2,10 +2,10 @@
 
 Updated: 2026-10-27
 
-Current override: production1.0.69(76) is published. Candidate1.0.70(77) addresses
-Play optimization/image-memory/layout findings. Native build/tests pass; phone QA,
-upstream edge-to-edge API cleanup remain unfinished. Internal27 is available;
-Play confirms High DEX optimization/92% obfuscation. Production remains76.
+Current override: production1.0.69(76) is published. Internal1.0.70(77) improves
+DEX optimization to Play High/92% but fails document-picker record conversion.
+Do not promote77. Candidate1.0.71(78) backports Expo PR51206's Field annotation
+keep rule; native rebuild/retest pending. Upstream edge API warning is unresolved.
 See docs/PLAY_QUALITY_2026-10-26.md.
 The historical migration paragraph below is superseded by FREE_RELEASE_STATUS.md.
 
