@@ -15,7 +15,7 @@ function plugin(name) {
   return expo.plugins.find(value => Array.isArray(value) && value[0] === name)?.[1];
 }
 
-check(expo.version === "1.0.69" && expo.android.versionCode === 76, "Candidate is 1.0.69 (76)");
+check(expo.version === "1.0.70" && expo.android.versionCode === 77, "Candidate is 1.0.70 (77)");
 check(expo.android.package === "com.urmiaworks.readflow", "Android package unchanged");
 check(expo.extra.eas.projectId === "097b0b5a-db90-46b4-b434-60836687b429", "Existing EAS project");
 check(["apiUrl", "appKey", "revenueCatAndroidApiKey", "revenueCatIosApiKey"].every(key => !(key in expo.extra)),
@@ -37,6 +37,8 @@ for (const name of ["android.permission.RECORD_AUDIO", "android.permission.FOREG
 const audio = plugin("expo-audio");
 check(audio?.recordAudioAndroid === false && audio?.microphonePermission === false, "No microphone access");
 check(expo.plugins.includes("./plugins/withAndroidReleaseManifestCleanup"), "Release manifest cleanup enabled");
+check(expo.plugins.includes("./plugins/withAndroidReleaseOptimization"), "Release R8 and resource optimization enabled");
+check(expo.android.edgeToEdgeEnabled === true, "Edge-to-edge stays enabled");
 check(expo.plugins.includes("./plugins/withSherpaCodegenGradleFix"), "Existing rF AI native build fix retained");
 
 const ads = plugin("react-native-google-mobile-ads");
@@ -54,6 +56,8 @@ check(!/LibraryAds|BannerAd|mobileAds/.test(read("src/components/Reader.tsx")), 
 for (const name of ["internal", "production"]) {
   const profile = eas.build[name];
   check(profile.distribution === "store" && profile.android.buildType === "app-bundle", `${name} produces an AAB`);
+  check(profile.android.gradleCommand === ":readflow-offline:testReleaseUnitTest :app:bundleRelease",
+    `${name} requires native metadata tests before bundling`);
   check(profile.autoIncrement === false, `${name} keeps the reviewed version code`);
 }
 const importer = read("src/services/PDFParser.ts");

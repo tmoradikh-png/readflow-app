@@ -5,6 +5,9 @@ dist/
 .env
 /android
 /ios
+**/build/
+**/.gradle/
+**/.cxx/
 .env.*
 *.jks
 *.keystore

@@ -27,7 +27,9 @@
       "autoIncrement": false,
       "distribution": "store",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "resourceClass": "medium",
+        "gradleCommand": ":readflow-offline:testReleaseUnitTest :app:bundleRelease"
       },
       "ios": {
         "simulator": false
@@ -37,7 +39,9 @@
       "autoIncrement": false,
       "distribution": "store",
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "app-bundle",
+        "resourceClass": "medium",
+        "gradleCommand": ":readflow-offline:testReleaseUnitTest :app:bundleRelease"
       },
       "ios": {
         "simulator": false

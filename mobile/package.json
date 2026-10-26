@@ -9,8 +9,8 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "check:reader-regressions": "node ./scripts/check-reader-regressions.mjs",
-    "check:qa": "tsc --noEmit && node ./scripts/check-release-config.mjs --qa && node ./scripts/sync-offline-text.cjs --check && node ./scripts/prepare-offline-ocr.cjs --check && npm run check:reader-regressions",
-    "check:release": "node ./scripts/check-release-config.mjs && node ./scripts/sync-offline-text.cjs --check && node ./scripts/prepare-offline-ocr.cjs --check && npm run check:reader-regressions",
+    "check:qa": "tsc --noEmit && node ./scripts/check-release-config.mjs --qa && node ./scripts/check-android-optimization.cjs && node ./scripts/sync-offline-text.cjs --check && node ./scripts/prepare-offline-ocr.cjs --check && npm run check:reader-regressions",
+    "check:release": "node ./scripts/check-release-config.mjs && node ./scripts/check-android-optimization.cjs && node ./scripts/sync-offline-text.cjs --check && node ./scripts/prepare-offline-ocr.cjs --check && npm run check:reader-regressions",
     "build:android:internal": "npm run check:release && eas build -p android --profile internal",
     "build:ios:internal": "node -e \"throw new Error('Offline import is Android-only; iOS is not ready for release')\""
   },

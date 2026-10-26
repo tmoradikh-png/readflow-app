@@ -1,6 +1,10 @@
 # readFlow Quality, Support, and Risk Register
 
-Updated: 2026-10-24
+Updated: 2026-10-26
+
+Active: docs/PLAY_QUALITY_2026-10-26.md tracks the DEX2%/February2027 issue,
+PDFBox bitmap sites and upstream edge-to-edge APIs. Candidate1.0.70(77) is not
+release-ready until optimized native/device QA passes. Published version is76.
 
 ## Free Candidate QA Update
 

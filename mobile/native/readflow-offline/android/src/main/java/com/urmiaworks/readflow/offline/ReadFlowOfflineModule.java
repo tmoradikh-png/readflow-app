@@ -15,13 +15,12 @@ import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
 import com.googlecode.tesseract.android.TessBaseAPI;
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader;
+import com.tom_roush.pdfbox.cos.COSBase;
+import com.tom_roush.pdfbox.cos.COSDictionary;
 import com.tom_roush.pdfbox.cos.COSName;
 import com.tom_roush.pdfbox.io.MemoryUsageSetting;
 import com.tom_roush.pdfbox.pdmodel.PDDocument;
 import com.tom_roush.pdfbox.pdmodel.PDResources;
-import com.tom_roush.pdfbox.pdmodel.graphics.PDXObject;
-import com.tom_roush.pdfbox.pdmodel.graphics.form.PDFormXObject;
-import com.tom_roush.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import com.tom_roush.pdfbox.text.PDFTextStripper;
 import com.tom_roush.pdfbox.text.TextPosition;
 import java.io.File;
@@ -139,17 +138,27 @@ public final class ReadFlowOfflineModule extends ReactContextBaseJavaModule {
             WritableMap result = Arguments.createMap();
             result.putArray("items", items);
             result.putDouble("pageHeight", height);
-            result.putBoolean("hasRasterImage", hasImage(pdf.getPage(page - 1).getResources(), new HashSet<>(), 0));
+            PDResources resources = pdf.getPage(page - 1).getResources();
+            result.putBoolean("hasRasterImage", hasImage(resources == null ? null : resources.getCOSObject(), new HashSet<>(), 0));
             return result;
         });
     }
 
-    private boolean hasImage(PDResources resources, Set<Object> seen, int depth) throws IOException {
-        if (resources == null || depth > 12 || !seen.add(resources.getCOSObject())) return false;
-        for (COSName name : resources.getXObjectNames()) {
-            PDXObject object = resources.getXObject(name);
-            if (object instanceof PDImageXObject) return true;
-            if (object instanceof PDFormXObject && hasImage(((PDFormXObject) object).getResources(), seen, depth + 1)) return true;
+    static boolean hasImage(COSDictionary resources, Set<Object> seen, int depth) {
+        if (resources == null || depth > 12 || !seen.add(resources)) return false;
+        COSBase objects = resources.getDictionaryObject(COSName.XOBJECT);
+        if (!(objects instanceof COSDictionary)) return false;
+        COSDictionary xobjects = (COSDictionary) objects;
+        // Inspect metadata only. Constructing PDImageXObject can decode JPX image data.
+        for (COSName name : xobjects.keySet()) {
+            COSBase value = xobjects.getDictionaryObject(name);
+            if (!(value instanceof COSDictionary)) continue;
+            COSDictionary object = (COSDictionary) value;
+            COSBase subtype = object.getDictionaryObject(COSName.SUBTYPE);
+            if (COSName.IMAGE.equals(subtype)) return true;
+            COSBase nested = object.getDictionaryObject(COSName.RESOURCES);
+            if (COSName.FORM.equals(subtype) && nested instanceof COSDictionary
+                && hasImage((COSDictionary) nested, seen, depth + 1)) return true;
         }
         return false;
     }

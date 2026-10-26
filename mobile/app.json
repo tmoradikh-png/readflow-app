@@ -2,7 +2,7 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.69",
+    "version": "1.0.70",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "scheme": "readflow",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 76,
+      "versionCode": 77,
       "permissions": [
         "INTERNET",
         "android.permission.FOREGROUND_SERVICE",
@@ -68,6 +68,7 @@
         }
       ],
       "./plugins/withAndroidReleaseManifestCleanup",
+      "./plugins/withAndroidReleaseOptimization",
       "./plugins/withSherpaCodegenGradleFix",
       [
         "react-native-google-mobile-ads",

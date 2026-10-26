@@ -1776,7 +1776,7 @@ export function Reader({
   const readerBottomPad = theme.spacing(3);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingLeft: insets.left, paddingRight: insets.right }]}>
       <ExpoStatusBar style={theme.colors.bg === "#171A18" ? "light" : "dark"} hidden={immersive} />
 
       {/* In fullscreen we hide the top bar entirely (the Exit button used to sit
