@@ -1,10 +1,12 @@
 # readFlow Developer Handoff
 
-Updated: 2026-10-26
+Updated: 2026-10-27
 
 Current override: production1.0.69(76) is published. Candidate1.0.70(77) addresses
-Play optimization/image-memory/layout findings; native validation and upstream
-edge-to-edge API cleanup remain unfinished. See docs/PLAY_QUALITY_2026-10-26.md.
+Play optimization/image-memory/layout findings. Native build/tests pass; phone QA,
+upstream edge-to-edge API cleanup remain unfinished. Internal27 is available;
+Play confirms High DEX optimization/92% obfuscation. Production remains76.
+See docs/PLAY_QUALITY_2026-10-26.md.
 The historical migration paragraph below is superseded by FREE_RELEASE_STATUS.md.
 
 Active work: [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md), Android 1.0.69 (76)

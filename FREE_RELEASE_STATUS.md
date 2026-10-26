@@ -1,12 +1,16 @@
 # Free Android Release Status
 
-## October 26 Quality Fixes In Progress
+## October 27 Quality Candidate Built
 
 Production1.0.69(76) remains active. Candidate1.0.70(77) enables R8 release
 optimization, avoids image decoding during PDF image detection and adds reader
-landscape safe-area padding. Source checks pass; native/Play validation is pending.
+landscape safe-area padding. Source checks, native metadata tests and EAS release
+build pass. Artifact DEX size is72.38% smaller. Play now reports High DEX optimization
+and92% obfuscation (R8 metadata separately gives84.75%). The two flagged bitmap sites
+are absent in optimized output. Internal release27 is available; phone QA is pending
+coordination with Assess ad-supported Sonos casting, which is sharing the phone.
 Upstream deprecated edge-to-edge API recommendation is not yet cleared.
-See [quality follow-up](docs/PLAY_QUALITY_2026-10-26.md). No new release submitted.
+See [quality follow-up](docs/PLAY_QUALITY_2026-10-26.md). No production submission.
 
 Updated: 2026-10-24. Owner authorized implementation, builds and Google Play submission.
 Free release1.0.69(76) is published. Paid-service retirement remains unfinished;

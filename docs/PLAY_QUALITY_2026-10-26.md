@@ -1,6 +1,6 @@
 # Android Play Quality Follow-Up
 
-Candidate: 1.0.70 (77). Production remains 1.0.69 (76). Not submitted.
+Candidate: 1.0.70 (77). Production remains 1.0.69 (76). No production submission.
 Before tag: readflow-before-play-quality-1.0.70-20261026 (9e1a026).
 
 ## Evidence and Changes
@@ -45,7 +45,9 @@ Sources: [RN0.83 WindowUtil](https://github.com/facebook/react-native/blob/v0.83
   reader/ad regression suite and bundled OCR asset checks passed.
 - Prebuild produced version77, minify=true, shrinkResources=true and optimizing rules.
 - Added native metadata tests: direct oversized JPX metadata (no decoder), nested
-  Form/indirect image, cycles/malformed dictionaries and depth limit. Not yet run.
+  Form/indirect image, cycles/malformed dictionaries and depth limit. EAS log shows
+  testReleaseUnitTest completed without a failure before continuing release compilation;
+  separate XML test report not yet retrieved.
 - First local build failed deleting old Kotlin output folders. Deletion was blocked;
   nothing was deleted. A fresh-output init script bypasses stale outputs without
   removing them. Initial script also relocated the root linker output, an assistant
@@ -58,12 +60,61 @@ Sources: [RN0.83 WindowUtil](https://github.com/facebook/react-native/blob/v0.83
   Billing page showed USD6 used of USD45 included, renewal canceled/Free scheduled.
   No new paid service/overage or Play changes. Mobile-only archive inspected:108files,
   60,075,135 uncompressed bytes; no books/APKs/backups/keys/env/cache/generated Android.
-  Upload30.4MB. Build result pending.
+  Upload30.4MB. Build FINISHED successfully; native test task and bundle completed.
+- Expo Doctor15/18: expo-asset exists transitively/pinned by override but is not
+  declared directly; background-actions lacks new-architecture verification metadata;
+  local/sherpa packages have no directory metadata; three Expo patch versions lag.
+  These dependencies are unchanged from76; no warning exclusions or speculative
+  dependency upgrades were added. Record as separate maintenance follow-up.
 - MEASURED baseline: production76 AAB has five DEX entries totaling39,071,464
   uncompressed bytes; no proguard.map/r8.json metadata. Counted ZipArchive entries,
   summing Length for /dex/*.dex, not an installed-memory measurement.
 - Connected SM-G975F is Android12, with existing1.0.66(73). No uninstall, install,
   data clearing or device QA performed. Android15+ display QA remains necessary.
+
+## October 27 Artifact Inspection
+
+- Source b3736fb is committed/pushed. EAS build
+  [12ccfc0a-a4e9-483a-9df7-501004279bed](https://expo.dev/accounts/tohid123/projects/readflow/builds/12ccfc0a-a4e9-483a-9df7-501004279bed)
+  finished successfully. Local artifact: artifacts/readflow-1.0.70-77-quality.aab.
+  SHA256: 00601CF5299F4B4C9A33D6202901E469A23F9D9E59D042605F07D5E29699B6E8.
+- MEASURED via ZIP entries: one DEX, 10,792,436 uncompressed bytes, versus five DEX
+  and 39,071,464 bytes in76. CALCULATED reduction: (1 - 10792436/39071464)*100
+  =72.38%. This is bytecode size, not total download size or installed RAM.
+- QUOTED from embedded com.android.tools/r8.json: R8 8.11.18; obfuscation,
+  optimization and shrinking enabled; noObfuscationPercentage15.25,
+  noOptimizationPercentage16.17, noShrinkingPercentage16.01. CALCULATED complements:
+  84.75%,83.83%,83.99%. These are artifact metadata, not a fresh Play score.
+  Both r8.json and proguard.map are embedded; neither existed in76.
+- Mapping and SDK dexdump inspection: SampledImageReader is absent; JPXFilter is
+  retained as z7.h with decode helpers but no encode method. The two reported
+  unsampled bitmap sites were removed. Play reanalysis is still required.
+- JNI audit: sherpa DTO names/getters and boxed FloatArray callbacks are retained.
+  Tesseract onProgressValues with nine int parameters is present in DEX under its
+  original name. It is absent from mapping.txt, illustrating why mapping absence
+  alone is not proof of removal. Its nativeClassInit looks up that exact signature.
+  This static audit is not a substitute for actual OCR/voice device tests.
+- Local derived evidence: tmp/quality77-mapping.txt and tmp/quality77-dex.xml,
+  generated from this AAB with ZIP extraction and Android SDK dexdump -l xml.
+- Internal release27 is available to internal testers, October27 00:07 Console time.
+  No devices were removed from the supported-device list. Production remains76.
+- Play bundle explorer reports DEX optimization High, obfuscation92%, Full Mode and
+  resource shrinking enabled, total uncompressed DEX10.8MB. This supersedes the
+  earlier pending-score state. Its92% is a separate reported metric from the84.75%
+  complement of R8 metadata; the exact difference in calculation is not established.
+  Optimization/shrinking percentages are shown as dashes, not zero or measured values.
+  Proof: tmp/play-quality77-dex-20261027.png; internal-publication proof:
+  tmp/play-quality77-internal-20261027.png. Install download shown70.3MB,9.95MB smaller
+  than76 (Play estimate, not measured network transfer).
+- Play-signed APK: artifacts/readflow-1.0.70-77-google-signed.apk, SHA256
+  302771D8EC4D9B7A5E1C017C3A624FB5F6721A197ECA74859F3B0D8FB0DAB200.
+  Its signer matches the installed73 certificate. ADB update returned Success, with
+  no uninstall/data clearing. Initial library was empty. Launch then required Get
+  this app from Play; Update from Play was selected, but completion is not verified.
+  The phone switched to Cast to Sonos; stopped input and restored temporary USB
+  stay-awake2 to original0. Owner authorized coordination with that chat before QA.
+- Upstream edge-to-edge deprecated API recommendation remains unresolved. Neither
+  a bitmap-warning-free dashboard nor completed phone QA has been claimed.
 
 Do not publish until optimized native compilation, JNI voice/OCR/import/billing smoke
 tests, retained image behavior and Android15+ layout checks pass. Inspect mapping and

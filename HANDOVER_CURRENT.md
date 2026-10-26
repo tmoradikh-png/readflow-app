@@ -1,9 +1,11 @@
 # readFlow Current Handover
 
-Updated: 2026-10-26
+Updated: 2026-10-27
 
 Current: production1.0.69(76) is published, verified October26. Candidate1.0.70(77)
-quality work is not yet native-verified or submitted. Read FREE_RELEASE_STATUS.md
+quality native tests/build pass; internal27 is available. Play reports High/92%
+obfuscation. Phone QA pending shared-device coordination; upstream edge API warning
+remains unresolved. Read FREE_RELEASE_STATUS.md
 and docs/PLAY_QUALITY_2026-10-26.md first; these supersede review-state notes below.
 
 ## Active Free-Release Migration
