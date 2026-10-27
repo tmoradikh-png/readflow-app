@@ -2,7 +2,10 @@
 
 Updated: 2026-10-27
 
-Current override: production1.0.69(76) is published. Internal1.0.70(77) fails
+Current override: production1.0.69(76) is last verified published. Owner accepted the
+remaining edge-to-edge recommendation and78 was submitted October27 for full rollout.
+Quick checks cleared; Console shows Changes in review; managed
+publishing off. Publication/warning clearance not yet confirmed. Internal1.0.70(77) fails
 document-picker record conversion; do not promote. Replacement1.0.71(78) backports
 Expo PR51206's Field annotation keep rule. Build/artifact checks passed; internal28
 is Active with Play High/92% obfuscation.78 is Play-installed and targeted picker,

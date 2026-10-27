@@ -1,8 +1,32 @@
 # Android Play Quality Follow-Up
 
-Candidate: 1.0.71 (78). Internal1.0.70(77) failed picker QA; do not promote.
-Production remains 1.0.69 (76). No production submission.
+Submitted: 1.0.71 (78). Internal1.0.70(77) failed picker QA; do not promote.
+Last verified published production remains 1.0.69 (76);78 is pending Google checks/review.
 Before tag: readflow-before-play-quality-1.0.70-20261026 (9e1a026).
+
+## October 27 Authorized Production Submission
+
+After clarification that edge-to-edge is a recommendation, owner explicitly requested
+release78 now. Existing internal78 promoted to production release6, track4697768062046351162;
+no rebuild, private-file upload or code change. Name:1.0.71 (78) Android quality improvements.
+QUOTED from Play preview: rollout100%, all existing targeted countries, zero devices
+losing support in every listed form factor. Artifact is78 (1.0.71), minimumAPI24,
+targetSDK36, with ReTrace mapping and native symbols attached. Failed77 is not included.
+
+Sent exactly one production change. Quick checks subsequently cleared; publishing
+overview confirms "Your changes are now in review." Managed publishing remains off.
+Public publication and a refreshed warning-free dashboard have not been verified.
+Proof: tmp/play-quality78-production-review-20261027.png.
+Pre-submission tag: readflow-before-production-1.0.71-20261027 atd269459.
+Source db12868 and existing artifact hashes below are unchanged.
+
+Public release notes: Improved Android code optimization, PDF image handling and
+landscape reader spacing. Fixed document selection in optimized builds. Free offline
+reading, OCR and rF AI remain available.
+
+Owner accepted release with the edge advisory; this is not an Android15+ layout test
+or proof that every historical text/audio issue is fixed. No new phone QA was run.
+The research/earlier release gates below are retained as historical evidence.
 
 ## October 27 Release Request and Remaining Advisory
 
@@ -34,8 +58,8 @@ overview has no reports; settings show no test credentials/script configured.
 No phone input, build, upload, account change or paid service was performed here.
 
 Asked owner whether to release78 with the unresolved advisory documented or hold
-production until all three findings are resolved. Await this scope decision; do not
-silently reinterpret "all issues" as two fixes. Existing source remains db12868.
+production until all three findings are resolved. Owner subsequently chose release;
+the submission section above supersedes this earlier decision gate. Source remains db12868.
 
 ## Build 78 Evidence
 

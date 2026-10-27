@@ -11,7 +11,10 @@ build/artifact checks passed and internal28 is Active, also High/92% in Play.
 photo and Original/Reflow position tests. Billing reaches Google's terms then was
 canceled; no completed-payment, audible endurance or Android15+ layout pass claimed.
 Both flagged bitmap methods are absent in78; upstream edge API warning remains
-unresolved. Published production version is76. Known stray reference markers persist.
+unresolved. Published production version is last verified76. Owner accepted the edge
+recommendation and78 was submitted October27 for full production rollout; Changes in
+review after quick checks cleared. Publication and production-warning
+clearance unverified. Known stray reference markers persist.
 
 ## Free Candidate QA Update
 

@@ -1,6 +1,18 @@
 # readFlow Play Release Packet
 
-Updated: 2026-10-24
+Updated: 2026-10-27
+
+## Submitted Quality Release
+
+1.0.71 (78) Android quality improvements submitted for full production rollout on
+October27. Existing tested internal78 promoted without rebuilding. Changes in review;
+quick checks cleared, managed publishing off. Last published76; no live78
+claim. Owner explicitly accepted the remaining edge-to-edge recommendation.
+Release notes: Improved Android code optimization, PDF image handling and landscape
+reader spacing. Fixed document selection in optimized builds. Free offline reading,
+OCR and rF AI remain available. Next Android versionCode79 or higher.
+See FREE_RELEASE_STATUS.md for submission proof and the quality report for QA limits.
+The following free-release milestones are historical.
 
 ## Pending Free Release
 

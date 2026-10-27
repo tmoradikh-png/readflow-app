@@ -2,7 +2,11 @@
 
 Updated: 2026-10-27
 
-Current: production1.0.69(76) is published. Internal1.0.70(77) fails document-picker
+Current: production1.0.69(76) is last verified published.1.0.71(78) was submitted
+October27 for full production rollout after owner accepted the remaining edge-to-edge
+recommendation. Quick checks cleared; Console confirms Changes in review.
+Managed publishing off; automatic publication follows approval. No live78
+or cleared-production-warning claim. Internal1.0.70(77) fails document-picker
 QA; do not promote. Replacement1.0.71(78) is built and available on the Active
 internal track, with Play High/92% obfuscation and the Expo annotation keep fix.
 78 is Play-installed; targeted picker/import/OCR/voice-control/photo/navigation smoke

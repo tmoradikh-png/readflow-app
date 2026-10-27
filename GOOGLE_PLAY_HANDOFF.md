@@ -1,6 +1,14 @@
 # readFlow Google Play Handoff
 
-Updated: 2026-10-24
+Updated: 2026-10-27
+
+Current override: last verified published production1.0.69(76). Tested1.0.71(78)
+promoted from internal28 to production6, full rollout, on October27 after owner's
+explicit acceptance of the remaining edge-to-edge recommendation. Console confirms
+Changes in review after quick checks cleared; managed publishing off.
+Approval publishes automatically; public availability/warning clearance unverified.
+No new build/upload. FREE_RELEASE_STATUS.md and docs/PLAY_QUALITY_2026-10-26.md hold
+exact evidence and remaining limitations. Earlier status paragraphs below are history.
 
 Current work: FREE_RELEASE_STATUS.md. Play production verified active 1.0.66 (73).
 October24 latest: final1.0.69(76), source dadf46f/EAS08016c8e finished and internal

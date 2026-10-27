@@ -1,12 +1,17 @@
 # Free Android Release Status
 
-## October 27 Optimized Internal Candidate
+## October 27 Build 78 Production Submission
 
-Latest owner request is to fix all Play findings and release. Production promotion
-is authorized in principle, but the deprecated edge-to-edge advisory is unresolved
-even in current upstream RN0.88 WindowUtil. Asked whether to release78 with that
-advisory documented or hold for further framework work. No submission/build/source
-change in this follow-up; Android15+ layout verification is still unavailable.
+Owner explicitly accepted release with the unresolved edge-to-edge recommendation:
+"then release to get rid of warning for now". Promoted existing tested78, without a
+new build or upload, to production release6 / track4697768062046351162. Release name:
+1.0.71 (78) Android quality improvements. Rollout100%, all existing targeted countries;
+Play's preview shows no devices losing support. Only this production change was sent.
+Quick checks have cleared; Console confirms "Your changes are now in review."
+Managed publishing is off, so approval publishes automatically. Public availability
+and warning clearance are NOT yet verified; last published remains October24 /76.
+Proof: tmp/play-quality78-production-review-20261027.png. No phone input or paid build.
+The edge-to-edge recommendation and Android15+ validation gap remain documented.
 
 Production1.0.69(76) remains unchanged. Internal release28,1.0.71(78), is available
 to testers on the Active track. Source db12868, source checks, native test/build and
@@ -25,7 +30,7 @@ reference-marker imperfections remain. Phone released to Assess ad-supported Son
 casting; playback stopped, USB stay-awake0 restored, casting/audio settings untouched.
 Upstream deprecated edge-to-edge API recommendation remains unresolved; Android15+
 layout QA is also outstanding. See [quality follow-up](docs/PLAY_QUALITY_2026-10-26.md)
-for artifacts, hashes and exact evidence. No production submission.
+for artifacts, hashes and exact evidence. Production submission is recorded above.
 
 Updated: 2026-10-24. Owner authorized implementation, builds and Google Play submission.
 Free release1.0.69(76) is published. Paid-service retirement remains unfinished;
