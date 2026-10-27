@@ -5,7 +5,8 @@ Updated: 2026-10-27
 Current: production1.0.69(76) is published. Internal1.0.70(77) fails document-picker
 QA; do not promote. Replacement1.0.71(78) is built and available on the Active
 internal track, with Play High/92% obfuscation and the Expo annotation keep fix.
-Phone78 installation/retest is pending. Shared-phone use
+78 is Play-installed; targeted picker/import/OCR/voice-control/photo/navigation smoke
+tests pass, with detailed limits in the quality report. Shared-phone use
 requires coordination with Assess ad-supported Sonos casting. Upstream edge API
 warning remains unresolved. Read FREE_RELEASE_STATUS.md
 and docs/PLAY_QUALITY_2026-10-26.md first; these supersede review-state notes below.

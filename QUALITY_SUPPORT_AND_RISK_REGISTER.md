@@ -7,8 +7,11 @@ PDFBox bitmap sites and upstream edge-to-edge APIs. Internal1.0.70(77) reaches P
 High/92% obfuscation, but phone QA found a blocking document-picker NPE. Do not
 promote77. Replacement1.0.71(78) adds upstream Expo PR51206's keep rule; native
 build/artifact checks passed and internal28 is Active, also High/92% in Play.
-Phone78 installation/retest remains required. Both flagged bitmap methods are absent
-in78; upstream edge API warning remains unresolved. Published production version is76.
+78 is installed through Play and passes targeted picker/import/OCR/native voice-control,
+photo and Original/Reflow position tests. Billing reaches Google's terms then was
+canceled; no completed-payment, audible endurance or Android15+ layout pass claimed.
+Both flagged bitmap methods are absent in78; upstream edge API warning remains
+unresolved. Published production version is76. Known stray reference markers persist.
 
 ## Free Candidate QA Update
 

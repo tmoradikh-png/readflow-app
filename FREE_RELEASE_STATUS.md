@@ -10,9 +10,13 @@ inspection no longer decodes images. Reader landscape safe-area padding was adde
 
 Do not promote failed77: device QA found a document-picker record-conversion NPE.
 78 backports merged Expo PR51206's narrow Field annotation keep rule; the annotation
-is confirmed unchanged in the artifact. Phone retest is still required: the connected
-phone has77 and its Play listing has not offered78. Coordinate all phone use with
-Assess ad-supported Sonos casting and preserve its casting/audio settings.
+is confirmed unchanged in the artifact.78 is now installed/acquired through Play on
+SM-G975F/Android12. Picker, clean text import, scan OCR/native voice generation and
+play/pause/restart/Stop passed targeted smoke tests.288-page import, retainedphoto
+and Original/Reflowpage15 preservation also passed. Support opens Google's terms,
+then was canceled: no completed-payment retest or audible/endurance claim. Existing
+reference-marker imperfections remain. Phone released to Assess ad-supported Sonos
+casting; playback stopped, USB stay-awake0 restored, casting/audio settings untouched.
 Upstream deprecated edge-to-edge API recommendation remains unresolved; Android15+
 layout QA is also outstanding. See [quality follow-up](docs/PLAY_QUALITY_2026-10-26.md)
 for artifacts, hashes and exact evidence. No production submission.

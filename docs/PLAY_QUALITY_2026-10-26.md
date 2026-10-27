@@ -20,8 +20,8 @@ Derived files: tmp/quality78-mapping.txt and tmp/quality78-dex.xml. DEX inspecti
 also confirms JPXFilter (z7.h) has only decode helpers, with no encode method.
 Play reports High DEX optimization,92% obfuscation, Full Mode and resource shrinking
 for78. Proof: tmp/play-quality78-dex-20261027.png. Optimization/shrinking percentage
-fields are dashes, not measured values. Phone retest remains pending; no production
-promotion. The phone Play listing still shows Open for installed77, not Update.
+fields are dashes, not measured values. The phone retest below now supersedes the
+earlier installation blocker. No production promotion.
 
 ## October 27 Device Blocker and Correction
 
@@ -38,9 +38,9 @@ R8 8.11.18: preserving the Field annotation fixes the same record-conversion fai
 The exact runtime null mechanism is not established locally or in the upstream PR;
 do not claim annotation defaults were stripped. Backported the narrow upstream keep
 rule, retained all other optimization, and added a configuration regression check.
-Candidate78 native build and unchanged-Field artifact audit passed. Real picker,
-text import, OCR and rF AI checks remain required before promotion. No speculative
-framework upgrade.
+Candidate78 native build and unchanged-Field artifact audit passed. Targeted device
+tests subsequently passed as recorded below; the remaining release limits still
+apply. No speculative framework upgrade.
 
 Owner authorized coordination with Assess ad-supported Sonos casting, chat
 01a1759b-3601-72e3-bc6d-caa4f7436b84. That chat granted an exclusive QA window and
@@ -54,7 +54,54 @@ also lacked readFlow. Installed package remains1.0.70(77), installercom.android.
 No update/uninstall/data clearing occurred during this window. Waiting for Play
 delivery or owner approval of a one-time browser Downloads exception for Google's
 signed APK, to be immediately moved into ReadFlow/artifacts. Request a fresh exclusive
-phone window before installation/retest. No78 device pass is claimed.
+phone window before installation/retest. No78 device pass is claimed at this point.
+
+Owner subsequently approved the download exception and asked to finish properly.
+Google-signed APK downloaded once and immediately moved into
+artifacts/readflow-1.0.71-78-google-signed.apk; SHA256
+6E0A56161DEAC42F00819920C16A0CA409A4BB121B388C9941A8E8B8732754BE.
+Signature matches the previously installed app. Sonos chat granted a fresh exclusive
+window. ADB update returned Success and package manager shows1.0.71(78), without
+data clearing. Launch required Get this app from Play; selected official Update
+from Play and acquisition completed. Final package manager confirms1.0.71(78) and
+installercom.android.vending. No bypass of the Play acquisition requirement.
+
+## October 27 Build 78 Phone Results
+
+Bounded smoke tests on Samsung SM-G975F/Android12, coordinated third phone window:
+- Startup and document picker pass. The77 options-conversion failure no longer
+  reproduces. Imported three documents without uninstalling or clearing app data.
+- Clean one-page fixture: heading and both body paragraphs match the known source
+  text; screenshot/XML tmp/quality78-clean-import.*. This is not whole-book fidelity.
+  Its isolated test-page footer remains in imported text; no universal footer claim.
+- Scanned one-page fixture: Tesseracteng initializes, OCR completes (shelf Fixed),
+  original image renders and its recognized text drives voice. Sparse scanned pages
+  intentionally remain visual; OCR text was not directly compared through a text
+  export. Do not treat displayed source pixels as an OCR-accuracy measurement.
+  Evidence tmp/quality78-ocr.png and quality78-native-smoke-evidence.txt.
+- rF AI: sherpa supertonic JNI engine initialized and AudioTrack delivered frames;
+  media session PLAYING observed. Play/pause/restart, Follow off/on and Stop worked.
+  Final media-session check showed no active readFlow session. This is a short native
+  control/synthesis test, not an audible-quality review or a ten-minute endurance test.
+- Extreme Ownership imported288pages; progress179/288 observed. Cover and page15
+  photo/caption render. Original then Reflow both retainedpage15 without a crash.
+  Evidence tmp/quality78-photo15.png/.xml, quality78-original15.xml, quality78-reflow15.xml.
+  Previously recorded stray reference in page16 (convoy of 1 Humvees) remains; outside
+  the three Play optimization changes, not silently represented as corrected.
+- Optional support loaded local pricing and opened Google's Review and agree terms.
+  Canceled with Android Back; no terms acceptance/purchase. Billing UI initiation
+  passes, but a completed payment/cancellation lifecycle is not retested in78.
+  Evidence tmp/quality78-support-terms.xml.
+- Phone returned to library with three QA documents, playback stopped. USB stay-awake
+  restored/read back0; phone commands stopped and Sonos chat notified. Its casting,
+  routing and volume were not changed. Android15+ layout QA remains outstanding.
+
+Two UI hierarchy captures failed to idle during the long import animation; switched
+to screenshots and observed progress/completion. No stale hierarchy drove input.
+No claim that all three Play warnings are cleared: DEX is verified High/92%, bitmap
+sites are absent and image behavior passes the targeted test, but deprecated SDK
+edge-to-edge calls remain unresolved and fresh bitmap recommendation clearance has
+not been shown in a production dashboard. Production76 is unchanged.
 
 ## Evidence and Changes
 
