@@ -1,5 +1,23 @@
 # Free Android Release Status
 
+## October 27 AdMob Approval Check
+
+Read-only check of refreshed AdMob home, notifications, Policy Center and readFlow
+app settings: payment profile complete; account still being verified/not approved.
+Policy Center says No current issues. Notifications contain general announcements,
+not a verification-document request. readFlow Google Play linkage is correct;
+App verification is Verified, while Approval status remains Getting ready.
+This supersedes earlier app-verification-pending notes; it is not ad-serving approval.
+The exact reason for Google's account-review delay is not disclosed. No setting,
+payment detail, review request or code changed. No setup repair is currently indicated.
+Source: https://admob.google.com/v2/apps/3386452834/settings.
+Google says apps remain Getting ready until account verification completes:
+https://support.google.com/admob/answer/10564477?hl=en-GB.
+Account verification typically takes24hours, rarely up to2weeks:
+https://support.google.com/admob/answer/7356219?hl=en.
+If still pending beyond that window after payment details were completed, contact
+AdMob support; no guaranteed approval date or automatic monitoring was promised.
+
 ## October 27 Build 78 Production Submission
 
 Owner explicitly accepted release with the unresolved edge-to-edge recommendation:
