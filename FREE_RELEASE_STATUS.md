@@ -2,6 +2,12 @@
 
 ## October 27 Optimized Internal Candidate
 
+Latest owner request is to fix all Play findings and release. Production promotion
+is authorized in principle, but the deprecated edge-to-edge advisory is unresolved
+even in current upstream RN0.88 WindowUtil. Asked whether to release78 with that
+advisory documented or hold for further framework work. No submission/build/source
+change in this follow-up; Android15+ layout verification is still unavailable.
+
 Production1.0.69(76) remains unchanged. Internal release28,1.0.71(78), is available
 to testers on the Active track. Source db12868, source checks, native test/build and
 artifact inspection passed. Play reports High DEX optimization and92% obfuscation.

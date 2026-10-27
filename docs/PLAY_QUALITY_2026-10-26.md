@@ -4,6 +4,41 @@ Candidate: 1.0.71 (78). Internal1.0.70(77) failed picker QA; do not promote.
 Production remains 1.0.69 (76). No production submission.
 Before tag: readflow-before-play-quality-1.0.70-20261026 (9e1a026).
 
+## October 27 Release Request and Remaining Advisory
+
+Owner now explicitly requests all issues fixed and production release. The earlier
+internal-only instruction is superseded, but no production promotion has occurred.
+The production dashboard still reports the three findings for76. Candidate78 has
+the verified DEX/bitmap improvements and bounded Android12 smoke results below;
+these do not establish that every production warning is cleared.
+
+Latest upstream [React Native0.88 WindowUtil](https://raw.githubusercontent.com/facebook/react-native/v0.88.0/packages/react-native/ReactAndroid/src/main/java/com/facebook/react/views/view/WindowUtil.kt)
+still contains legacy bar-color and cutout compatibility calls. RN0.87 removed
+StatusBarModule color methods, but that alone does not remove WindowUtil's sites.
+A broad Expo/RN upgrade therefore has no verified all-warning fix. No dependency,
+minimum Android version, bytecode or warning-suppression changes were applied.
+
+Public npm metadata: ads wrapper17.4.0 requires RN>=0.86;16.5.0 embeds Google Ads25.4.0.
+A local constant-pool scan of Google's public play-services-ads25.5.0 classes.jar
+found no Window get/setStatusBarColor or get/setNavigationBarColor method references.
+This is only one artifact, not a complete dependency or runtime/compatibility audit;
+it does not prove an app upgrade clears the advisory. Research files are under tmp.
+Sources: [wrapper metadata](https://registry.npmjs.org/react-native-google-mobile-ads/17.4.0),
+[16.5 metadata](https://registry.npmjs.org/react-native-google-mobile-ads/16.5.0),
+[Google Ads release notes](https://developers.google.com/admob/android/rel-notes).
+
+Android15+ validation remains unavailable locally: connected SM-G975F is Android12;
+hardware audit reports firmware virtualization disabled, HypervisorPlatform disabled,
+and no installed emulator/AVD. No machine configuration changed. Play pre-launch
+overview has no reports; settings show no test credentials/script configured.
+No phone input, build, upload, account change or paid service was performed here.
+
+Asked owner whether to release78 with the unresolved advisory documented or hold
+production until all three findings are resolved. Await this scope decision; do not
+silently reinterpret "all issues" as two fixes. Existing source remains db12868.
+
+## Build 78 Evidence
+
 Replacement78 source db12868 is committed/pushed. EAS build
 300660f8-4e6b-4b5f-99d8-c6731a72859d FINISHED using existing included credit.
 Fresh billing still showed USD6/USD45 included, renewal canceled/Free scheduled.
