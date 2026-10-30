@@ -1,5 +1,31 @@
 # Free Android Release Status
 
+## October 30 Paid-Service Retirement
+
+Owner authorized cancellation of unnecessary services, with OpenAI left unchanged.
+Play production now shows active release1.0.71(78). The current mobile source uses
+on-device document import/OCR, local reading and constant free entitlements; it has
+no Render or RevenueCat bootstrap dependency. Subscriber and recent-order checks
+were completed before retirement. Legacy clients must update for offline imports.
+
+- Render backend suspended, not deleted. Dashboard confirms Suspended by you and
+  that suspended services are not billed. Configuration is retained; do not resume
+  the service or deploy the legacy backend without explicit owner authorization.
+  Previously accrued charges remain payable.
+- All six legacy Google Play subscription base plans are Inactive (zero active
+  base plans in the subscription list). The optional one-time support product was
+  not changed. No subscriber cancellation or refund was performed.
+- Expo billing now confirms Current plan Free and upcoming estimate zero. There
+  was no new build, paid plan or add-on in this task.
+- OpenAI remains unchanged as requested. RevenueCat account billing still needs
+  an authenticated check; do not describe all vendor billing as closed or zero.
+- AdMob and the public website/privacy/app-ads.txt remain in place for ads and
+  support. No new ad-serving approval or device-test claim.
+
+Private dashboard evidence is retained locally in the task checkpoint and tmp/;
+it is not included in the public repository. This section supersedes earlier
+pending backend-retirement and production-publication statements below.
+
 ## October 27 AdMob Approval Check
 
 Read-only check of refreshed AdMob home, notifications, Policy Center and readFlow

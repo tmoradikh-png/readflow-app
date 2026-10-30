@@ -1,13 +1,17 @@
 # readFlow Pricing and Cost Model
 
-Updated: 2026-10-20
+Updated: 2026-10-30
 
 Current direction: FREE_RELEASE_STATUS.md supersedes the pricing proposals below.
 The new app is designed without paid document/AI backend calls. AdMob publisher
-use is free; revenue is unknown and payment deductions/tax still apply. Existing
-bills are NOT cancelled: Expo CLI shows Starter renewing at USD 19 on October 27,
-with unused included build credit; Render/RevenueCat/OpenAI billing still needs
-review and retirement. Do not call the operating cost zero yet.
+use is free; revenue is unknown and payment deductions/tax still apply. Render's
+legacy backend was suspended October30; its dashboard confirms suspended services
+are not billed, but accrued charges remain payable. Expo now confirms Free with
+an upcoming estimate of zero. Legacy subscription base plans are inactive.
+OpenAI is retained unchanged at the owner's request. RevenueCat account billing
+remains unverified pending authenticated access. Do not claim every account is
+closed or total operating cost is zero. Pricing and backend assumptions below are
+historical; the current free Android app has no paid document/AI backend calls.
 
 This file records the business model assumptions for readFlow so another
 developer can continue without guessing. Re-check vendor prices before launch

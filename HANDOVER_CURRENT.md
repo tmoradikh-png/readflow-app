@@ -1,12 +1,14 @@
 # readFlow Current Handover
 
-Updated: 2026-10-27
+Updated: 2026-10-30
 
-Current: production1.0.69(76) is last verified published.1.0.71(78) was submitted
-October27 for full production rollout after owner accepted the remaining edge-to-edge
-recommendation. Quick checks cleared; Console confirms Changes in review.
-Managed publishing off; automatic publication follows approval. No live78
-or cleared-production-warning claim. Internal1.0.70(77) fails document-picker
+Current: Play production now shows active release1.0.71(78), following the October27
+submission. This does not establish that all production recommendations cleared.
+The current app does not require Render: backend suspended October30, all six legacy
+subscription base plans inactive, Expo Free confirmed. OpenAI unchanged at owner
+request; RevenueCat account billing remains pending authenticated access. Do not
+resume the retired backend or claim accrued bills were waived. Older clients must
+update for offline imports. Internal1.0.70(77) fails document-picker
 QA; do not promote. Replacement1.0.71(78) is built and available on the Active
 internal track, with Play High/92% obfuscation and the Expo annotation keep fix.
 78 is Play-installed; targeted picker/import/OCR/voice-control/photo/navigation smoke
@@ -19,16 +21,15 @@ and docs/PLAY_QUALITY_2026-10-26.md first; these supersede review-state notes be
 
 Read [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md) first for the authorized
 1.0.69 (76) free/offline migration, support product, AdMob account and build gates.
-Final76 from dadf46f is built, installed through Play and submitted for full production
-rollout. Automated checks cleared; Console confirms Changes in review; managed publishing
-off. Last verified live production remains1.0.66(73). Native76 startup/fresh import,
+Historical build76 from dadf46f was published October24 and superseded by active78.
+The following records its migration QA, not current production status. Native76 startup/fresh import,
 footer cleanup and free wording passed. Earlier ten-minute audio and test support
 purchase completed, with text/pronunciation/control limitations recorded in status.
 Books preserved; phone stay-awake/resolution restored. ADB/background-only work.
 Public policy/app-ads.txt and European/US consent messages are published. AdMob review
 is in progress. Earlier103 orders and the new support order are Test; no real paid order found.
-Expo paid renewal canceled, Free tier scheduled, next estimate0. Legacy backend and
-base plans remain active pending production transition. Exact evidence/gates in status.
+Expo Free is now confirmed. Render and legacy subscription sales are retired;
+remaining vendor-account checks and evidence are in FREE_RELEASE_STATUS.md.
 Older subscription architecture and release records below are historical context.
 
 Start here when taking over readFlow. This file is a short operational map. It

@@ -1,6 +1,14 @@
 # readFlow Payment Setup
 
-Updated: 2026-10-24
+Updated: 2026-10-30
+
+Current retirement status: Play production1.0.71(78) is active. All six legacy
+subscription base plans are Inactive; one-time support remains unchanged. Render
+is suspended with no ongoing suspended-service billing, and Expo confirms Free.
+Accrued bills remain payable. OpenAI is unchanged by owner request; RevenueCat
+account billing awaits authenticated access. See FREE_RELEASE_STATUS.md for the
+current migration status. Historical review/active-plan statements below do not
+override this update. No subscriber cancellation or refund was performed.
 
 Current migration: see [FREE_RELEASE_STATUS.md](FREE_RELEASE_STATUS.md).
 Play support product readflow_support_1 is active (one-time, no entitlement).
