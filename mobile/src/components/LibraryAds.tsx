@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { AppState, Linking, Platform, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { AppState, Linking, Platform, Pressable, Text, View } from "react-native";
 import Constants from "expo-constants";
 import mobileAds, {
   AdsConsent, AdsConsentPrivacyOptionsRequirementStatus,
@@ -26,7 +26,7 @@ export async function initializeAds() {
 // Only this library component can request ads. No document metadata is passed to the SDK.
 export function LibraryAds({ available }: { available: boolean }) {
   const { colors, fonts } = useAppTheme();
-  const { width } = useWindowDimensions();
+  const [bannerWidth, setBannerWidth] = useState(0);
   const [foreground, setForeground] = useState(AppState.currentState === "active");
   const [ready, setReady] = useState(false);
   const [privacyRequired, setPrivacyRequired] = useState(false);
@@ -50,11 +50,17 @@ export function LibraryAds({ available }: { available: boolean }) {
     if (!available || !foreground || privacyBusy || Platform.OS !== "android" || !unitId) return;
     (async () => {
       if (!consentUpdated) {
-        await AdsConsent.requestInfoUpdate();
-        if (!active) return;
-        await AdsConsent.loadAndShowConsentFormIfRequired();
-        consentUpdated = true;
+        try {
+          await AdsConsent.requestInfoUpdate();
+          if (!active) return;
+          await AdsConsent.loadAndShowConsentFormIfRequired();
+          consentUpdated = true;
+        } catch {
+          // UMP may still permit ads using consent from the previous session.
+          // Never infer permission locally; getConsentInfo below remains the gate.
+        }
       }
+      if (!active) return;
       const info = await AdsConsent.getConsentInfo();
       if (!active) return;
       setPrivacyRequired(info.privacyOptionsRequirementStatus === AdsConsentPrivacyOptionsRequirementStatus.REQUIRED);
@@ -90,12 +96,14 @@ export function LibraryAds({ available }: { available: boolean }) {
 
   if (Platform.OS !== "android" || !available) return null;
   return (
-    <View style={{ borderTopWidth: 1, borderColor: colors.border, paddingTop: 12, alignItems: "center", gap: 8 }}>
-      {ready && foreground && !privacyBusy && (
-        <View style={{ width: Math.floor(width), minHeight: 50, alignItems: "center" }}>
+    <View onLayout={event => setBannerWidth(Math.max(0, Math.floor(event.nativeEvent.layout.width)))}
+      style={{ width: "100%", borderTopWidth: 1, borderColor: colors.border, paddingTop: 12, alignItems: "center", gap: 8 }}>
+      {ready && foreground && !privacyBusy && bannerWidth > 0 && (
+        <View style={{ width: bannerWidth, minHeight: 50, alignItems: "center" }}>
           <Text style={{ color: colors.textMute, fontFamily: fonts.sans, fontSize: 11 }}>Advertisement</Text>
-          <BannerAd key={`${Math.floor(width)}-${revision}`} unitId={unitId} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-            onAdFailedToLoad={() => setReady(false)} />
+          {/* Keep mounted after no-fill/network errors so the SDK can refresh. */}
+          <BannerAd key={`${bannerWidth}-${revision}`} unitId={unitId}
+            width={bannerWidth} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} />
         </View>
       )}
       <Pressable accessibilityRole="button" disabled={privacyBusy} onPress={privacy} style={{ padding: 10 }}>
