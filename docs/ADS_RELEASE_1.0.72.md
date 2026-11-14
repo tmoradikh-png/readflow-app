@@ -18,8 +18,9 @@ Do not raise floors or broaden sensitive content solely to inflate eCPM.
 
 ## Verification
 
-Working-tree TypeScript, release configuration, reader regressions, OCR asset
-verification and new mocked-native ad component checks passed. The new checks
+TypeScript, release configuration, reader regressions, OCR asset verification
+and new mocked-native ad component checks passed on both the working tree and
+the isolated Android release source at commit `fbcc615`. The new checks
 cover permission denial, prior-session consent after update/form errors, failed
 consent-state reads, width, backgrounding, hidden library, privacy revocation,
 late consent completion and SDK initialization failure/retry.
@@ -27,6 +28,12 @@ late consent completion and SDK initialization failure/retry.
 Native build, phone smoke test and store submission are pending. A mocked SDK
 test does not prove real ad delivery, consent UI, revenue, or device layout.
 Existing unrelated native PDF/phone-voice crash reports are outside this ad fix.
+
+For a clean Windows source export, use `git -c core.autocrlf=false archive`.
+Default Windows line-ending conversion changed generated-source comparisons and
+the OCR license checksum in three packaging attempts. Explicitly disabling that
+conversion preserved committed bytes and passed the unchanged checks. Do not
+weaken checksums or regenerate text rules merely to work around checkout bytes.
 
 ## Release Gates
 
