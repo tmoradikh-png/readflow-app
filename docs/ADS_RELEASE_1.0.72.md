@@ -2,8 +2,9 @@
 
 Updated November 15, 2026. S23 native privacy verification passed. Build80 is
 available to internal testers and submitted for a full production rollout with
-the approved notes. Play shows Changes in review with quick checks still running;
-managed publishing is off. This is submission, not a confirmed public release.
+the approved notes. Play's quick checks completed and the overview confirms the
+changes are now in review; managed publishing is off. This is submission, not a
+confirmed public release.
 The owner also approved the new app-level trader declaration, matching the
 existing trader developer account. Submitted Yes; optional terms URL left blank.
 Build79 is superseded. No listing text or screenshots were changed.
