@@ -15,7 +15,7 @@ function plugin(name) {
   return expo.plugins.find(value => Array.isArray(value) && value[0] === name)?.[1];
 }
 
-check(expo.version === "1.0.72" && expo.android.versionCode === 79, "Candidate is 1.0.72 (79)");
+check(expo.version === "1.0.72" && expo.android.versionCode === 80, "Candidate is 1.0.72 (80)");
 check(expo.android.package === "com.urmiaworks.readflow", "Android package unchanged");
 check(expo.extra.eas.projectId === "097b0b5a-db90-46b4-b434-60836687b429", "Existing EAS project");
 check(["apiUrl", "appKey", "revenueCatAndroidApiKey", "revenueCatIosApiKey"].every(key => !(key in expo.extra)),

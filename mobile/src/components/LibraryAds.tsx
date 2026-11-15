@@ -77,7 +77,8 @@ export function LibraryAds({ available }: { available: boolean }) {
     setPrivacyBusy(true);
     setMessage("");
     try {
-      const info = await AdsConsent.requestInfoUpdate();
+      // UMP preloads this form after the launch-time update; do not restart it here.
+      const info = await AdsConsent.getConsentInfo();
       if (!mounted.current) return;
       if (info.privacyOptionsRequirementStatus === AdsConsentPrivacyOptionsRequirementStatus.REQUIRED) {
         await AdsConsent.showPrivacyOptionsForm();
@@ -85,7 +86,7 @@ export function LibraryAds({ available }: { available: boolean }) {
         await Linking.openURL(String(extra?.privacyPolicy || "https://urmiaworks.com/readflow/privacy"));
       }
     } catch {
-      if (mounted.current) setMessage("Privacy options are unavailable. Please try again when online.");
+      if (mounted.current) setMessage("Privacy options are unavailable. Please try again in a moment.");
     } finally {
       if (mounted.current) {
         setPrivacyBusy(false);

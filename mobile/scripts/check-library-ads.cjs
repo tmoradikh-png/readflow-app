@@ -84,7 +84,11 @@ function createHarness(options = {}) {
           if (options.infoError) throw new Error('No consent state');
           return info;
         },
-        showPrivacyOptionsForm: async () => { calls.privacy++; info = { ...info, canRequestAds: false }; },
+        showPrivacyOptionsForm: async () => {
+          calls.privacy++;
+          if (options.privacyError) throw new Error('Privacy options form is being loading. Please try again later.');
+          info = { ...info, canRequestAds: false };
+        },
       },
       AdsConsentPrivacyOptionsRequirementStatus: { REQUIRED: 'REQUIRED' },
       BannerAd: 'BannerAd', BannerAdSize: { ANCHORED_ADAPTIVE_BANNER: 'adaptive' },
@@ -156,8 +160,18 @@ function createHarness(options = {}) {
   const pendingPrivacy = privacy.find('Pressable').props.onPress();
   await privacy.flush(); await pendingPrivacy; await privacy.flush();
   assert.equal(privacy.calls.privacy, 1);
+  assert.equal(privacy.calls.update, 1, 'Opening privacy must not restart UMP form preloading');
   assert.equal(privacy.find('BannerAd'), undefined, 'Revoked permission removes the ad');
   privacy.unmount();
+
+  const loadingPrivacy = createHarness({ privacyError: true });
+  await loadingPrivacy.flush(); loadingPrivacy.layout(320); await loadingPrivacy.flush();
+  await loadingPrivacy.find('Pressable').props.onPress(); await loadingPrivacy.flush();
+  assert.equal(loadingPrivacy.calls.update, 1);
+  assert.equal(loadingPrivacy.calls.privacy, 1, 'No automatic privacy-form retry loop');
+  assert.equal(loadingPrivacy.find('Pressable').props.disabled, false, 'User can retry after loading');
+  assert.ok(loadingPrivacy.find('BannerAd'), 'SDK-approved prior consent survives a form error');
+  loadingPrivacy.unmount();
 
   let resolveUpdate;
   const pending = createHarness({ updateWait: new Promise(resolve => { resolveUpdate = resolve; }) });

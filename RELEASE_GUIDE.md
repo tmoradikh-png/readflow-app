@@ -1,5 +1,14 @@
 # readFlow Android Release Guide (Play Store)
 
+## Current Ad-Recovery Candidate - 2026-11-15
+
+Use `docs/ADS_RELEASE_1.0.72.md` for candidate1.0.72(80), the earlier79 Play
+internal draft, build evidence, approved notes and remaining device/release gates.
+Production remains1.0.71(78) until the new release is verified as published.
+The isolated `.qa` demo-ad APK is for testing only and must never be uploaded to
+Play. Historical migration and paid-backend instructions below are not current
+release prerequisites. Preserve existing keys and unrelated iOS/website changes.
+
 ## Free Offline Candidate - 2026-10-21
 
 Current work is candidate 1.0.67 (74), not a released app. Read
