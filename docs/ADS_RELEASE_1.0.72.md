@@ -1,10 +1,12 @@
 # Library Ad Recovery - 1.0.72 (80)
 
-Updated November 15, 2026. Build79 is accepted in an unpublished internal draft.
-S23 QA79 passed demo-ad layout and network recovery, but exposed a privacy-form
-loading error. QA80 and production80 are built. Play accepted80 into the existing
-unpublished internal draft; submission remains held for native privacy verification.
-The S23 disconnected after QA80 installation, before the app could be launched.
+Updated November 15, 2026. S23 native privacy verification passed. Build80 is
+available to internal testers and submitted for a full production rollout with
+the approved notes. Play shows Changes in review with quick checks still running;
+managed publishing is off. This is submission, not a confirmed public release.
+The owner also approved the new app-level trader declaration, matching the
+existing trader developer account. Submitted Yes; optional terms URL left blank.
+Build79 is superseded. No listing text or screenshots were changed.
 
 ## Scope
 
@@ -39,10 +41,14 @@ QA80 build `f6165c4c-c4d9-4247-916b-73db428b96fc` finished. Artifact:
 `artifacts/readflow-qa-1.0.72-80-demo-ads.apk`, 290764294 bytes, SHA-256
 `1E02AD08519293F4CB27D7195822BC3A646186C3E0B4297FE8B2709AFC136622`.
 Compiled package/version, demo-only config, absent advertising-ID permissions
-and unchanged disposable debug signature verified. Installed successfully on the
-S23, but not launched/tested before its USB connection disappeared. Cleanup of the
-temporary QA80 package and USB stay-awake setting is pending reconnection. The
-original app/data were not changed. Phone queue released; no phone process remains.
+and unchanged disposable debug signature verified. On the reconnected S23, the
+privacy form visibly opened. Do not consent saved zero purpose-consent bits;
+reopening Manage options showed switches off, and Confirm choices returned to the
+library. Cold restart succeeded with the demo banner. The owner clarified that
+they had tapped Consent during earlier observations; automatic dismissal was an
+unsupported inference, not an established defect. Temporary QA80 was uninstalled,
+USB stay-awake restored to0 and the phone ticket released. Original app/data were
+not changed. No advertising-ID registration, live ad or ad click was used.
 Production80 build `b5435348-fec8-43aa-903d-e8aaeb1a3ca6` finished using the
 existing upload identity and free quota. Both80 archives contain109files and
 22 OCR models; no private inputs or unrelated iOS/website changes.
@@ -53,7 +59,10 @@ JarFile signature verified and existing upload certificate matched. Play accepte
 the artifact with mapping and native symbols, no newly unsupported devices or
 blocking errors. Internal draft29 now contains80 only, named1.0.72(80), with the
 approved release notes unchanged. Build79 remains recoverable in the artifact
-library. Save and publish was NOT pressed. Production remains last-verified78.
+library. Internal80 was published November15 and promoted to production release7
+(track4697768062046351162), at100% of existing targeted countries. Submission
+includes only that release and the explicitly approved trader declaration.
+Production remains last-verified78 until Google's approval/publication completes.
 
 EAS production build `242625bd-8a27-47fb-9fcd-1195e2b204b9` finished. Its Gradle
 log confirms `:readflow-offline:testReleaseUnitTest` and a successful build.
@@ -72,8 +81,9 @@ visible on two attempts; a separate post-recovery capture logged the native
 error "Privacy options form is being loading. Please try again later." AdMob's
 published message has consent, refusal and manage-options controls enabled.
 The extra per-click consent update is removed in80 to avoid racing preloading;
-that diagnosis does not establish why the earlier forms dismissed automatically.
-Native privacy verification is still required. Production submission is pending.
+that diagnosis does not establish automatic dismissal. Subsequent owner feedback
+and the controlled QA80 test above resolve that uncertainty. Native privacy smoke
+verification passed; production submission is now recorded above.
 A mocked SDK test does not prove real ad delivery, consent UI or revenue.
 Existing unrelated native PDF/phone-voice crash reports are outside this ad fix.
 
