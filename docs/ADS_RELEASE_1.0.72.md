@@ -1,8 +1,10 @@
 # Library Ad Recovery - 1.0.72 (80)
 
 Updated November 15, 2026. Build79 is accepted in an unpublished internal draft.
-S23 QA passed demo-ad layout and network recovery, but exposed a privacy-form
-loading error. Build80 is being prepared; production submission is held for QA.
+S23 QA79 passed demo-ad layout and network recovery, but exposed a privacy-form
+loading error. QA80 and production80 are built. Play accepted80 into the existing
+unpublished internal draft; submission remains held for native privacy verification.
+The S23 disconnected after QA80 installation, before the app could be launched.
 
 ## Scope
 
@@ -26,10 +28,32 @@ Do not raise floors or broaden sensitive content solely to inflate eCPM.
 
 TypeScript, release configuration, reader regressions, OCR asset verification
 and new mocked-native ad component checks passed on both the working tree and
-the isolated Android release source at commit `fbcc615`. The new checks
+the isolated Android release source at commits `fbcc615` and `2e31390`. The new checks
 cover permission denial, prior-session consent after update/form errors, failed
 consent-state reads, width, backgrounding, hidden library, privacy revocation,
 late consent completion and SDK initialization failure/retry.
+Build80 additionally checks that opening privacy does not restart consent updates
+and that form-loading errors remain safely retryable without automatic loops.
+
+QA80 build `f6165c4c-c4d9-4247-916b-73db428b96fc` finished. Artifact:
+`artifacts/readflow-qa-1.0.72-80-demo-ads.apk`, 290764294 bytes, SHA-256
+`1E02AD08519293F4CB27D7195822BC3A646186C3E0B4297FE8B2709AFC136622`.
+Compiled package/version, demo-only config, absent advertising-ID permissions
+and unchanged disposable debug signature verified. Installed successfully on the
+S23, but not launched/tested before its USB connection disappeared. Cleanup of the
+temporary QA80 package and USB stay-awake setting is pending reconnection. The
+original app/data were not changed. Phone queue released; no phone process remains.
+Production80 build `b5435348-fec8-43aa-903d-e8aaeb1a3ca6` finished using the
+existing upload identity and free quota. Both80 archives contain109files and
+22 OCR models; no private inputs or unrelated iOS/website changes.
+Both cloud logs confirm native test execution and successful Gradle builds.
+Production artifact: `artifacts/readflow-1.0.72-80-ads.aab`,201895400bytes,SHA-256
+`8585D567B5DC711CA6A4D461EB6C2136B817BE167A6E53071904B202DEEB3545`.
+JarFile signature verified and existing upload certificate matched. Play accepted
+the artifact with mapping and native symbols, no newly unsupported devices or
+blocking errors. Internal draft29 now contains80 only, named1.0.72(80), with the
+approved release notes unchanged. Build79 remains recoverable in the artifact
+library. Save and publish was NOT pressed. Production remains last-verified78.
 
 EAS production build `242625bd-8a27-47fb-9fcd-1195e2b204b9` finished. Its Gradle
 log confirms `:readflow-offline:testReleaseUnitTest` and a successful build.
@@ -37,8 +61,8 @@ Artifact: `artifacts/readflow-1.0.72-79-ads.aab`, 201895396 bytes, SHA-256
 `9A142E1FE93BC31C6EE62E604DCEA50B929179F6A734E9A0BC25E4157CA48473`.
 The upload certificate matches the existing identity. JDK JarFile signature
 verification passed, with self-signed, timestamp and stream-entry-order warnings;
-Google Play accepted and processed the bundle. Internal draft 29 is ready to
-release with no blocking errors or newly unsupported devices. It is not published.
+Google Play accepted and processed this earlier bundle. It was superseded in
+internal draft29 by80 without publication.
 
 S23 demo banners loaded in portrait and landscape. After one offline launch,
 the native SDK logged a failed load while the Advertisement slot stayed mounted.
