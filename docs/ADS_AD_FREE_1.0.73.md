@@ -1,6 +1,6 @@
 # Ad-Free Subscriptions - 1.0.73
 
-November 16, 2026. Source committed/pushed as65f741c with before/after tags;
+November 17, 2026. Source committed/pushed as65f741c andb018657 with before/after tags;
 NOT released or device-tested.
 
 ## Approved Scope
@@ -68,10 +68,24 @@ or repeated build attempt. This is not packaged-APK or device verification.
 
 Still required: clean EAS build, real Play test purchase/restore/cancel/expiry,
 native demo-ad/consent/layout/audio-stop/contact QA, release config checks,
-updated public privacy text and final gated submission. Device tests only S23
-with per-phone queue, no advertising-ID registration, no real purchase/ad traffic.
-Proposed demo-ad internal81 then live-ad production82 strategy awaits owner
-approval; do not submit production until gates pass. Only free build quota.
+final gated submission. Public privacy text is now updated. Device tests only the
+owner-selected S10 with per-phone queue, no real purchase/ad traffic.
+Owner redirected testing to the connected S10 (SM-G975F), whose existing Samsung
+AdMob test-device registration was confirmed. Build81 uses the approved live
+configuration; require a visible Test Ad badge during QA, no ad clicks. The
+S23 advertising-ID denial remains respected. No second build82 is planned unless
+a concrete issue requires it. Only free build quota.
+
+Build81 started on Expo: 7073fcc7-49e2-40a8-a1f9-0a73b9fc6a9b, clean sourceb018657,
+profile internal/store, status IN_QUEUE at this milestone. No artifact/upload yet.
+The connected S10 retains Play-installed1.0.71(78); no update or data deletion yet.
+
+Owner approved exact privacy replacement. Published to
+https://763c2bc8.urmiaworks.pages.dev and verified on
+https://urmiaworks.com/readflow/privacy . Only the approved paragraph and revision
+date changed. Latest production base6d9a6b23 preserved, with423 other staged
+public/Functions files unchanged. Local manifest and screenshot:
+CODEX_WORK/ad-free81/privacy-manifest.json and privacy-live.png.
 
 Google guidance:
 - https://developer.android.com/google/play/billing/integrate
