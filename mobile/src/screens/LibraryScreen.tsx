@@ -90,6 +90,7 @@ export function LibraryScreen({
   onRefreshUsage,
   onRefreshEntitlement,
 }: Props) {
+  const adFree = useAdFree();
   const theme = useAppTheme();
   const styles = useThemedStyles(createStyles);
   const insets = useSafeAreaInsets();
@@ -522,7 +523,7 @@ export function LibraryScreen({
   const recent = items[0];
   const rest = items.slice(1);
   const isPaid = false;
-  const planLabel = "Free";
+  const planLabel = adFree.status === "active" ? "Ad-Free" : adFree.status === "free" ? "Free" : "Reader";
   return (
     <SafeAreaView style={styles.safe} edges={["left", "right", "bottom"]}>
       <View
@@ -1179,6 +1180,7 @@ function HelpAboutSheet({
     const subject = `readFlow support - ${version}${code ? ` (${code})` : ""}`;
     const body = [
       `Plan: ${planName}`,
+      `Ad-free subscription: ${adFree.status}`,
       `App: ${version}${code ? ` (${code})` : ""}`,
       `Platform: ${Platform.OS} ${Platform.Version}`,
       `Support ID: ${appUserId}`,

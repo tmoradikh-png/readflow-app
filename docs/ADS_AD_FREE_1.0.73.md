@@ -1,6 +1,7 @@
 # Ad-Free Subscriptions - 1.0.73
 
-November 16, 2026. Implementation in progress; NOT released or device-tested.
+November 16, 2026. Source committed/pushed as65f741c with before/after tags;
+NOT released or device-tested.
 
 ## Approved Scope
 
@@ -57,7 +58,10 @@ These limits must not be described as full server-verified subscription handling
 ## Evidence And Release Gates
 
 TypeScript, complete release/reader/OCR suite and mocked ad/subscription checks
-passed. Native billing module compiles separately against cached Billing9.1.0,
+passed, including an isolated committed Android source export. That export also
+needs three historical backend source fixtures for regression/generation checks;
+they are local test inputs, not a deployed server or part of the mobile upload.
+Native billing module compiles separately against cached Billing9.1.0,
 RN0.81.5 and Android36. Full local Gradle stopped before native compilation because
 shared dependency build directories could not be deleted; no destructive cleanup
 or repeated build attempt. This is not packaged-APK or device verification.
