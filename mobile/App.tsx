@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { LogBox, View } from "react-native";
+import { AppState, LogBox, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { useFonts } from "expo-font";
@@ -30,6 +30,8 @@ import {
 import { getReadingLanguage } from "./src/services/ReadingLanguages";
 import { AppTheme, ThemeProvider, useAppTheme, useThemedStyles } from "./src/theme";
 import { ReadingPosition } from "./src/services/ReadingPosition";
+import { AdFreeProvider } from "./src/services/AdFree";
+import { libraryInterstitial } from "./src/services/LibraryInterstitial";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 LogBox.ignoreLogs(["SherpaOnnxModelList: Unsupported model espeak-ng-data"]);
@@ -37,7 +39,7 @@ LogBox.ignoreLogs(["SherpaOnnxModelList: Unsupported model espeak-ng-data"]);
 export default function App() {
   return (
     <ThemeProvider>
-      <ReadFlowApp />
+      <AdFreeProvider><ReadFlowApp /></AdFreeProvider>
     </ThemeProvider>
   );
 }
@@ -50,6 +52,10 @@ function ReadFlowApp() {
   const entitlement = FREE_ENTITLEMENT;
   const [preferences, setPreferences] = useState<ReadingPreferences>(DEFAULT_PREFERENCES);
   const progressWriteRef = useRef<Promise<void>>(Promise.resolve());
+  const readerOpen = useRef(false);
+  const readingStarted = useRef(0);
+  const readingMs = useRef(0);
+  const closeGeneration = useRef(0);
   const readingLanguage = getReadingLanguage(preferences.bookLanguage);
 
   const [fontsLoaded] = useFonts({
@@ -71,12 +77,25 @@ function ReadFlowApp() {
     loadPreferences().then(setPreferences).catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", state => {
+      if (!readerOpen.current) return;
+      if (readingStarted.current) readingMs.current += Math.max(0, Date.now() - readingStarted.current);
+      readingStarted.current = state === "active" ? Date.now() : 0;
+    });
+    return () => { subscription.remove(); closeGeneration.current++; };
+  }, []);
+
   const updatePreferences = useCallback((next: ReadingPreferences) => {
     setPreferences(next);
     savePreferences(next).catch(() => {});
   }, []);
 
   const openDoc = useCallback((d: ParsedPdf, it: LibraryItem) => {
+    readerOpen.current = true;
+    closeGeneration.current++;
+    readingMs.current = 0;
+    readingStarted.current = AppState.currentState === "active" ? Date.now() : 0;
     setItem(it);
     setDoc(d);
   }, []);
@@ -121,9 +140,18 @@ function ReadFlowApp() {
               preview: item?.lastPreview ?? "",
             }}
             onProgress={handleProgress}
-            onBack={() => {
+            onBack={(audioStopped) => {
+              // Skip ads if the speech engine has not confirmed stopping by the transition.
+              const duration = readingMs.current + (readingStarted.current ? Math.max(0, Date.now() - readingStarted.current) : 0);
+              readerOpen.current = false; readingStarted.current = 0;
+              const generation = ++closeGeneration.current;
+              const closedAt = Date.now();
               setDoc(null);
               setItem(null);
+              requestAnimationFrame(() => {
+                libraryInterstitial.showAfterBookClose(duration, () => audioStopped && !readerOpen.current
+                  && generation === closeGeneration.current && Date.now() - closedAt < 250);
+              });
             }}
           />
         ) : (

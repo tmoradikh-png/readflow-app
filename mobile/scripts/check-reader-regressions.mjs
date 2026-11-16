@@ -1495,6 +1495,8 @@ function loadAdsInitializer(sdk) {
     "react-native": {},
     "expo-constants": {},
     "../theme": {},
+    "../services/LibraryInterstitial": {},
+    "../services/AdFree": {},
     "react-native-google-mobile-ads": {
       __esModule: true,
       default: () => sdk,
@@ -1518,6 +1520,7 @@ const initializeTestAds = loadAdsInitializer({
     assert.equal(muted, true);
     adCalls.push("mute");
   },
+  setAppVolume: volume => { assert.equal(volume, 0); adCalls.push("volume"); },
 });
 const firstAdInitialization = initializeTestAds();
 const concurrentAdInitialization = initializeTestAds();
@@ -1527,7 +1530,7 @@ nativeAdsReady = true;
 finishAdInitialization("ready");
 assert.deepEqual(await Promise.all([firstAdInitialization, concurrentAdInitialization]), ["ready", "ready"]);
 assert.equal(await initializeTestAds(), "ready");
-assert.deepEqual(adCalls, ["configure", "initialize", "mute"], "Concurrent mounts share one initialization");
+assert.deepEqual(adCalls, ["configure", "initialize", "mute", "volume"], "Concurrent mounts share one initialization");
 
 let adInitializationAttempts = 0;
 let recoveredMuteCalls = 0;
@@ -1538,6 +1541,7 @@ const initializeRecoveringAds = loadAdsInitializer({
     return "recovered";
   },
   setAppMuted: () => { recoveredMuteCalls++; },
+  setAppVolume: () => {},
 });
 await assert.rejects(initializeRecoveringAds, /initialization unavailable/);
 assert.equal(recoveredMuteCalls, 0, "Failed SDK initialization must never call the native mute setter");

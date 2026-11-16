@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { createPublicKey } from "node:crypto";
 
 const root = process.cwd();
 const read = name => fs.readFileSync(path.join(root, name), "utf8");
@@ -15,13 +16,13 @@ function plugin(name) {
   return expo.plugins.find(value => Array.isArray(value) && value[0] === name)?.[1];
 }
 
-check(expo.version === "1.0.72" && expo.android.versionCode === 80, "Candidate is 1.0.72 (80)");
+check(expo.version === "1.0.73" && expo.android.versionCode === 81, "Candidate is 1.0.73 (81)");
 check(expo.android.package === "com.urmiaworks.readflow", "Android package unchanged");
 check(expo.extra.eas.projectId === "097b0b5a-db90-46b4-b434-60836687b429", "Existing EAS project");
 check(["apiUrl", "appKey", "revenueCatAndroidApiKey", "revenueCatIosApiKey"].every(key => !(key in expo.extra)),
-  "No server or subscription configuration in the app");
+  "No paid backend or RevenueCat configuration in the app");
 check(!pkg.dependencies["react-native-purchases"] && pkg.dependencies["readflow-offline"],
-  "Direct optional support billing and local document processing");
+  "Direct Play billing and local document processing");
 check(read(".gitignore").split(/\r?\n/).includes("/android"), "Generated Android build tree is excluded from EAS/Git");
 check(!fs.existsSync(path.join(root, ".easignore")), "No separate EAS ignore file overrides source exclusions");
 
@@ -45,12 +46,15 @@ const ads = plugin("react-native-google-mobile-ads");
 check(ads?.androidAppId === "ca-app-pub-5199768562686629~3386452834", "Registered AdMob Android app");
 check(ads?.delayAppMeasurementInit === true, "Ad measurement delayed until consent");
 check(expo.extra.admobBannerId === "ca-app-pub-5199768562686629/1338873995", "Registered library banner");
+check(qa || /^ca-app-pub-5199768562686629\/\d+$/.test(expo.extra.admobInterstitialId || ""), "Production interstitial unit configured");
 check(qa || expo.extra.adsTestMode === false, "Production requires deliberate live-ad configuration after QA");
 check(!qa || expo.extra.adsTestMode === true, "QA must use test ads");
 const adSource = read("src/components/LibraryAds.tsx");
 check(/AdsConsent\.requestInfoUpdate/.test(adSource) && /info\.canRequestAds/.test(adSource)
   && /showPrivacyOptionsForm/.test(adSource), "Consent and privacy choices are wired");
-check(!/Interstitial|AppOpenAd|RewardedAd/.test(adSource), "No interrupting ad formats");
+check(!/AppOpenAd|RewardedAd/.test(adSource), "No app-open or rewarded ads");
+check(/canShowAds/.test(adSource) && /setAppMuted\(true\)/.test(adSource) && /setAppVolume\(0\)/.test(adSource),
+  "Library ads are subscription-gated and muted");
 check(!/LibraryAds|BannerAd|mobileAds/.test(read("src/components/Reader.tsx")), "No ads in the reader");
 
 for (const name of ["internal", "production"]) {
@@ -69,6 +73,13 @@ check(/const entitlement = FREE_ENTITLEMENT/.test(app) && !/RevenueCat|purchaseT
 const billing = read("native/readflow-offline/android/src/main/java/com/urmiaworks/readflow/offline/ReadFlowSupportModule.java");
 check(/readflow_support_1/.test(billing) && !/ProductType\.SUBS/.test(billing)
   && /consumeAsync/.test(billing), "Optional support uses a consumable one-time product");
+const adFreeBilling = read("native/readflow-offline/android/src/main/java/com/urmiaworks/readflow/offline/ReadFlowAdFreeModule.java");
+check(/readflow_ad_free/.test(adFreeBilling) && /ProductType\.SUBS/.test(adFreeBilling)
+  && /acknowledgePurchase/.test(adFreeBilling) && !/consumeAsync/.test(adFreeBilling), "Ad-free subscriptions are acknowledged, never consumed");
+try {
+  const key = createPublicKey({ key: Buffer.from(read("native/readflow-offline/assets/readflow-billing-public-key.txt").trim(), "base64"), format: "der", type: "spki" });
+  check(key.asymmetricKeyType === "rsa" && key.asymmetricKeyDetails.modulusLength >= 2048, "Public Play purchase verification key is valid RSA");
+} catch { check(false, "Public Play purchase verification key is required"); }
 check(!/sk-[a-zA-Z0-9]{16,}/.test(JSON.stringify(expo)), "No OpenAI secret in the app configuration");
 
 if (process.exitCode) console.error("Configuration checks failed. Do not submit.");

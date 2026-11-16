@@ -49,6 +49,8 @@ import {
   useThemedStyles,
 } from "../theme";
 import { SupportPrompt } from "../components/SupportPrompt";
+import { AdFreeOptions } from "../components/AdFreeOptions";
+import { useAdFree } from "../services/AdFree";
 import { LibraryAds } from "../components/LibraryAds";
 import { loadAppUserId } from "../services/AppIdentity";
 
@@ -99,6 +101,7 @@ export function LibraryScreen({
   const [showLanguage, setShowLanguage] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showSubscription, setShowSubscription] = useState(false);
   const [notice, setNotice] = useState<NoticeState | null>(null);
   const [rebuildStartingIds, setRebuildStartingIds] = useState<Set<string>>(
     () => new Set()
@@ -575,7 +578,8 @@ export function LibraryScreen({
             : "Saving document..."}
         </Text>
       )}
-      {!loading && !busyId && !showVoice && !showHelp && !showLanguage && !notice && <SupportPrompt hasBooks={items.length > 0} />}
+      {!loading && !busyId && !showVoice && !showHelp && !showLanguage && !notice && (Platform.OS === "android"
+        ? <AdFreeOptions onVisibilityChange={setShowSubscription} /> : <SupportPrompt hasBooks={items.length > 0} />)}
 
       {items.length === 0 ? (
         <Empty onAdd={importNew} loading={loading} isPaid={isPaid} />
@@ -627,7 +631,7 @@ export function LibraryScreen({
         </ScrollView>
       )}
 
-      <LibraryAds available={!loading && !busyId && !showVoice && !showHelp && !showLanguage && !notice} />
+      <LibraryAds available={!loading && !busyId && !showVoice && !showHelp && !showLanguage && !showSubscription && !notice} />
 
       <VoiceSettingsSheet
         visible={showVoice}
@@ -1162,13 +1166,16 @@ function HelpAboutSheet({
   const theme = useAppTheme();
   const styles = useThemedStyles(createStyles);
   const { mode: themeMode, setMode: setThemeMode } = useThemeController();
+  const adFree = useAdFree();
   const expo = Constants.expoConfig as any;
   const version = expo?.version || "dev";
   const code = expo?.android?.versionCode || expo?.ios?.buildNumber || "";
   const supportEmail = expo?.extra?.supportEmail || "support@urmiaworks.com";
   const website = expo?.extra?.website || "https://urmiaworks.com";
+  const [contactError, setContactError] = useState("");
   async function contact() {
-    const appUserId = await loadAppUserId();
+    setContactError("");
+    const appUserId = await loadAppUserId().catch(() => "Unavailable");
     const subject = `readFlow support - ${version}${code ? ` (${code})` : ""}`;
     const body = [
       `Plan: ${planName}`,
@@ -1187,9 +1194,9 @@ function HelpAboutSheet({
       "",
       "Please do not attach a private document unless support asks for it.",
     ].join("\n");
-    Linking.openURL(
+    await Linking.openURL(
       `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    ).catch(() => {});
+    ).catch(() => setContactError(`No email app opened. You can email ${supportEmail} from any email service.`));
   }
 
   function openWebsite() {
@@ -1201,7 +1208,7 @@ function HelpAboutSheet({
       <View style={styles.modalBackdrop}>
         <View style={styles.modalSheet}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>About</Text>
+            <Text style={styles.modalTitle}>Help & About</Text>
             <Pressable onPress={onClose} hitSlop={10}>
               <Text style={styles.modalClose}>x</Text>
             </Pressable>
@@ -1211,7 +1218,7 @@ function HelpAboutSheet({
               readFlow {version}
               {code ? ` (${code})` : ""}
             </Text>
-            <Text style={styles.aboutPlan}>Plan: {planName}</Text>
+            <Text style={styles.aboutPlan}>Plan: {adFree.status === "active" ? "Ad-Free" : planName}</Text>
             <View style={styles.appearanceBlock}>
               <Text style={styles.appearanceLabel}>Appearance</Text>
               <View style={styles.appearanceRow}>
@@ -1236,9 +1243,11 @@ function HelpAboutSheet({
                 ))}
               </View>
             </View>
+            <Text selectable style={styles.aboutPlan}>{supportEmail}</Text>
+            {!!contactError && <Text selectable style={styles.aboutPlan}>{contactError}</Text>}
             <View style={styles.aboutActions}>
               <Pressable style={styles.aboutBtn} onPress={contact}>
-                <Text style={styles.aboutBtnText}>Report a problem</Text>
+                <Text style={styles.aboutBtnText}>Contact us / Report a problem</Text>
               </Pressable>
               <Pressable style={styles.aboutBtnGhost} onPress={openWebsite}>
                 <Text style={styles.aboutBtnGhostText}>Website</Text>

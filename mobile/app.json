@@ -2,7 +2,7 @@
   "expo": {
     "name": "readFlow",
     "slug": "readflow",
-    "version": "1.0.72",
+    "version": "1.0.73",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "scheme": "readflow",
@@ -27,7 +27,7 @@
     },
     "android": {
       "package": "com.urmiaworks.readflow",
-      "versionCode": 80,
+      "versionCode": 81,
       "permissions": [
         "INTERNET",
         "android.permission.FOREGROUND_SERVICE",
@@ -86,7 +86,8 @@
         "projectId": "097b0b5a-db90-46b4-b434-60836687b429"
       },
       "adsTestMode": false,
-      "admobBannerId": "ca-app-pub-5199768562686629/1338873995"
+      "admobBannerId": "ca-app-pub-5199768562686629/1338873995",
+      "admobInterstitialId": "ca-app-pub-5199768562686629/8175009965"
     }
   }
 }

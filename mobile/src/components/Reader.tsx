@@ -69,7 +69,7 @@ interface Props {
   startPosition?: Partial<ReadingPosition>;
   /** Reports the latest reading position so the Library can persist it. */
   onProgress?: (position: ReadingPosition, totalPages: number) => void | Promise<void>;
-  onBack: () => void;
+  onBack: (audioStopped: boolean) => void;
 }
 
 interface LineRange {
@@ -1713,9 +1713,10 @@ export function Reader({
     epochRef.current++;
     playingRef.current = false;
     setIsPlaying(false);
-    ttsRef.current.stop();
+    let audioStopped = false;
+    void ttsRef.current.stop().then(() => { audioStopped = true; }).catch(() => {});
     await saveLastRead();
-    onBack();
+    onBack(audioStopped);
   }
 
   if (flat.length === 0) {

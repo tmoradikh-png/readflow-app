@@ -10,7 +10,7 @@ import java.util.List;
 
 public final class ReadFlowOfflinePackage implements ReactPackage {
     @Override public List<NativeModule> createNativeModules(ReactApplicationContext context) {
-        return Arrays.asList(new ReadFlowOfflineModule(context), new ReadFlowSupportModule(context));
+        return Arrays.asList(new ReadFlowOfflineModule(context), new ReadFlowSupportModule(context), new ReadFlowAdFreeModule(context));
     }
     @Override public List<ViewManager> createViewManagers(ReactApplicationContext context) {
         return Collections.emptyList();

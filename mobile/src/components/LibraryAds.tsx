@@ -6,6 +6,8 @@ import mobileAds, {
   BannerAd, BannerAdSize, MaxAdContentRating, TestIds,
 } from "react-native-google-mobile-ads";
 import { useAppTheme } from "../theme";
+import { libraryInterstitial } from "../services/LibraryInterstitial";
+import { useAdFree } from "../services/AdFree";
 
 let initialized: Promise<unknown> | null = null;
 let consentUpdated = false;
@@ -16,15 +18,17 @@ export async function initializeAds() {
       await mobileAds().setRequestConfiguration({ maxAdContentRating: MaxAdContentRating.PG });
       // Android's mute setter throws natively until SDK initialization completes.
       const status = await mobileAds().initialize();
-      mobileAds().setAppMuted(true);
+      await mobileAds().setAppMuted(true);
+      await mobileAds().setAppVolume(0);
       return status;
     })().catch(error => { initialized = null; throw error; });
   }
   return initialized;
 }
 
-// Only this library component can request ads. No document metadata is passed to the SDK.
+// Ad loading starts only here, outside books. No document metadata is sent to the SDK.
 export function LibraryAds({ available }: { available: boolean }) {
+  const { canShowAds } = useAdFree();
   const { colors, fonts } = useAppTheme();
   const [bannerWidth, setBannerWidth] = useState(0);
   const [foreground, setForeground] = useState(AppState.currentState === "active");
@@ -47,7 +51,7 @@ export function LibraryAds({ available }: { available: boolean }) {
   useEffect(() => {
     let active = true;
     setReady(false);
-    if (!available || !foreground || privacyBusy || Platform.OS !== "android" || !unitId) return;
+    if (!available || !canShowAds || !foreground || privacyBusy || Platform.OS !== "android" || !unitId) return;
     (async () => {
       if (!consentUpdated) {
         try {
@@ -64,15 +68,17 @@ export function LibraryAds({ available }: { available: boolean }) {
       const info = await AdsConsent.getConsentInfo();
       if (!active) return;
       setPrivacyRequired(info.privacyOptionsRequirementStatus === AdsConsentPrivacyOptionsRequirementStatus.REQUIRED);
+      libraryInterstitial.setConsent(info.canRequestAds);
       if (!info.canRequestAds) return;
       await initializeAds();
-      if (active) setReady(true);
+      if (active) { setReady(true); libraryInterstitial.prepare(); }
     })().catch(() => {}); // Offline/consent/ad errors never block access to books.
     return () => { active = false; };
-  }, [available, foreground, privacyBusy, revision, unitId]);
+  }, [available, canShowAds, foreground, privacyBusy, revision, unitId]);
 
   async function privacy() {
     if (privacyBusy) return;
+    libraryInterstitial.setConsent(false);
     setReady(false);
     setPrivacyBusy(true);
     setMessage("");
@@ -99,7 +105,7 @@ export function LibraryAds({ available }: { available: boolean }) {
   return (
     <View onLayout={event => setBannerWidth(Math.max(0, Math.floor(event.nativeEvent.layout.width)))}
       style={{ width: "100%", borderTopWidth: 1, borderColor: colors.border, paddingTop: 12, alignItems: "center", gap: 8 }}>
-      {ready && foreground && !privacyBusy && bannerWidth > 0 && (
+      {canShowAds && ready && foreground && !privacyBusy && bannerWidth > 0 && (
         <View style={{ width: bannerWidth, minHeight: 50, alignItems: "center" }}>
           <Text style={{ color: colors.textMute, fontFamily: fonts.sans, fontSize: 11 }}>Advertisement</Text>
           {/* Keep mounted after no-fill/network errors so the SDK can refresh. */}

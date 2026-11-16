@@ -18,6 +18,7 @@ function createHarness(options = {}) {
   let effects = [];
   let tree;
   let available = options.available !== false;
+  let canShowAds = options.subscriber !== true;
   let info = { canRequestAds: options.allowed !== false, privacyOptionsRequirementStatus: 'REQUIRED' };
   const React = {
     createElement: (type, props, ...children) => ({ type, props: props || {}, children }),
@@ -58,6 +59,8 @@ function createHarness(options = {}) {
     },
     'expo-constants': { expoConfig: { extra: { adsTestMode: false, admobBannerId: 'live-unit' } } },
     '../theme': { useAppTheme: () => ({ colors: {}, fonts: {} }) },
+    '../services/AdFree': { useAdFree: () => ({ canShowAds }) },
+    '../services/LibraryInterstitial': { libraryInterstitial: { setConsent() {}, prepare() {} } },
     'react-native-google-mobile-ads': {
       __esModule: true,
       default: () => ({
@@ -67,6 +70,7 @@ function createHarness(options = {}) {
           if (options.initError && calls.initialize === 1) throw new Error('SDK unavailable');
         },
         setAppMuted: () => {},
+        setAppVolume: () => {},
       }),
       AdsConsent: {
         requestInfoUpdate: async () => {
@@ -121,12 +125,13 @@ function createHarness(options = {}) {
     layout(width) { find('View')?.props.onLayout({ nativeEvent: { layout: { width } } }); },
     state(value) { listeners.forEach(listener => listener(value)); },
     available(value) { available = value; dirty = true; },
+    subscribed(value) { canShowAds = !value; dirty = true; },
     unmount() { slots.forEach(slot => slot.cleanup?.()); },
   };
 }
 
 (async () => {
-  for (const options of [{ allowed: false }, { allowed: false, updateError: true }, { infoError: true }, { available: false }]) {
+  for (const options of [{ subscriber: true }, { allowed: false }, { allowed: false, updateError: true }, { infoError: true }, { available: false }]) {
     const h = createHarness(options);
     await h.flush(); h.layout(320); await h.flush();
     assert.equal(h.find('BannerAd'), undefined);
